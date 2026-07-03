@@ -1,0 +1,1022 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Technical Specification Review</title>
+<!--
+  Interactive review report for the Techjays TL Agent (tl-spec-review skill).
+  Self-contained: no external CSS/JS/fonts — opens offline in any browser.
+  The agent injects the review JSON into the #review-data script tag below
+  (the placeholder token there is the only thing to replace). All rendering is
+  done client-side from that single data object, so the HTML and the companion
+  spec-review.md stay in sync (both derive from the same JSON).
+-->
+<style>
+  :root {
+    --bg: #f6f8fa; --surface: #ffffff; --surface-2: #f6f8fa; --border: #d0d7de;
+    --text: #1f2328; --muted: #636c76; --accent: #0969da;
+    --excellent: #1a7f37; --good: #2da44e; --adequate: #bf8700;
+    --weak: #e16f24; --stub: #cf222e; --absent: #a40e26; --na: #8c959f;
+    --blocker: #cf222e; --major: #e16f24; --minor: #bf8700; --nit: #6e7781;
+    --shadow: 0 1px 3px rgba(31,35,40,.08), 0 1px 2px rgba(31,35,40,.06);
+    --radius: 10px;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #0d1117; --surface: #161b22; --surface-2: #21262d; --border: #30363d;
+      --text: #e6edf3; --muted: #8b949e; --accent: #4493f8;
+      --excellent: #3fb950; --good: #56d364; --adequate: #d29922;
+      --weak: #db6d28; --stub: #f85149; --absent: #ff7b72; --na: #6e7781;
+      --blocker: #f85149; --major: #db6d28; --minor: #d29922; --nit: #8b949e;
+      --shadow: none;
+    }
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; background: var(--bg); color: var(--text);
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    line-height: 1.55; font-size: 15px;
+  }
+  .wrap { max-width: 1040px; margin: 0 auto; padding: 0 20px 80px; }
+  a { color: var(--accent); text-decoration: none; }
+  a:hover { text-decoration: underline; }
+  h1, h2, h3 { line-height: 1.25; }
+  code { background: var(--surface-2); padding: .1em .4em; border-radius: 5px; font-size: .88em;
+         font-family: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, monospace; }
+
+  /* Sticky header */
+  header.topbar {
+    position: sticky; top: 0; z-index: 20; background: var(--surface);
+    border-bottom: 1px solid var(--border); box-shadow: var(--shadow);
+  }
+  .topbar-inner { max-width: 1040px; margin: 0 auto; padding: 12px 20px;
+    display: flex; align-items: center; gap: 16px; flex-wrap: wrap; }
+  .topbar .scoreball { display: flex; align-items: baseline; gap: 4px; font-weight: 800; }
+  .topbar .scoreball .num { font-size: 26px; }
+  .topbar .scoreball .den { font-size: 14px; color: var(--muted); font-weight: 600; }
+  .topbar .title { font-size: 16px; font-weight: 700; margin: 0; flex: 1 1 240px; min-width: 0; }
+  .topbar .title small { display: block; color: var(--muted); font-weight: 500; font-size: 12px; }
+
+  .verdict-badge { padding: 6px 12px; border-radius: 999px; font-weight: 700; font-size: 13px;
+    color: #fff; white-space: nowrap; }
+
+  /* Meta chips */
+  .meta { display: flex; flex-wrap: wrap; gap: 8px; margin: 20px 0 8px; }
+  .chip { background: var(--surface); border: 1px solid var(--border); border-radius: 999px;
+    padding: 5px 12px; font-size: 13px; color: var(--muted); }
+  .chip b { color: var(--text); font-weight: 600; }
+  .chip.yes b { color: var(--good); } .chip.no b { color: var(--muted); }
+
+  .card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius);
+    box-shadow: var(--shadow); padding: 20px 22px; margin: 16px 0; }
+  .card h2 { margin: 0 0 12px; font-size: 18px; }
+  .section-label { text-transform: uppercase; letter-spacing: .04em; font-size: 12px;
+    color: var(--muted); font-weight: 700; margin: 28px 0 6px; }
+
+  .summary-text { margin: 0 0 14px; }
+  .gating { margin: 0; padding: 0; list-style: none; display: grid; gap: 8px; }
+  .gating li { display: flex; gap: 10px; align-items: flex-start; padding: 10px 12px;
+    background: var(--surface-2); border-radius: 8px; border-left: 3px solid var(--blocker); }
+  .gating .fix { color: var(--muted); }
+
+  /* Scorecard */
+  table.scorecard { width: 100%; border-collapse: collapse; }
+  table.scorecard td, table.scorecard th { padding: 9px 8px; text-align: left;
+    border-bottom: 1px solid var(--border); vertical-align: middle; }
+  table.scorecard th { font-size: 12px; text-transform: uppercase; letter-spacing: .03em;
+    color: var(--muted); }
+  table.scorecard tr.area-row { cursor: pointer; }
+  table.scorecard tr.area-row:hover { background: var(--surface-2); }
+  .grp-row td { background: var(--surface-2); font-weight: 700; font-size: 12px;
+    text-transform: uppercase; letter-spacing: .04em; color: var(--muted); padding: 6px 8px; }
+  .areacode { color: var(--muted); font-size: 12px; font-family: ui-monospace, monospace; }
+  .bar { position: relative; height: 8px; border-radius: 4px; background: var(--surface-2);
+    overflow: hidden; min-width: 90px; }
+  .bar > span { position: absolute; left: 0; top: 0; bottom: 0; border-radius: 4px; }
+  .scorenum { font-weight: 800; font-variant-numeric: tabular-nums; white-space: nowrap; }
+  .statuslbl { font-size: 12px; font-weight: 700; }
+  tr.total-row td { border-top: 2px solid var(--border); border-bottom: none;
+    font-weight: 800; font-size: 16px; padding-top: 14px; }
+
+  /* Area detail accordion */
+  .toolbar { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; margin: 8px 0 0; }
+  .btn { background: var(--surface); border: 1px solid var(--border); color: var(--text);
+    border-radius: 7px; padding: 6px 12px; font-size: 13px; cursor: pointer; font-weight: 600; }
+  .btn:hover { background: var(--surface-2); }
+  details.area { background: var(--surface); border: 1px solid var(--border);
+    border-radius: var(--radius); margin: 10px 0; overflow: hidden; box-shadow: var(--shadow); }
+  details.area > summary { list-style: none; cursor: pointer; padding: 14px 18px;
+    display: flex; align-items: center; gap: 12px; }
+  details.area > summary::-webkit-details-marker { display: none; }
+  details.area > summary::after { content: "▸"; margin-left: auto; color: var(--muted);
+    transition: transform .15s; }
+  details.area[open] > summary::after { transform: rotate(90deg); }
+  details.area > summary .swatch { width: 6px; height: 30px; border-radius: 3px; flex: none; }
+  details.area > summary .aname { font-weight: 700; }
+  details.area > summary .ascore { margin-left: 6px; font-weight: 800; font-variant-numeric: tabular-nums; }
+  .area-body { padding: 4px 18px 18px 36px; border-top: 1px solid var(--border); }
+  .area-body h4 { margin: 14px 0 4px; font-size: 12px; text-transform: uppercase;
+    letter-spacing: .03em; color: var(--muted); }
+  .fnd-chiprow { display: flex; flex-wrap: wrap; gap: 6px; }
+  .fnd-chip { font-family: ui-monospace, monospace; font-size: 12px; padding: 3px 8px;
+    border-radius: 6px; background: var(--surface-2); border: 1px solid var(--border);
+    cursor: pointer; font-weight: 600; }
+  .fnd-chip:hover { border-color: var(--accent); }
+
+  /* Findings register */
+  .sevfilter { display: flex; flex-wrap: wrap; gap: 8px; margin: 4px 0 14px; }
+  .sevbtn { border: 1px solid var(--border); background: var(--surface); cursor: pointer;
+    border-radius: 999px; padding: 5px 13px; font-size: 13px; font-weight: 700; color: var(--text); }
+  .sevbtn[aria-pressed="true"] { background: var(--text); color: var(--bg); border-color: var(--text); }
+  .sevbtn .dot { display: inline-block; width: 9px; height: 9px; border-radius: 50%; margin-right: 6px;
+    vertical-align: middle; }
+  table.findings { width: 100%; border-collapse: collapse; }
+  table.findings th, table.findings td { padding: 10px 8px; text-align: left;
+    border-bottom: 1px solid var(--border); vertical-align: top; }
+  table.findings th { font-size: 12px; text-transform: uppercase; color: var(--muted); }
+  table.findings tr[hidden] { display: none; }
+  .sevtag { display: inline-block; padding: 2px 9px; border-radius: 999px; color: #fff;
+    font-size: 11px; font-weight: 800; text-transform: uppercase; letter-spacing: .03em; white-space: nowrap; }
+  .fid { font-family: ui-monospace, monospace; font-weight: 700; white-space: nowrap; }
+  .fid:target, tr.flash > td { animation: flash 1.6s ease; }
+  @keyframes flash { 0%,40% { background: rgba(255,196,0,.28); } 100% { background: transparent; } }
+  .areatag { font-family: ui-monospace, monospace; font-size: 12px; color: var(--muted); }
+
+  ol.actions, ul.qs { padding-left: 20px; margin: 6px 0; } ol.actions li, ul.qs li { margin: 6px 0; }
+  .strength-list { margin: 6px 0; padding-left: 20px; } .strength-list li { margin: 4px 0; }
+  footer { color: var(--muted); font-size: 12px; text-align: center; margin-top: 30px; }
+  .empty { color: var(--muted); font-style: italic; }
+
+  /* Resolution loop */
+  .round-banner { display: flex; flex-wrap: wrap; gap: 10px 14px; align-items: center; margin: 16px 0 0;
+    padding: 10px 14px; background: var(--surface-2); border: 1px solid var(--border); border-radius: var(--radius); }
+  .round-banner .pill { background: var(--surface); border: 1px solid var(--border); border-radius: 999px;
+    padding: 3px 11px; font-size: 12px; font-weight: 800; }
+  .progress-line { font-size: 13px; color: var(--muted); }
+  .statustag { display: inline-block; padding: 2px 9px; border-radius: 999px; color: #fff; font-size: 11px;
+    font-weight: 800; text-transform: uppercase; letter-spacing: .03em; white-space: nowrap; }
+  table.findings tr.terminal td { opacity: .6; }
+  .reso-line { display: block; margin-top: 6px; font-size: 13px; color: var(--muted); }
+  .reso-line b { color: var(--text); font-weight: 600; }
+  .respond-card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius);
+    box-shadow: var(--shadow); padding: 14px 16px; margin: 10px 0; }
+  .respond-card .rc-head { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; margin-bottom: 6px; }
+  .respond-card .rc-finding { color: var(--muted); font-size: 13px; margin: 2px 0 10px; }
+  .respond-card .followups { background: var(--surface-2); border-left: 3px solid var(--minor); border-radius: 0 6px 6px 0;
+    padding: 8px 12px; margin: 0 0 10px; font-size: 13px; }
+  .respond-card .followups ul { margin: 4px 0 0; padding-left: 18px; }
+  .respond-card label.fld { display: block; font-size: 12px; text-transform: uppercase; letter-spacing: .03em;
+    color: var(--muted); font-weight: 700; margin: 8px 0 4px; }
+  .respond-card textarea { width: 100%; min-height: 64px; resize: vertical; padding: 8px 10px; font: inherit;
+    font-size: 14px; color: var(--text); background: var(--surface-2); border: 1px solid var(--border); border-radius: 7px; }
+  .respond-card textarea:focus, .respond-card select:focus { outline: none; border-color: var(--accent);
+    box-shadow: 0 0 0 2px color-mix(in srgb, var(--accent) 30%, transparent); }
+  .respond-card select { font: inherit; font-size: 13px; padding: 5px 8px; color: var(--text);
+    background: var(--surface-2); border: 1px solid var(--border); border-radius: 7px; }
+  .respond-actions { display: flex; align-items: center; gap: 12px; margin: 14px 0 0; flex-wrap: wrap; }
+  .btn.primary { background: var(--accent); color: #fff; border-color: var(--accent); }
+  .btn.primary:hover { filter: brightness(1.08); background: var(--accent); }
+  #export-note { font-size: 12px; color: var(--muted); }
+
+  @media print {
+    .respond-card, .respond-actions { display: none; }
+    header.topbar { position: static; box-shadow: none; }
+    details.area { break-inside: avoid; } details.area[open] > summary::after { content: ""; }
+    .toolbar, .sevfilter { display: none; } .card { break-inside: avoid; box-shadow: none; }
+  }
+  @media (max-width: 640px) {
+    table.scorecard .col-bar { display: none; }
+    .area-body { padding-left: 18px; }
+  }
+</style>
+</head>
+<body>
+<script id="review-data" type="application/json">{
+  "project": "ClimatePros · Auto-Dispatch (Use Case A)",
+  "documentReviewed": "arch/system-design.html",
+  "documentVersion": "unversioned (last modified 2026-07-03; embeds arch/frag-architecture.html + arch/frag-flows.html)",
+  "reviewDate": "2026-07-03 13:22",
+  "reviewId": "2026-07-03-132209",
+  "round": 1,
+  "priorReview": null,
+  "system": {
+    "isAI": false,
+    "aiNote": "No LLM/generative-AI component. The 'Ranking Algorithm' (§8) is a deterministic weighted-sum formula over stated inputs (ETA, familiarity) with configured (not learned) weights — §14 Future Improvements explicitly proposes adding a learned/self-tuning reward loop later, confirming today's system is rules-based.",
+    "multiSystem": true,
+    "multiSystemNote": "Dashboard (existing UI) → EC2 Server A/B (FastAPI) → Redis Streams/locks/lists (ElastiCache) → AWS ECS Fargate worker pool → Amazon RDS (SQL Server, system of record) → Amazon SNS → APNs/FCM → Flutter technician app, with boto3-driven ECS scaling in the loop."
+  },
+  "overallScore": 5.9,
+  "verdict": "Significant gaps — revise before build",
+  "verdictReason": "A Blocker (FND-004: an unaddressed crash-window race between the RDS assignment write and the stream XACK that can re-run the assignment flow on an already-assigned dispatch, undermining the document's own repeatedly-stated 'exactly-once' invariant) caps this regardless of average, and the 5.9/10 average independently lands in the same band — driven mainly by an undocumented persistent data schema (DAT, 3/10) and a self-acknowledged architecture-diagram/prose contradiction on the core locking model (ARC, 6/10).",
+  "executiveSummary": "This is a spec for a toggle-driven, division-isolated auto-dispatch pipeline layered onto ClimatePros' existing EC2/RDS platform via a new Redis + Fargate processing tier and an SNS notify/reply loop. It is unusually strong in places most specs skip — the cost projection is grounded in real unit-cost math, the crash/slow-worker fault-tolerance walkthrough is genuinely clear, and the operational flows model retries, timeouts, and escalation rather than only the happy path. But it is not yet build-ready: a crash-window race in the exactly-once completion path (FND-004) can double-process a dispatch, the primary architecture diagram contradicts the documented locking model on a stated invariant (FND-002), and none of the project's new persistent data (RDS status fields, availability record, endpointArn table) has a field-level schema (FND-007). Close those three first; the rest of the document is a solid foundation to build on.",
+  "gatingFindings": [
+    "FND-004",
+    "FND-007",
+    "FND-002",
+    "FND-016",
+    "FND-014"
+  ],
+  "strengths": [
+    "The ElastiCache single-node SPOF is named, explained as a deliberate cost trade-off, and paired with a concrete fallback (manual dispatch) — exactly how an accepted architectural risk should be documented.",
+    "The Cost Projection section derives every number from stated volume assumptions and real AWS unit pricing, with three scenarios and a quantified scale-to-zero payoff — the strongest section in the document.",
+    "The retry-until-shortlist-exhausted-then-escalate flow, and the plain-language crash/slow-worker walkthrough in §12, model unhappy paths clearly rather than only the happy path."
+  ],
+  "areas": [
+    {
+      "num": 1,
+      "code": "OVR",
+      "name": "Overview & Problem Framing",
+      "group": "Architecture & Design",
+      "score": 8,
+      "band": "Good",
+      "assessment": "The problem (admin-bottlenecked manual dispatch) is stated crisply, and §2's four goals/invariants (exactly-once, conflict-aware concurrency, no-polling reply, scale-to-zero) read as genuine engineering invariants rather than marketing adjectives. The success metric — escalation-to-human rate ≤ Y%, with Y explicitly deferred to the pilot baseline — is a thoughtful, honestly-scoped measurable criterion rather than a vague \"fast/scalable.\" Non-goals are explicit and useful (manual flow untouched, no UI change beyond the toggle, no RDS schema change beyond dispatch-status fields).",
+      "findingIds": [
+        "FND-001"
+      ],
+      "suggestions": "Pull the volume assumption that currently only appears inside the Cost Projection example into §2 as a stated business assumption, and reuse it consistently.",
+      "strengths": "Deferring the numeric escalation-rate target to the pilot baseline (rather than guessing a number) is exactly the kind of surfaced uncertainty a strong spec should have."
+    },
+    {
+      "num": 2,
+      "code": "ARC",
+      "name": "Architecture & System Design",
+      "group": "Architecture & Design",
+      "score": 6,
+      "band": "Adequate",
+      "assessment": "There's a real interactive architecture diagram, clearly-scoped components (Dashboard, Server A/B, Fargate pool, Redis, RDS, SNS), an explicit request-flow narrative, and honest failure-mode reasoning (the ElastiCache single-node risk is called out and paired with a concrete fallback rather than hidden). The scoring is held down by one significant, self-acknowledged defect: the primary diagram contradicts the documented locking model on a core invariant (FND-002), which is exactly the kind of diagram/prose mismatch the rubric treats as a red flag. There's also no consolidated NFR/SLO statement (FND-003).",
+      "findingIds": [
+        "FND-002",
+        "FND-003"
+      ],
+      "suggestions": "Redraw frag-architecture.html to match the per-technician lock model before using it to build from, and add a short NFR/SLO table consolidating the timing constants that are currently scattered across the flows sections.",
+      "strengths": "The ElastiCache HA callout (§5) is a model of how to document an accepted architectural risk: it names the SPOF, the trade-off reason, and a concrete, credible fallback (manual dispatch) instead of hand-waving it."
+    },
+    {
+      "num": 3,
+      "code": "FLW",
+      "name": "Feature Flows & System Sequencing",
+      "group": "Architecture & Design",
+      "score": 4,
+      "band": "Weak",
+      "assessment": "This section has real strengths — the three control flows (enable/disable/new-dispatch), the per-request assignment loop with an explicit retry-until-exhausted-then-escalate path, the SNS round-trip sequence, and the Socratic crash/slow-worker walkthrough in §12 are all clearly sequenced with unhappy paths modeled, which is more than most specs attempt. The score is capped by a Blocker: the worker's write-RDS-then-XACK ordering (§4 step 6) leaves a crash window that can lead to re-running the assignment flow on an already-assigned dispatch, violating the \"exactly-once\" guarantee the document asserts as achieved (FND-004). Several timing constants that other sections depend on for correctness are also never given concrete values (FND-005), and SNS Publish-failure handling is unaddressed (FND-006).",
+      "findingIds": [
+        "FND-004",
+        "FND-005",
+        "FND-006"
+      ],
+      "suggestions": "Close FND-004 first — add an explicit already-assigned check (or an atomic write+ack) to the reclaim path in §12 — since this is the one gap that undermines the document's central correctness claim. Then fill in the concrete timeout/TTL values and the SNS-failure handling.",
+      "strengths": "The retry-until-exhausted-then-escalate loop and the plain-language crash/slow-worker walkthrough in §12 are genuinely strong, readable unhappy-path documentation."
+    },
+    {
+      "num": 4,
+      "code": "DAT",
+      "name": "Data Schema & Modeling",
+      "group": "Engineering Contracts",
+      "score": 3,
+      "band": "Weak",
+      "assessment": "The ephemeral Redis coordination structures are documented well (§6's table: stream, per-tech lock, reply list, each with key pattern and purpose). But every piece of *persistent* new data this project introduces — the RDS dispatch-status fields, the technician availability record, and the techId→endpointArn mapping — is referenced only in prose, with no field names, types, constraints, keys/indexes, or migration approach given anywhere (FND-007). PII handling is a partial strength (the endpointArn is explicitly classified and its lifecycle described) but doesn't extend to the location/address data the ranking algorithm consumes (FND-008).",
+      "findingIds": [
+        "FND-007",
+        "FND-008"
+      ],
+      "suggestions": "Add a schema section or ERD for the three new/changed persistent structures (dispatch-status fields, availability record, endpointArn table) with field types, keys, and a migration note — this is the single largest gap in an otherwise build-ready-leaning document.",
+      "strengths": "The endpointArn PII callout in §11 (encrypted at rest, access-limited, upsert-cleans-stale-tokens) is a genuinely good model for how the missing RDS fields should be documented too."
+    },
+    {
+      "num": 5,
+      "code": "API",
+      "name": "API Contracts",
+      "group": "Engineering Contracts",
+      "score": 6,
+      "band": "Adequate",
+      "assessment": "The five new endpoints are enumerated with method, path, caller, purpose, and request body; auth is cleanly split control-plane vs data-plane against existing middleware; and the error contract (stable code/message/requestId envelope, enumerated global status codes, and a specifically-reasoned 409 for the SETNX-deduped reply) is unusually complete for a spec at this stage. The gap that holds the score down is that no endpoint shows a success-response schema (FND-009) — most consequential for the config GET, whose whole purpose depends on a shape that's never shown. Versioning and rate limiting are also unaddressed (FND-010, FND-011).",
+      "findingIds": [
+        "FND-009",
+        "FND-010",
+        "FND-011"
+      ],
+      "suggestions": "Add success-response examples for all five endpoints (the GET config response most urgently), then state versioning and rate-limiting positions even if the answer is \"unchanged from the existing platform.\"",
+      "strengths": "The \"two response types, two endpoints\" design rationale (§9) and the enumerated, endpoint-specific error contract are genuinely strong, client-ready API design thinking."
+    },
+    {
+      "num": 6,
+      "code": "LIB",
+      "name": "Libraries, Frameworks & Tech Stack",
+      "group": "Engineering Contracts",
+      "score": 7,
+      "band": "Good",
+      "assessment": "§3 names concrete, well-justified technologies for every layer (Flutter, SNS, APNs+FCM, FastAPI, redis.asyncio, ElastiCache, ECS Fargate, boto3) with a clear role for each, and the \"why SNS + FCM both\" callout is a good example of justifying a non-obvious choice. The stack is entirely mainstream/low-risk (AWS-native managed services plus long-established Python libraries), which limits the practical impact of the gaps below.",
+      "findingIds": [
+        "FND-012",
+        "FND-013"
+      ],
+      "suggestions": "Pin at least the worker's direct Python dependencies to a version, and add a one-line licensing confirmation.",
+      "strengths": "Every component in the stack table is named with a specific, non-generic role rather than described only by category (e.g. \"a queue\")."
+    },
+    {
+      "num": 7,
+      "code": "OBS",
+      "name": "Observability & Traceability",
+      "group": "Applied AI / LLM Engineering",
+      "score": "N/A",
+      "band": "N/A",
+      "assessment": "N/A — the system has no LLM/generative-AI component. The ranking algorithm (§8) is a deterministic weighted formula over stated inputs (ETA, familiarity), not a model making judgment calls, so AI-specific observability (prompts/completions/tokens/cost tracing) doesn't apply. Ordinary operational observability is covered instead under Onboarding/Go-live (§11 Phase 3: push-adoption %, stream lag, lock-hold time, BLPOP-timeout rate), which is the right substitute for this system.",
+      "findingIds": [],
+      "suggestions": "",
+      "strengths": ""
+    },
+    {
+      "num": 8,
+      "code": "EVL",
+      "name": "Evaluation Strategy",
+      "group": "Applied AI / LLM Engineering",
+      "score": "N/A",
+      "band": "N/A",
+      "assessment": "N/A — no model output requires an eval/golden-set strategy; the ranking formula's correctness is a matter of algorithm testing (see FND-016 for the closest analogue: no stated test plan for the locking logic), not model evaluation.",
+      "findingIds": [],
+      "suggestions": "",
+      "strengths": ""
+    },
+    {
+      "num": 9,
+      "code": "FBK",
+      "name": "Feedback Loops & Continuous Improvement",
+      "group": "Applied AI / LLM Engineering",
+      "score": "N/A",
+      "band": "N/A",
+      "assessment": "N/A for this phase — there's no learned model to retrain or drift-monitor today. Notably, §14 Future Improvements explicitly proposes a future \"reward/feedback loop\" that would feed accept/reject and job-outcome history back into ranking so weights self-tune — which confirms today's ranking is intentionally static/rules-based, not a system this area applies to yet.",
+      "findingIds": [],
+      "suggestions": "",
+      "strengths": ""
+    },
+    {
+      "num": 10,
+      "code": "CMP",
+      "name": "AI Compliance, Safety & Governance",
+      "group": "Applied AI / LLM Engineering",
+      "score": "N/A",
+      "band": "N/A",
+      "assessment": "N/A — no model provider, prompt, or generated content is in scope, so AI-specific governance (data-use terms, prompt-injection defense, hallucination mitigation) doesn't apply. General data-privacy handling for the one new PII field (device token/endpointArn) is assessed instead under Data Schema & Modeling (FND-008).",
+      "findingIds": [],
+      "suggestions": "",
+      "strengths": ""
+    },
+    {
+      "num": 11,
+      "code": "INF",
+      "name": "Infrastructure & Environment Setup",
+      "group": "Delivery & Operations",
+      "score": 5,
+      "band": "Adequate",
+      "assessment": "Environment separation is handled well — staging and production get fully isolated instances of every new resource (§11), which is exactly the right posture. IAM roles are named at a high level (SNS Publish, ECS scale control, ElastiCache access). What's missing is anything on secrets management for the sensitive APNs signing key and AWS credentials (FND-014), and any IaC tool or networking/VPC/security-group story for the new resources (FND-015) — Phase 0 currently reads as a manual provisioning checklist.",
+      "findingIds": [
+        "FND-014",
+        "FND-015"
+      ],
+      "suggestions": "State the secrets-management mechanism for the APNs key and any new credentials, name the IaC tool used for Phase 0 provisioning, and add a short networking paragraph (VPC/security groups) for the new ElastiCache and Fargate resources.",
+      "strengths": "Staging/production isolation (separate ElastiCache, RDS, Fargate service per environment, §11) is explicitly called out and is exactly the right practice."
+    },
+    {
+      "num": 12,
+      "code": "CICD",
+      "name": "CI/CD & Release Management",
+      "group": "Delivery & Operations",
+      "score": 5,
+      "band": "Adequate",
+      "assessment": "Reusing the client's existing CI/CD pipeline rather than inventing a new one is a legitimate, explicitly-stated scope decision for an augmentation to an existing platform (§11), and the division-by-division go-live sequencing (§11 Phase 3: monitoring first, pilot one division, then expand) functions as a sensible business-level canary rollout. What's missing is any test strategy for the new distributed-locking logic before it reaches production (FND-016) — the single riskiest piece of new code in the project — and any augmentation of the inherited rollback plan for this project's new failure modes, like stuck Redis locks (FND-017).",
+      "findingIds": [
+        "FND-016",
+        "FND-017"
+      ],
+      "suggestions": "Add a chaos/failure-injection test plan for the locking logic that must pass before the single-division pilot, and a short runbook addendum for clearing Redis state if a bad worker deploy needs rolling back mid-flight.",
+      "strengths": "The Phase 3 go-live sequencing (monitoring live first, then a single pilot division, then division-by-division expansion) is a sound, low-risk progressive-rollout strategy even without a formal blue/green deploy mechanism."
+    },
+    {
+      "num": 13,
+      "code": "CST",
+      "name": "Cost Projection",
+      "group": "Delivery & Operations",
+      "score": 9,
+      "band": "Excellent",
+      "assessment": "This is the strongest section in the document. The Fargate cost is derived from actual vCPU/GB-hour pricing rather than guessed; ElastiCache's fixed cost is computed; SNS push cost is computed from a stated volume assumption (500 dispatches/day × 5 techs × 30) and correctly shown to land inside the free tier; three real scenarios (Light/2h, 8h-ON, 24×7) are tabulated with a per-scenario total; sunk EC2/RDS cost is correctly excluded from the delta; and the scale-to-zero payoff is quantified (~12×). The one gap is a scaling-clarity nuance, not a missing assumption (FND-018).",
+      "findingIds": [
+        "FND-018"
+      ],
+      "suggestions": "Add one sentence clarifying whether the Fargate pool (and its N) is shared across all enabled divisions or provisioned per division, so the cost table reads correctly once more than one division is live.",
+      "strengths": "Grounded token/unit-cost math with stated volume assumptions and three real scenarios (not a single hand-waved number) is exactly what a strong cost-projection section looks like — this should be the template for the rest of the client's specs."
+    }
+  ],
+  "findings": [
+    {
+      "id": "FND-001",
+      "severity": "Minor",
+      "area": "OVR",
+      "finding": "The Problem & Goals section (§2) never states the current/projected dispatch volume driving the automation need. The only volume figure in the whole document — \"500 dispatches/day x 5 techs x 30\" — shows up unattributed inside the Cost Projection's SNS math example (§13), not as a stated business assumption in §2.",
+      "fix": "State the real (or explicitly-assumed) current daily/weekly dispatch volume per division in §2, and reuse that same number as the basis for the Cost Projection and the default Fargate task count N, so goals and infra sizing trace to one grounded figure instead of an example buried in §13.",
+      "status": "Open",
+      "authorResponse": null,
+      "adjudication": null,
+      "followUps": [],
+      "resolvedOn": null,
+      "decisionId": null
+    },
+    {
+      "id": "FND-002",
+      "severity": "Major",
+      "area": "ARC",
+      "finding": "The architecture diagram (frag-architecture.html, embedded in §4) still draws and labels a per-division lock (lock:div:Div_A / lock:div:*) as the concurrency mechanism, directly contradicting the actual, documented model — a per-technician lock (lock:tech:{techId}) in §6 Redis Data Structures — which is what makes the stated goal \"two requests run in parallel when their candidate technicians are disjoint (even within the same division)\" (§2) true. The document even flags the mismatch itself (\"diagram redraw pending\") but ships it uncorrected, so a team building from the diagram alone would implement per-division serialization and silently defeat one of the four stated invariants.",
+      "fix": "Redraw frag-architecture.html's Fargate-pool task cards and Redis-layer panel to show per-candidate-technician locking (lock:tech:{techId}) consistent with §6/§8/§12, before it is used as the build reference.",
+      "status": "Open",
+      "authorResponse": null,
+      "adjudication": null,
+      "followUps": [],
+      "resolvedOn": null,
+      "decisionId": null
+    },
+    {
+      "id": "FND-003",
+      "severity": "Minor",
+      "area": "ARC",
+      "finding": "No consolidated non-functional/SLO statement exists for the pipeline (e.g. target dispatch-to-first-offer latency, max concurrent in-flight dispatches per task, or how many divisions can be enabled simultaneously against one Fargate pool). Individual timing constants are scattered across flows (30s offer window, ~1 min ranking window) but never rolled up into a testable target.",
+      "fix": "Add a short NFR/SLO table: target dispatch-to-assignment latency, max concurrent in-flight dispatches per worker task, and an expected ceiling on simultaneously-enabled divisions per pool — so the architecture can be load-tested against a number.",
+      "status": "Open",
+      "authorResponse": null,
+      "adjudication": null,
+      "followUps": [],
+      "resolvedOn": null,
+      "decisionId": null
+    },
+    {
+      "id": "FND-004",
+      "severity": "Blocker",
+      "area": "FLW",
+      "finding": "§4 step 6 states the completion order as \"the worker writes to RDS, releases the lock, and XACKs the message\" — leaving a crash window between the RDS write and the XACK. If the worker dies in that window, the message stays unacknowledged in the stream's PEL; once the (TTL-based) lock naturally expires, §4 step 4 / §12 say a surviving worker \"runs the assignment flow\" again from the top for any reclaimed message, with no stated check for whether the dispatch was already assigned. That can re-run ranking and re-offer (and re-assign) a dispatch that RDS already recorded as assigned to a different technician — directly contradicting the \"exactly-once\" invariant the document asserts as an achieved guarantee no fewer than four times (§1, §2, §6 callout, §12 \"Net effect\").",
+      "fix": "Before a reclaimed/XCLAIMed message re-enters the assignment flow, have the worker check for an existing assignment (RDS lookup or a Redis \"assigned:{dispatchId}\" marker) and, if found, XACK and exit without re-offering. Alternatively make the RDS write and the lock-release/XACK sequence atomic (only release the lock after a successful XACK). Document whichever mechanism is chosen in §12 next to the existing crash/slow-worker walkthrough.",
+      "status": "Open",
+      "authorResponse": null,
+      "adjudication": null,
+      "followUps": [],
+      "resolvedOn": null,
+      "decisionId": null
+    },
+    {
+      "id": "FND-005",
+      "severity": "Minor",
+      "area": "FLW",
+      "finding": "The lock TTL, the stream consumer-group's visibility/claim-idle timeout, and the worker's BLPOP timeout T are all referenced as needing a specific ordering (\"T must stay below the division lock TTL\", §10) but none of the three is ever given a concrete value anywhere in the document, so the ordering constraint the design depends on can't actually be checked from the spec.",
+      "fix": "State the proposed concrete values (e.g. lock TTL = 90s, BLPOP timeout T = 30s, stream claim-idle-time = 60s) and confirm T < lock TTL < claim-idle-time holds with those numbers.",
+      "status": "Open",
+      "authorResponse": null,
+      "adjudication": null,
+      "followUps": [],
+      "resolvedOn": null,
+      "decisionId": null
+    },
+    {
+      "id": "FND-006",
+      "severity": "Minor",
+      "area": "FLW",
+      "finding": "The per-request flow doesn't address SNS Publish() failures (throttling, or a delivery failure reported for a candidate technician) — only the \"technician has no endpointArn at all\" onboarding case is covered (§11 Phase 2's fallback).",
+      "fix": "State what the worker does when Publish() itself errors or reports a delivery failure for a candidate: skip to the next ranked technician, retry with backoff, or count it toward that candidate's offer timeout.",
+      "status": "Open",
+      "authorResponse": null,
+      "adjudication": null,
+      "followUps": [],
+      "resolvedOn": null,
+      "decisionId": null
+    },
+    {
+      "id": "FND-007",
+      "severity": "Major",
+      "area": "DAT",
+      "finding": "The document repeatedly references new persisted data — \"dispatch status fields\" added to RDS (§2 non-goals), a technician's general availability record (§9 POST /technicians/{id}/availability), and the techId→endpointArn mapping (§11) — but none of it has a field-level schema: no table/column names, types, nullability, keys, or indexes, and no migration/versioning approach for the RDS changes. The Redis *ephemeral* coordination structures are documented well (§6's table); the *persistent* system-of-record changes are not.",
+      "fix": "Add a short schema section (or ERD) enumerating: the new/changed RDS columns (e.g. Dispatch.status enum + allowed values, Dispatch.assignedTechId, Dispatch.assignedAt), the endpointArn storage table (columns, a unique key on techId+platform for the upsert path described in §11, and its lookup index), and how/where the availability record is modeled and read by the ranking step.",
+      "status": "Open",
+      "authorResponse": null,
+      "adjudication": null,
+      "followUps": [],
+      "resolvedOn": null,
+      "decisionId": null
+    },
+    {
+      "id": "FND-008",
+      "severity": "Minor",
+      "area": "DAT",
+      "finding": "PII classification is done well for the one new field this project stores (device token/endpointArn, §11 callout) but not extended to technician location and customer/jobsite address, both of which feed the ranking algorithm's dist_i term — the doc waves these off as \"existing…out of scope\" for storage (fair), but doesn't confirm no *new* logging/trace surface this project adds captures them.",
+      "fix": "Add one line confirming that no new logging, metrics, or export surface introduced by this project persists technician location or customer address beyond what the existing platform already retains.",
+      "status": "Open",
+      "authorResponse": null,
+      "adjudication": null,
+      "followUps": [],
+      "resolvedOn": null,
+      "decisionId": null
+    },
+    {
+      "id": "FND-009",
+      "severity": "Major",
+      "area": "API",
+      "finding": "Every new endpoint's request body is specified, but none show a response body/schema for the success case. This is most consequential for GET /divisions/{id}/config, whose entire stated purpose is \"so the admin UI can render the switch position and weight sliders\" (§9) — which can't be built without knowing the response shape.",
+      "fix": "Add a success-response example (with status code) for each endpoint, at minimum GET /divisions/{id}/config → { enabled: bool, weights: {...} }.",
+      "status": "Open",
+      "authorResponse": null,
+      "adjudication": null,
+      "followUps": [],
+      "resolvedOn": null,
+      "decisionId": null
+    },
+    {
+      "id": "FND-010",
+      "severity": "Minor",
+      "area": "API",
+      "finding": "No API versioning strategy (path or header-based) is mentioned for any of the five new endpoints.",
+      "fix": "State the versioning approach explicitly, even if it's \"no versioning needed for this initial release, matches the platform's existing unversioned endpoints.\"",
+      "status": "Open",
+      "authorResponse": null,
+      "adjudication": null,
+      "followUps": [],
+      "resolvedOn": null,
+      "decisionId": null
+    },
+    {
+      "id": "FND-011",
+      "severity": "Minor",
+      "area": "API",
+      "finding": "No rate limiting is specified for any endpoint, including POST /technicians/{id}/availability and POST /dispatches/{id}/respond — both technician-triggerable and both able to be spammed by a buggy client retry loop.",
+      "fix": "State whether the existing platform's rate limiting already covers these new endpoints, or specify new limits if not.",
+      "status": "Open",
+      "authorResponse": null,
+      "adjudication": null,
+      "followUps": [],
+      "resolvedOn": null,
+      "decisionId": null
+    },
+    {
+      "id": "FND-012",
+      "severity": "Minor",
+      "area": "LIB",
+      "finding": "No library or runtime named in §3's tech-stack table is version-pinned (FastAPI, Python, redis.asyncio, boto3 all appear with no version number).",
+      "fix": "Pin Python and the worker's direct dependencies (FastAPI, the Redis client, boto3) to at least a minor version in the tech-stack table or a linked requirements file, and note the target AWS API versions for ECS/SNS if non-default.",
+      "status": "Open",
+      "authorResponse": null,
+      "adjudication": null,
+      "followUps": [],
+      "resolvedOn": null,
+      "decisionId": null
+    },
+    {
+      "id": "FND-013",
+      "severity": "Nit",
+      "area": "LIB",
+      "finding": "No licensing note for the named OSS pieces. Risk is low in practice (FastAPI/boto3/redis-py are all permissive MIT/Apache), but the document doesn't say so.",
+      "fix": "Add one sentence confirming no copyleft/AGPL dependency is introduced by this project's additions.",
+      "status": "Open",
+      "authorResponse": null,
+      "adjudication": null,
+      "followUps": [],
+      "resolvedOn": null,
+      "decisionId": null
+    },
+    {
+      "id": "FND-014",
+      "severity": "Major",
+      "area": "INF",
+      "finding": "No secrets-management approach is stated anywhere — notably for the Apple .p8 APNs signing key (§11 Phase 0: \"upload Apple .p8 key\") and any AWS credentials the workers/Server B use to call ECS/SNS/ElastiCache.",
+      "fix": "State where these secrets live (e.g. AWS Secrets Manager or Parameter Store with rotation) and confirm none are baked into the worker container image or task-definition environment variables as plaintext.",
+      "status": "Open",
+      "authorResponse": null,
+      "adjudication": null,
+      "followUps": [],
+      "resolvedOn": null,
+      "decisionId": null
+    },
+    {
+      "id": "FND-015",
+      "severity": "Major",
+      "area": "INF",
+      "finding": "No infrastructure-as-code tool is named for provisioning the new resources (ElastiCache cluster, ECS task definitions, SNS platform applications, IAM roles) — §11 Phase 0 reads as a manual checklist. Networking is also unaddressed: no VPC/subnet/security-group boundaries are described for how the new Fargate pool reaches ElastiCache (:6379) and RDS (:1433).",
+      "fix": "Name the IaC tool used to provision the Phase 0 resources (Terraform/CloudFormation/CDK) and add a short networking paragraph: which VPC/subnets the Fargate pool and ElastiCache node sit in, and the security-group rules permitting Fargate→Redis and Fargate→RDS.",
+      "status": "Open",
+      "authorResponse": null,
+      "adjudication": null,
+      "followUps": [],
+      "resolvedOn": null,
+      "decisionId": null
+    },
+    {
+      "id": "FND-016",
+      "severity": "Major",
+      "area": "CICD",
+      "finding": "There is no test strategy anywhere in the document for the new distributed-locking / exactly-once logic — the single riskiest piece of new code in this project (see FND-004). No unit tests for the lock/claim logic, no integration test simulating a worker crash or a slow-worker/stall, and no load or chaos testing are mentioned before the §11 Phase 3 pilot.",
+      "fix": "Add a testing subsection: at minimum, a chaos/failure-injection test that kills a worker mid-assignment and asserts no duplicate SNS offer or duplicate RDS write occurs, run and passing before the single-division pilot begins.",
+      "status": "Open",
+      "authorResponse": null,
+      "adjudication": null,
+      "followUps": [],
+      "resolvedOn": null,
+      "decisionId": null
+    },
+    {
+      "id": "FND-017",
+      "severity": "Minor",
+      "area": "CICD",
+      "finding": "The rollback plan is inherited wholesale from \"the client's established deployment strategy\" (§11) with no augmentation for this project's new failure modes — redeploying the previous task definition doesn't by itself clear a stuck Redis lock or an in-flight PEL entry left by a bad worker image.",
+      "fix": "Add a short runbook note: what to do to Redis state (locks, stream PEL) if a bad worker deploy needs to be rolled back while dispatches are in flight.",
+      "status": "Open",
+      "authorResponse": null,
+      "adjudication": null,
+      "followUps": [],
+      "resolvedOn": null,
+      "decisionId": null
+    },
+    {
+      "id": "FND-018",
+      "severity": "Minor",
+      "area": "CST",
+      "finding": "The cost table's N (Fargate task count) is presented as a single figure, but §9's /divisions/{id}/toggle scales the pool per division enable/disable event — the document never clarifies whether N is one shared pool serving all enabled divisions (a single consumer group across the whole stream) or scales per division as more divisions go live. This matters for real budgeting once more than one division is active.",
+      "fix": "Add one sentence clarifying whether the Fargate pool is shared platform-wide (single consumer group) or provisioned per division, and how the cost table's N and monthly figures should be read as additional divisions are enabled.",
+      "status": "Open",
+      "authorResponse": null,
+      "adjudication": null,
+      "followUps": [],
+      "resolvedOn": null,
+      "decisionId": null
+    }
+  ],
+  "questions": [
+    "Is the Fargate consumer-group pool shared across all enabled divisions (one global N), or does each division get its own pool? This affects both FND-002/ARC's lock-model reading and FND-018's cost-scaling clarity.",
+    "What are the actual planned values for the Redis lock TTL, the stream's consumer-group visibility/claim-idle timeout, and the worker's BLPOP timeout T?",
+    "Is there an existing RDS schema/migration document for the 'dispatch status fields' mentioned in §2's non-goals that simply wasn't included in this spec?",
+    "Does the current EC2 platform already have a secrets-management pattern (Secrets Manager, Parameter Store, vault) this project is expected to reuse for the new APNs .p8 key and any new credentials?",
+    "Does the client's existing CI/CD pipeline already include a load/chaos-testing gate that would exercise new concurrency logic like this, or would that need to be added net-new for this project?"
+  ],
+  "nextActions": [
+    "Close FND-004 first: define and document the already-assigned check (or atomic write+ack) that makes 'exactly-once' hold across a worker crash between the RDS write and the XACK.",
+    "Add the missing RDS field-level schema (FND-007) for dispatch-status fields, the availability record, and the endpointArn table.",
+    "Redraw frag-architecture.html to match the per-technician lock model (FND-002) so the primary diagram and the prose agree.",
+    "Add a chaos/failure-injection test plan for the locking logic (FND-016), run before the Phase 3 single-division pilot.",
+    "Fill in secrets-management and IaC/networking details (FND-014, FND-015) for the new AWS resources."
+  ]
+}</script>
+
+<header class="topbar">
+  <div class="topbar-inner">
+    <div class="scoreball"><span class="num" id="tb-score">–</span><span class="den">/10</span></div>
+    <h1 class="title" id="tb-title">Technical Specification Review<small id="tb-sub"></small></h1>
+    <span class="verdict-badge" id="tb-verdict">—</span>
+  </div>
+</header>
+
+<div class="wrap" id="root">
+  <div class="meta" id="meta"></div>
+  <div id="round-banner"></div>
+
+  <div class="card" id="exec">
+    <h2>Executive summary</h2>
+    <p class="summary-text" id="exec-summary"></p>
+    <div id="gating-wrap"></div>
+    <div id="strengths-wrap"></div>
+  </div>
+
+  <div class="section-label">Scorecard</div>
+  <div class="card"><table class="scorecard"><thead><tr>
+    <th>#</th><th>Area</th><th class="col-bar">Score</th><th>/10</th><th>Status</th>
+  </tr></thead><tbody id="scorecard-body"></tbody></table></div>
+
+  <div class="section-label">Area detail</div>
+  <div class="toolbar">
+    <button class="btn" id="expandAll">Expand all</button>
+    <button class="btn" id="collapseAll">Collapse all</button>
+  </div>
+  <div id="areas"></div>
+
+  <div class="section-label">Findings register</div>
+  <div class="sevfilter" id="sevfilter"></div>
+  <div class="card"><table class="findings"><thead><tr>
+    <th>ID</th><th>Sev.</th><th>Status</th><th>Area</th><th>Finding</th><th>Suggested fix</th>
+  </tr></thead><tbody id="findings-body"></tbody></table></div>
+
+  <div class="section-label">Open items — respond &amp; export</div>
+  <p class="progress-line" style="margin:4px 0 0">Type a response under each open finding, choose an intent, then <b>Export responses</b> — the page downloads a Markdown file named for this review. Save it in <code>tl-output/</code> and run <code>/tl:resolve</code> on it to have the agent adjudicate and close items.</p>
+  <div id="respond-list"></div>
+  <div class="respond-actions">
+    <button class="btn primary" id="exportBtn">Export responses</button>
+    <span id="export-note"></span>
+  </div>
+
+  <div class="section-label">Clarifying questions for the author</div>
+  <div class="card"><ul class="qs" id="questions"></ul></div>
+
+  <div class="section-label">Recommended next actions</div>
+  <div class="card"><ol class="actions" id="actions"></ol></div>
+
+  <footer id="footer"></footer>
+</div>
+
+<script>
+(function () {
+  "use strict";
+  var SEV = {
+    Blocker: { c: "var(--blocker)" }, Major: { c: "var(--major)" },
+    Minor: { c: "var(--minor)" }, Nit: { c: "var(--nit)" }
+  };
+  var SEV_ORDER = ["Blocker", "Major", "Minor", "Nit"];
+  var STATUS = {
+    "Open": "var(--muted)", "Needs-verification": "var(--minor)", "Responded": "var(--accent)",
+    "Resolved": "var(--excellent)", "Accepted-risk": "var(--accent)", "Won't-fix": "var(--stub)"
+  };
+  var TERMINAL = { "Resolved": 1, "Accepted-risk": 1, "Won't-fix": 1 };
+  function statusOf(f) { return f.status || "Open"; }
+  function statusColor(s) { return STATUS[s] || "var(--muted)"; }
+
+  function el(tag, attrs, kids) {
+    var n = document.createElement(tag);
+    if (attrs) for (var k in attrs) {
+      if (k === "class") n.className = attrs[k];
+      else if (k === "html") n.innerHTML = attrs[k];
+      else if (k === "text") n.textContent = attrs[k];
+      else n.setAttribute(k, attrs[k]);
+    }
+    (kids || []).forEach(function (c) { if (c) n.appendChild(typeof c === "string" ? document.createTextNode(c) : c); });
+    return n;
+  }
+  function scoreColor(s) {
+    if (s === "N/A" || s == null) return "var(--na)";
+    s = +s;
+    if (s >= 9) return "var(--excellent)"; if (s >= 7) return "var(--good)";
+    if (s >= 5) return "var(--adequate)"; if (s >= 3) return "var(--weak)";
+    if (s >= 1) return "var(--stub)"; return "var(--absent)";
+  }
+  function verdictColor(v) {
+    v = (v || "").toLowerCase();
+    if (v.indexOf("ready to build") === 0) return "var(--excellent)";
+    if (v.indexOf("caveat") >= 0) return "var(--adequate)";
+    if (v.indexOf("not ready") >= 0 || v.indexOf("major rework") >= 0) return "var(--absent)";
+    return "var(--weak)"; // "significant gaps"
+  }
+
+  var data;
+  try { data = JSON.parse(document.getElementById("review-data").textContent); }
+  catch (e) {
+    document.getElementById("root").innerHTML =
+      '<div class="card"><h2>No review data</h2><p class="empty">This template has not been populated yet. ' +
+      'The TL agent injects the review JSON into the <code>#review-data</code> block.</p></div>';
+    return;
+  }
+
+  // ---- Header ----
+  document.getElementById("tb-score").textContent = (data.overallScore != null ? data.overallScore : "–");
+  document.getElementById("tb-score").style.color = scoreColor(Math.round(data.overallScore));
+  document.getElementById("tb-title").firstChild.textContent = (data.project || "Technical Specification") + " — Review";
+  document.getElementById("tb-sub").textContent = data.documentVersion ? ("v" + data.documentVersion) : "";
+  var vb = document.getElementById("tb-verdict");
+  vb.textContent = data.verdict || ""; vb.style.background = verdictColor(data.verdict);
+
+  // ---- Meta chips ----
+  var sys = data.system || {};
+  var meta = document.getElementById("meta");
+  function chip(label, val, cls) { return el("span", { class: "chip " + (cls || "") },
+    [document.createTextNode(label + " "), el("b", { text: val })]); }
+  if (data.documentReviewed) meta.appendChild(chip("Document:", data.documentReviewed));
+  meta.appendChild(chip("Reviewed:", data.reviewDate || "—"));
+  meta.appendChild(chip("AI / LLM system?", sys.isAI ? "Yes" : "No", sys.isAI ? "yes" : "no"));
+  meta.appendChild(chip("Multiple systems?", sys.multiSystem ? "Yes" : "No", sys.multiSystem ? "yes" : "no"));
+
+  // ---- Executive summary ----
+  document.getElementById("exec-summary").textContent = data.executiveSummary || "";
+  var findingById = {}; (data.findings || []).forEach(function (f) { findingById[f.id] = f; });
+  var gating = (data.gatingFindings || []).map(function (id) { return findingById[id]; }).filter(Boolean);
+  if (gating.length) {
+    var gw = document.getElementById("gating-wrap");
+    gw.appendChild(el("h4", { class: "section-label", text: "Gating findings", style: "margin-top:6px" }));
+    var ul = el("ul", { class: "gating" });
+    gating.forEach(function (f) {
+      ul.appendChild(el("li", { style: "border-left-color:" + SEV[f.severity].c }, [
+        el("a", { href: "#" + f.id, class: "fid", text: f.id }),
+        el("span", {}, [el("span", { class: "sevtag", style: "background:" + SEV[f.severity].c, text: f.severity }),
+          document.createTextNode(" " + f.finding + " "),
+          el("span", { class: "fix", text: "→ " + f.fix })])
+      ]));
+    });
+    gw.appendChild(ul);
+  }
+  if (data.strengths && data.strengths.length) {
+    var sw = document.getElementById("strengths-wrap");
+    sw.appendChild(el("h4", { class: "section-label", text: "Notable strengths", style: "margin-top:14px" }));
+    var sl = el("ul", { class: "strength-list" });
+    data.strengths.forEach(function (s) { sl.appendChild(el("li", { text: s })); });
+    sw.appendChild(sl);
+  }
+
+  // ---- Scorecard ----
+  var body = document.getElementById("scorecard-body");
+  var lastGroup = null;
+  (data.areas || []).forEach(function (a) {
+    if (a.group && a.group !== lastGroup) {
+      lastGroup = a.group;
+      var gr = el("tr", { class: "grp-row" }); gr.appendChild(el("td", { colspan: "5", text: a.group }));
+      body.appendChild(gr);
+    }
+    var isNA = (a.score === "N/A" || a.score == null);
+    var col = scoreColor(a.score);
+    var bar = el("div", { class: "bar" });
+    if (!isNA) bar.appendChild(el("span", { style: "width:" + (a.score * 10) + "%;background:" + col }));
+    var tr = el("tr", { class: "area-row", "data-area": a.code });
+    tr.appendChild(el("td", { class: "areacode", text: a.num }));
+    tr.appendChild(el("td", {}, [el("span", { text: a.name }), document.createTextNode("  "),
+      el("span", { class: "areacode", text: a.code })]));
+    tr.appendChild(el("td", { class: "col-bar" }, [bar]));
+    tr.appendChild(el("td", { class: "scorenum", style: "color:" + col, text: isNA ? "N/A" : a.score }));
+    tr.appendChild(el("td", {}, [el("span", { class: "statuslbl", style: "color:" + col, text: a.band || "" })]));
+    tr.addEventListener("click", function () {
+      var d = document.getElementById("area-" + a.code);
+      if (d) { d.open = true; d.scrollIntoView({ behavior: "smooth", block: "start" }); }
+    });
+    body.appendChild(tr);
+  });
+  var totColor = scoreColor(Math.round(data.overallScore));
+  var totr = el("tr", { class: "total-row" });
+  totr.appendChild(el("td", { colspan: "3", text: "Overall (avg of applicable)" }));
+  totr.appendChild(el("td", { class: "scorenum", style: "color:" + totColor, text: data.overallScore }));
+  totr.appendChild(el("td", {}, [el("span", { class: "statuslbl", style: "color:" + totColor, text: data.verdict || "" })]));
+  body.appendChild(totr);
+
+  // ---- Area detail ----
+  var areasWrap = document.getElementById("areas");
+  (data.areas || []).forEach(function (a) {
+    var isNA = (a.score === "N/A" || a.score == null);
+    var col = scoreColor(a.score);
+    var d = el("details", { class: "area", id: "area-" + a.code });
+    if (!isNA && +a.score < 5) d.open = true; // surface the weak areas by default
+    var sum = el("summary", {}, [
+      el("span", { class: "swatch", style: "background:" + col }),
+      el("span", { class: "aname", text: a.num + ". " + a.name }),
+      el("span", { class: "areacode", text: a.code }),
+      el("span", { class: "ascore", style: "color:" + col, text: isNA ? "N/A" : (a.score + "/10") })
+    ]);
+    var b = el("div", { class: "area-body" });
+    b.appendChild(el("h4", { text: "Assessment" }));
+    b.appendChild(el("p", { text: a.assessment || "—" }));
+    b.appendChild(el("h4", { text: "Findings" }));
+    if (a.findingIds && a.findingIds.length) {
+      var cr = el("div", { class: "fnd-chiprow" });
+      a.findingIds.forEach(function (id) {
+        var f = findingById[id];
+        var chip = el("span", { class: "fnd-chip", title: f ? (f.severity + ": " + f.finding) : "",
+          style: f ? ("border-left:3px solid " + SEV[f.severity].c) : "", text: id });
+        chip.addEventListener("click", function () { jumpTo(id); });
+        cr.appendChild(chip);
+      });
+      b.appendChild(cr);
+    } else { b.appendChild(el("p", { class: "empty", text: "None — covered well." })); }
+    if (a.suggestions) { b.appendChild(el("h4", { text: "Suggestions" })); b.appendChild(el("p", { text: a.suggestions })); }
+    if (a.strengths) { b.appendChild(el("h4", { text: "Strengths" })); b.appendChild(el("p", { text: a.strengths })); }
+    d.appendChild(sum); d.appendChild(b); areasWrap.appendChild(d);
+  });
+  document.getElementById("expandAll").addEventListener("click", function () {
+    document.querySelectorAll("details.area").forEach(function (d) { d.open = true; }); });
+  document.getElementById("collapseAll").addEventListener("click", function () {
+    document.querySelectorAll("details.area").forEach(function (d) { d.open = false; }); });
+
+  // ---- Findings register + severity filter ----
+  var counts = { Blocker: 0, Major: 0, Minor: 0, Nit: 0 };
+  (data.findings || []).forEach(function (f) { if (counts[f.severity] != null) counts[f.severity]++; });
+  var fbody = document.getElementById("findings-body");
+  var sorted = (data.findings || []).slice().sort(function (x, y) {
+    return SEV_ORDER.indexOf(x.severity) - SEV_ORDER.indexOf(y.severity) || x.id.localeCompare(y.id);
+  });
+  if (!sorted.length) { fbody.appendChild(el("tr", {}, [el("td", { colspan: "6", class: "empty", text: "No findings logged." })])); }
+  sorted.forEach(function (f) {
+    var st = statusOf(f);
+    var tr = el("tr", { id: f.id, "data-sev": f.severity });
+    if (TERMINAL[st]) tr.className = "terminal";
+    tr.appendChild(el("td", {}, [el("span", { class: "fid", text: f.id })]));
+    tr.appendChild(el("td", {}, [el("span", { class: "sevtag", style: "background:" + SEV[f.severity].c, text: f.severity })]));
+    tr.appendChild(el("td", {}, [el("span", { class: "statustag", style: "background:" + statusColor(st), text: st })]));
+    tr.appendChild(el("td", {}, [el("span", { class: "areatag", text: f.area || "" })]));
+    var fcell = el("td", {}, [document.createTextNode(f.finding || "")]);
+    if (f.adjudication) fcell.appendChild(el("span", { class: "reso-line" },
+      [el("b", { text: "↳ " + st + ": " }), document.createTextNode(f.adjudication)]));
+    tr.appendChild(fcell);
+    tr.appendChild(el("td", { text: f.fix || "" }));
+    fbody.appendChild(tr);
+  });
+
+  var active = "All";
+  var sf = document.getElementById("sevfilter");
+  function mkSev(label, count, color) {
+    var b = el("button", { class: "sevbtn", "aria-pressed": label === "All" ? "true" : "false" });
+    if (color) b.appendChild(el("span", { class: "dot", style: "background:" + color }));
+    b.appendChild(document.createTextNode(label + (count != null ? " (" + count + ")" : "")));
+    b.addEventListener("click", function () {
+      active = label;
+      sf.querySelectorAll(".sevbtn").forEach(function (x) { x.setAttribute("aria-pressed", "false"); });
+      b.setAttribute("aria-pressed", "true");
+      fbody.querySelectorAll("tr").forEach(function (tr) {
+        if (!tr.getAttribute("data-sev")) return;
+        tr.hidden = (label !== "All" && tr.getAttribute("data-sev") !== label);
+      });
+    });
+    return b;
+  }
+  sf.appendChild(mkSev("All", (data.findings || []).length, null));
+  SEV_ORDER.forEach(function (s) { sf.appendChild(mkSev(s, counts[s], SEV[s].c)); });
+
+  function jumpTo(id) {
+    if (active !== "All") sf.querySelector(".sevbtn").click();
+    var row = document.getElementById(id);
+    if (row) { row.hidden = false; row.scrollIntoView({ behavior: "smooth", block: "center" });
+      row.classList.add("flash"); setTimeout(function () { row.classList.remove("flash"); }, 1700); }
+  }
+
+  // ---- Round banner + progress ----
+  var rbWrap = document.getElementById("round-banner");
+  if (data.round && data.round > 1) {
+    var rb = el("div", { class: "round-banner" }, [el("span", { class: "pill", text: "Round " + data.round })]);
+    if (data.priorReview) rb.appendChild(el("span", { class: "progress-line", text: "resolves spec-review-" + data.priorReview }));
+    var fsAll = data.findings || [];
+    var closedN = fsAll.filter(function (f) { return TERMINAL[statusOf(f)]; }).length;
+    if (fsAll.length) rb.appendChild(el("span", { class: "progress-line",
+      text: "· " + closedN + " of " + fsAll.length + " findings closed" + (closedN < fsAll.length ? ", " + (fsAll.length - closedN) + " still open" : " — all resolved") }));
+    rbWrap.appendChild(rb);
+  }
+
+  // ---- Open items: respond & export ----
+  var openItems = (data.findings || []).filter(function (f) { return !TERMINAL[statusOf(f)]; });
+  var rl = document.getElementById("respond-list");
+  var exportBtn = document.getElementById("exportBtn");
+  var exportNote = document.getElementById("export-note");
+  if (!openItems.length) {
+    rl.appendChild(el("p", { class: "empty", text: "All findings are closed — nothing to respond to." }));
+    if (exportBtn) exportBtn.style.display = "none";
+  } else {
+    openItems.forEach(function (f) {
+      var st = statusOf(f);
+      var card = el("div", { class: "respond-card", "data-fid": f.id });
+      card.appendChild(el("div", { class: "rc-head" }, [
+        el("span", { class: "fid", text: f.id }),
+        el("span", { class: "sevtag", style: "background:" + SEV[f.severity].c, text: f.severity }),
+        el("span", { class: "statustag", style: "background:" + statusColor(st), text: st }),
+        el("span", { class: "areatag", text: f.area || "" })
+      ]));
+      card.appendChild(el("div", { class: "rc-finding", text: f.finding || "" }));
+      if (f.followUps && f.followUps.length) {
+        var fu = el("div", { class: "followups" }, [el("b", { text: "Please address:" })]);
+        var ul = el("ul"); f.followUps.forEach(function (qq) { ul.appendChild(el("li", { text: qq })); });
+        fu.appendChild(ul); card.appendChild(fu);
+      }
+      card.appendChild(el("label", { class: "fld", text: "Your response" }));
+      var ta = el("textarea", { "data-fid": f.id, placeholder: "Explain how this is handled, or why it's accepted / declined…" });
+      if (f.authorResponse) ta.value = f.authorResponse;
+      card.appendChild(ta);
+      card.appendChild(el("label", { class: "fld", text: "Intent" }));
+      var sel = el("select", { "data-fid": f.id });
+      ["resolve", "accept-risk", "need-info", "wont-fix"].forEach(function (opt) {
+        sel.appendChild(el("option", { value: opt, text: opt }));
+      });
+      card.appendChild(sel);
+      rl.appendChild(card);
+    });
+  }
+
+  if (exportBtn) exportBtn.addEventListener("click", function () {
+    var reviewId = data.reviewId || "review";
+    var L = ["---", "doc_type: spec-review-responses", "source_review: " + reviewId,
+      "spec: " + (data.documentReviewed || ""), "exported_from: html-report", "---", "",
+      "# Responses to spec-review-" + reviewId, "",
+      "> Each section is one finding. Edit the response and intent, then run `/tl:resolve` on this file.", ""];
+    var answered = 0;
+    rl.querySelectorAll(".respond-card").forEach(function (card) {
+      var fid = card.getAttribute("data-fid");
+      var f = findingById[fid] || {};
+      var resp = (card.querySelector("textarea").value || "").trim();
+      var intent = card.querySelector("select").value;
+      L.push("## " + fid + " — [" + (f.severity || "") + " · " + (f.area || "") + "] " + (f.finding || ""));
+      L.push("**Intent:** " + intent);
+      L.push("**Response:**");
+      L.push(resp || "(no response yet)");
+      L.push("");
+      if (resp) answered++;
+    });
+    var blob = new Blob([L.join("\n")], { type: "text/markdown;charset=utf-8" });
+    var url = URL.createObjectURL(blob);
+    var a = el("a", { href: url, download: "spec-review-" + reviewId + "-responses.md" });
+    document.body.appendChild(a); a.click(); document.body.removeChild(a);
+    setTimeout(function () { URL.revokeObjectURL(url); }, 1500);
+    if (exportNote) exportNote.textContent = answered
+      ? "Downloaded spec-review-" + reviewId + "-responses.md (" + answered + " answered) — save it in tl-output/ and run /tl:resolve on it."
+      : "Downloaded, but no responses were filled in yet — add some and export again.";
+  });
+
+  // ---- Questions / actions / footer ----
+  var q = document.getElementById("questions");
+  (data.questions || []).forEach(function (t) { q.appendChild(el("li", { text: t })); });
+  if (!(data.questions || []).length) q.appendChild(el("li", { class: "empty", text: "None raised." }));
+  var ac = document.getElementById("actions");
+  (data.nextActions || []).forEach(function (t) { ac.appendChild(el("li", { text: t })); });
+  document.getElementById("footer").textContent =
+    "Generated by the Techjays TL Agent · tl-spec-review · " + (data.reviewDate || "");
+})();
+</script>
+</body>
+</html>

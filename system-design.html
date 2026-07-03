@@ -1,0 +1,996 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ClimatePros — Auto-Dispatch (Use Case A) System Design</title>
+    <style>
+        :root {
+            --primary: #1a56db;
+            --primary-light: #e8effc;
+            --primary-dark: #0f3a8e;
+            --accent: #059669;
+            --accent-light: #d1fae5;
+            --warning: #d97706;
+            --warning-light: #fef3c7;
+            --danger: #dc2626;
+            --danger-light: #fee2e2;
+            --bg: #f8fafc;
+            --surface: #ffffff;
+            --border: #e2e8f0;
+            --text: #1e293b;
+            --text-muted: #64748b;
+            --code-bg: #f1f5f9;
+            --stage-upload: #6366f1;
+            --stage-analyze: #8b5cf6;
+            --stage-estimate: #f97316;
+            --stage-quote: #10b981;
+        }
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+            background: var(--bg);
+            color: var(--text);
+            line-height: 1.7;
+        }
+
+        /* Navigation */
+        .sidebar {
+            position: fixed;
+            left: 0;
+            top: 0;
+            width: 280px;
+            height: 100vh;
+            background: var(--surface);
+            border-right: 1px solid var(--border);
+            padding: 24px 0;
+            overflow-y: auto;
+            z-index: 100;
+        }
+        .sidebar-brand {
+            padding: 0 24px 20px;
+            border-bottom: 1px solid var(--border);
+            margin-bottom: 16px;
+        }
+        .sidebar-brand h2 {
+            font-size: 18px;
+            color: var(--primary);
+            font-weight: 700;
+        }
+        .sidebar-brand span {
+            font-size: 12px;
+            color: var(--text-muted);
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+        .nav-section {
+            padding: 8px 24px;
+            font-size: 11px;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 1.5px;
+            color: var(--text-muted);
+        }
+        .nav-link {
+            display: block;
+            padding: 8px 24px 8px 32px;
+            color: var(--text);
+            text-decoration: none;
+            font-size: 14px;
+            transition: all 0.15s;
+            border-left: 3px solid transparent;
+        }
+        .nav-link:hover {
+            background: var(--primary-light);
+            color: var(--primary);
+            border-left-color: var(--primary);
+        }
+        .nav-link.sub { padding-left: 48px; font-size: 13px; color: var(--text-muted); }
+
+        /* Main Content */
+        .main {
+            margin-left: 280px;
+            padding: 40px 60px 100px;
+            max-width: 1200px;
+        }
+
+        /* Hero */
+        .hero {
+            background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%);
+            color: #fff;
+            padding: 48px;
+            border-radius: 16px;
+            margin-bottom: 48px;
+        }
+        .hero h1 { font-size: 36px; font-weight: 800; margin-bottom: 8px; }
+        .hero .subtitle { font-size: 18px; opacity: 0.9; margin-bottom: 20px; }
+        .hero-meta {
+            display: flex;
+            gap: 24px;
+            font-size: 13px;
+            opacity: 0.8;
+            flex-wrap: wrap;
+        }
+        .hero-meta span { display: flex; align-items: center; gap: 6px; }
+
+        /* Sections */
+        section { margin-bottom: 56px; }
+        h2 {
+            font-size: 26px;
+            font-weight: 700;
+            color: var(--primary-dark);
+            margin-bottom: 20px;
+            padding-bottom: 10px;
+            border-bottom: 2px solid var(--primary-light);
+        }
+        h3 {
+            font-size: 20px;
+            font-weight: 600;
+            color: var(--text);
+            margin: 28px 0 14px;
+        }
+        h4 {
+            font-size: 16px;
+            font-weight: 600;
+            margin: 20px 0 10px;
+            color: var(--text);
+        }
+        p { margin-bottom: 14px; color: var(--text); }
+
+        /* Cards */
+        .card {
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            padding: 24px;
+            margin-bottom: 20px;
+        }
+        .card-header {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            margin-bottom: 14px;
+        }
+        .card-header .icon {
+            width: 40px;
+            height: 40px;
+            border-radius: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 20px;
+        }
+        .card-header h4 { margin: 0; font-size: 17px; }
+        .card-header p { margin: 0; font-size: 13px; color: var(--text-muted); }
+
+        /* Tech Stack Grid */
+        .tech-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+            gap: 16px;
+        }
+        .tech-card {
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: 10px;
+            padding: 20px;
+            text-align: center;
+            transition: transform 0.15s;
+        }
+        .tech-card:hover { transform: translateY(-2px); box-shadow: 0 4px 12px rgba(0,0,0,0.08); }
+        .tech-card .tech-icon { font-size: 32px; margin-bottom: 10px; }
+        .tech-card .tech-name { font-weight: 700; font-size: 15px; }
+        .tech-card .tech-ver { font-size: 12px; color: var(--text-muted); }
+        .tech-card .tech-role { font-size: 13px; color: var(--text-muted); margin-top: 6px; }
+
+        /* Pipeline Diagram */
+        .pipeline {
+            display: flex;
+            align-items: center;
+            gap: 0;
+            padding: 28px 0;
+            overflow-x: auto;
+        }
+        .stage-node {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            min-width: 140px;
+            text-align: center;
+        }
+        .stage-circle {
+            width: 64px;
+            height: 64px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 24px;
+            color: #fff;
+            font-weight: 700;
+            margin-bottom: 10px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+        }
+        .stage-label { font-weight: 600; font-size: 13px; }
+        .stage-type {
+            font-size: 11px;
+            padding: 2px 8px;
+            border-radius: 10px;
+            margin-top: 4px;
+            font-weight: 600;
+        }
+        .type-sync { background: var(--accent-light); color: var(--accent); }
+        .type-async { background: var(--warning-light); color: var(--warning); }
+        .stage-arrow {
+            font-size: 24px;
+            color: var(--text-muted);
+            margin: 0 4px;
+            margin-bottom: 30px;
+        }
+
+        /* State Machine */
+        .state-machine {
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            padding: 30px;
+            overflow-x: auto;
+        }
+        .state-row {
+            display: flex;
+            align-items: center;
+            padding: 10px 0;
+            border-bottom: 1px solid var(--border);
+            font-size: 14px;
+        }
+        .state-row:last-child { border-bottom: none; }
+        .state-from {
+            min-width: 220px;
+            font-family: 'Consolas', 'Monaco', monospace;
+            font-weight: 600;
+        }
+        .state-arrow-sm { min-width: 40px; color: var(--text-muted); text-align: center; }
+        .state-to { font-family: 'Consolas', 'Monaco', monospace; }
+        .state-tag {
+            display: inline-block;
+            padding: 2px 10px;
+            border-radius: 6px;
+            font-size: 12px;
+            margin: 2px 4px;
+            font-weight: 600;
+        }
+        .state-running { background: var(--warning-light); color: var(--warning); }
+        .state-done { background: var(--accent-light); color: var(--accent); }
+        .state-failed { background: var(--danger-light); color: var(--danger); }
+
+        /* Table */
+        .table-wrapper {
+            overflow-x: auto;
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            margin: 16px 0;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 14px;
+        }
+        thead { background: var(--primary); color: #fff; }
+        th {
+            padding: 12px 16px;
+            text-align: left;
+            font-weight: 600;
+            font-size: 13px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+        td {
+            padding: 10px 16px;
+            border-bottom: 1px solid var(--border);
+            vertical-align: top;
+        }
+        tr:nth-child(even) { background: #fafbfc; }
+        tr:hover { background: var(--primary-light); }
+
+        /* Code */
+        code {
+            background: var(--code-bg);
+            padding: 2px 7px;
+            border-radius: 5px;
+            font-family: 'Consolas', 'Monaco', monospace;
+            font-size: 13px;
+            color: var(--primary-dark);
+        }
+        pre {
+            background: #1e293b;
+            color: #e2e8f0;
+            padding: 20px 24px;
+            border-radius: 10px;
+            overflow-x: auto;
+            margin: 16px 0;
+            font-family: 'Consolas', 'Monaco', monospace;
+            font-size: 13px;
+            line-height: 1.6;
+        }
+        pre code { background: none; padding: 0; color: inherit; }
+        .kw { color: #c084fc; }
+        .fn { color: #67e8f9; }
+        .str { color: #86efac; }
+        .cmt { color: #64748b; font-style: italic; }
+        .num { color: #fbbf24; }
+
+        /* Badges */
+        .badge {
+            display: inline-block;
+            padding: 3px 10px;
+            border-radius: 6px;
+            font-size: 12px;
+            font-weight: 600;
+        }
+        .badge-get { background: #dbeafe; color: #1d4ed8; }
+        .badge-post { background: #d1fae5; color: #059669; }
+        .badge-patch { background: #fef3c7; color: #d97706; }
+        .badge-ws { background: #ede9fe; color: #7c3aed; }
+        .badge-202 { background: #fce7f3; color: #db2777; }
+        .badge-200 { background: #d1fae5; color: #059669; }
+
+        /* Infra Diagram */
+        .infra-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 16px;
+            margin: 20px 0;
+        }
+        .infra-card {
+            background: var(--surface);
+            border: 2px solid var(--border);
+            border-radius: 12px;
+            padding: 20px;
+            text-align: center;
+        }
+        .infra-card .infra-icon { font-size: 36px; margin-bottom: 8px; }
+        .infra-card .infra-name { font-weight: 700; font-size: 16px; }
+        .infra-card .infra-tech { font-size: 13px; color: var(--text-muted); }
+        .infra-card .infra-port {
+            margin-top: 8px;
+            font-family: monospace;
+            font-size: 12px;
+            color: var(--primary);
+            background: var(--primary-light);
+            padding: 2px 8px;
+            border-radius: 4px;
+        }
+
+        /* ER Diagram */
+        .er-diagram {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+            gap: 16px;
+            margin: 20px 0;
+        }
+        .er-table {
+            background: var(--surface);
+            border: 2px solid var(--border);
+            border-radius: 10px;
+            overflow: hidden;
+        }
+        .er-table-name {
+            background: var(--primary);
+            color: #fff;
+            padding: 10px 16px;
+            font-weight: 700;
+            font-size: 14px;
+            letter-spacing: 0.5px;
+        }
+        .er-cols { padding: 8px 0; }
+        .er-col {
+            padding: 4px 16px;
+            font-size: 13px;
+            font-family: 'Consolas', monospace;
+            display: flex;
+            justify-content: space-between;
+        }
+        .er-col:nth-child(even) { background: #fafbfc; }
+        .er-col .col-name { font-weight: 600; }
+        .er-col .col-type { color: var(--text-muted); font-size: 12px; }
+        .er-col .pk { color: var(--warning); }
+        .er-col .fk { color: var(--primary); }
+
+        /* Data Flow */
+        .flow-step {
+            display: flex;
+            align-items: flex-start;
+            gap: 20px;
+            margin: 20px 0;
+            padding: 20px;
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            border-left: 4px solid var(--primary);
+        }
+        .flow-num {
+            min-width: 36px;
+            height: 36px;
+            border-radius: 50%;
+            background: var(--primary);
+            color: #fff;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: 700;
+            font-size: 16px;
+        }
+        .flow-content h4 { margin: 0 0 6px; }
+        .flow-content p { margin: 0; font-size: 14px; color: var(--text-muted); }
+
+        /* Relationship lines */
+        .rel-list {
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: 10px;
+            padding: 20px;
+            margin: 16px 0;
+        }
+        .rel-item {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            padding: 8px 0;
+            font-size: 14px;
+            border-bottom: 1px dotted var(--border);
+        }
+        .rel-item:last-child { border-bottom: none; }
+        .rel-from, .rel-to {
+            font-family: monospace;
+            font-weight: 600;
+            background: var(--code-bg);
+            padding: 3px 8px;
+            border-radius: 4px;
+        }
+        .rel-type { font-size: 12px; color: var(--text-muted); }
+
+        /* Sequence diagram text-based */
+        .sequence {
+            background: #1e293b;
+            color: #e2e8f0;
+            padding: 24px;
+            border-radius: 10px;
+            font-family: 'Consolas', monospace;
+            font-size: 12px;
+            line-height: 1.8;
+            overflow-x: auto;
+            white-space: pre;
+            margin: 16px 0;
+        }
+
+        /* Directory tree */
+        .tree {
+            background: var(--code-bg);
+            padding: 20px 24px;
+            border-radius: 10px;
+            font-family: 'Consolas', monospace;
+            font-size: 13px;
+            line-height: 1.7;
+            margin: 16px 0;
+        }
+        .tree .dir { color: var(--primary); font-weight: 700; }
+        .tree .file { color: var(--text); }
+        .tree .desc { color: var(--text-muted); font-style: italic; }
+
+        /* Callout */
+        .callout {
+            border-left: 4px solid var(--primary);
+            background: var(--primary-light);
+            border-radius: 8px;
+            padding: 16px 20px;
+            margin: 16px 0;
+            font-size: 14px;
+        }
+        .callout strong { color: var(--primary-dark); }
+
+        /* Layered Architecture Diagram */
+        .arch { margin: 24px 0; display: flex; flex-direction: column; gap: 4px; }
+        .arch-layer {
+            border-radius: 14px;
+            padding: 14px 22px 18px;
+            border: 1px solid rgba(0,0,0,0.04);
+        }
+        .arch-title {
+            text-align: center;
+            font-size: 12px;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            color: var(--text-muted);
+            margin-bottom: 12px;
+        }
+        .arch-row { display: flex; flex-wrap: wrap; gap: 12px; justify-content: center; }
+        .arch-box {
+            background: #fff;
+            border: 1.5px solid #c3b8ef;
+            border-radius: 9px;
+            padding: 10px 16px;
+            font-size: 13px;
+            font-weight: 600;
+            color: var(--text);
+            text-align: center;
+            box-shadow: 0 1px 2px rgba(0,0,0,0.05);
+            min-width: 120px;
+        }
+        .arch-box small { display: block; font-weight: 400; color: var(--text-muted); font-size: 11px; margin-top: 3px; }
+        .arch-box.dashed { border-style: dashed; color: var(--text-muted); background: #fbfaff; }
+        .arch-arrow { text-align: center; color: #94a3b8; font-size: 18px; line-height: 1; margin: 2px 0; }
+        .arch-split { display: flex; gap: 16px; }
+        .arch-split > .arch-layer { flex: 1; }
+        .layer-user       { background: #e5f0fb; }
+        .layer-present    { background: #fdf2e3; }
+        .layer-api        { background: #e9edfc; }
+        .layer-logic      { background: #eef1f4; }
+        .layer-worker     { background: #f2ecfd; }
+        .layer-integration{ background: #e7f6ee; }
+        .layer-data       { background: #fceaf0; }
+        @media (max-width: 720px) { .arch-split { flex-direction: column; } }
+
+        /* Responsive */
+        @media (max-width: 1024px) {
+            .sidebar { display: none; }
+            .main { margin-left: 0; padding: 24px; }
+        }
+        @media print {
+            .sidebar { display: none; }
+            .main { margin-left: 0; }
+        }
+        .hero p { color: #fff; }
+    </style>
+</head>
+<body>
+
+<!-- Sidebar Navigation -->
+<nav class="sidebar">
+  <div class="sidebar-brand">
+    <h2>ClimatePros · Auto-Dispatch</h2>
+    <span>System Design — Use Case A</span>
+  </div>
+  <div class="nav-section">High-Level Design</div>
+  <a href="#overview" class="nav-link">System Overview</a>
+  <a href="#problem" class="nav-link">Problem &amp; Goals</a>
+  <a href="#tech-stack" class="nav-link">Tech Stack</a>
+  <a href="#architecture" class="nav-link">Architecture Diagram</a>
+  <a href="#infra" class="nav-link">Infrastructure</a>
+  <div class="nav-section">Core Design (LLD)</div>
+  <a href="#redis" class="nav-link">Redis Data Structures</a>
+  <a href="#flows" class="nav-link">Operational Flows</a>
+  <a href="#ranking" class="nav-link">Ranking Algorithm</a>
+  <a href="#api" class="nav-link">API Reference</a>
+  <a href="#sns" class="nav-link">SNS Round-Trip</a>
+  <a href="#onboarding" class="nav-link">Onboarding Plan</a>
+  <a href="#fault" class="nav-link">Fault Tolerance</a>
+  <div class="nav-section">Cost</div>
+  <a href="#cost" class="nav-link">Cost Projection</a>
+  <div class="nav-section">Appendix</div>
+  <a href="#future" class="nav-link">Future Improvements</a>
+</nav>
+
+<!-- Main Content -->
+<div class="main">
+
+<div class="hero">
+  <h1>Auto-Dispatch</h1>
+  <div class="subtitle">System Design — Use Case A (HLD &amp; LLD)</div>
+  <p style="opacity:0.85; margin-bottom:16px;">An admin toggle drives fully automated, division-isolated technician dispatch — layered on the existing EC2 + RDS application, with a new Redis (ElastiCache) + AWS Fargate processing tier for concurrency, fault tolerance, and scale-to-zero cost control, plus an Amazon SNS round-trip for real-time technician notify &amp; reply.</p>
+  <div class="hero-meta">
+    <span>Toggle → automated dispatch</span><span>|</span>
+    <span>Division-isolated · exactly-once</span><span>|</span>
+    <span>July 2026</span>
+  </div>
+</div>
+
+<section id="overview">
+  <h2>1. System Overview</h2>
+  <p>Auto-Dispatch turns manual technician assignment into a fully automated pipeline. An admin flips a per-division toggle; from then on every new dispatch request for that division is picked up, routed to the nearest available technicians, and assigned — with no operator in the loop. When the toggle is OFF the processing tier scales to zero, so an idle division costs nothing.</p>
+  <div class="card">
+    <div class="card-header">
+      <div class="icon" style="background: var(--primary-light); color: var(--primary);">&#9881;</div>
+      <div>
+        <h4>Core principle: toggle-driven, division-isolated, zero-cost-idle</h4>
+        <p>One admin switch per division. Automation runs on a scale-to-zero Fargate pool; divisions never interfere with each other.</p>
+      </div>
+    </div>
+    <p>Dispatch requests flow through a durable Redis Stream into a pool of competing Fargate workers. A per-division distributed lock guarantees one division is processed sequentially — never in parallel — so two workers can never double-assign the same job. Technician replies arrive over an SNS &rarr; phone &rarr; EC2 &rarr; Redis round-trip that a worker wakes on instantly via <code>BLPOP</code> (no polling).</p>
+  </div>
+  <h3>Key Capabilities</h3>
+  <div class="tech-grid">
+    <div class="tech-card"><div class="tech-icon">&#128377;</div><div class="tech-name">Toggle-Driven</div><div class="tech-role">Per-division ON/OFF from the Dashboard; ON scales up N tasks, OFF scales to zero</div></div>
+    <div class="tech-card"><div class="tech-icon">&#128274;</div><div class="tech-name">Conflict Locking</div><div class="tech-role">Distributed <code>lock:tech:{id}</code> on the candidate set — parallel when disjoint, serial only on a shared tech</div></div>
+    <div class="tech-card"><div class="tech-icon">&#9989;</div><div class="tech-name">Exactly-Once</div><div class="tech-role">Stream consumer group + PEL/<code>XCLAIM</code> + lock shield prevent duplicate assignment</div></div>
+    <div class="tech-card"><div class="tech-icon">&#9889;</div><div class="tech-name">Instant Reply</div><div class="tech-role">Worker <code>BLPOP</code>s a per-tech reply key — wakes on accept, no polling</div></div>
+  </div>
+</section>
+
+<section id="problem">
+  <h2>2. Problem &amp; Goals</h2>
+  <p>Today an admin hand-picks a technician for every dispatch request. That does not scale: it is slow, serial, blind to who is actually nearest and available, and has no parallelism across divisions. As request volume grows the admin becomes the bottleneck.</p>
+  <div class="card">
+    <div class="card-header">
+      <div class="icon" style="background: var(--warning-light); color: var(--warning);">&#9888;</div>
+      <div><h4>Goals &amp; invariants</h4><p>What the automated system must guarantee.</p></div>
+    </div>
+    <ul style="padding-left:22px;">
+      <li><strong>Exactly-once dispatch</strong> — a request is assigned to exactly one technician, even under worker crashes or stalls.</li>
+      <li><strong>Conflict-aware concurrency</strong> — two requests run in parallel when their candidate technicians are disjoint (even within the same division); they serialize only when they share a common technician, so a tech is never double-offered or double-assigned.</li>
+      <li><strong>No-polling reply</strong> — technician Accept/Reject wakes the worker instantly.</li>
+      <li><strong>Scale-to-zero</strong> — a disabled or idle division consumes no compute.</li>
+    </ul>
+  </div>
+  <div class="card">
+    <div class="card-header">
+      <div class="icon" style="background: var(--success-light, #dcfce7); color: var(--success, #16a34a);">&#128202;</div>
+      <div><h4>Success metric</h4><p>How we know the automation is working, not just running.</p></div>
+    </div>
+    <ul style="padding-left:22px;">
+      <li><strong>Escalation-to-human rate &le; Y%</strong> — share of dispatches that exhaust the ranked shortlist (every candidate timed out or rejected) and fall back to a human. This is the automation's failure-to-automate ceiling: a low, stable rate means auto-dispatch is actually placing jobs; a rising rate signals bad ranking, thin technician coverage, or low reply adoption. Target <code>Y</code> is set from the single-division pilot baseline (Section 11) before full rollout.</li>
+    </ul>
+  </div>
+  <div class="callout"><strong>Non-goals:</strong> the existing manual dispatch flow is untouched — a division with the toggle OFF behaves exactly as today. No UI change beyond the toggle and its configuration (task count <code>N</code>). No change to the RDS system of record schema beyond dispatch status fields.</div>
+</section>
+
+<section id="tech-stack">
+  <h2>3. Technology Stack</h2>
+  <p>Existing pieces (blue) are reused as-is; the auto-dispatch project adds the amber pieces. Backend and workers are Python; workers are fully async so one task handles many concurrent dispatches.</p>
+  <div class="tech-grid">
+    <div class="tech-card"><div class="tech-icon">&#128241;</div><div class="tech-name">Flutter</div><div class="tech-ver">technician app · existing</div><div class="tech-role">Receives push, POSTs Accept/Reject</div></div>
+    <div class="tech-card"><div class="tech-icon">&#128227;</div><div class="tech-name">Amazon SNS</div><div class="tech-ver">mobile push · new</div><div class="tech-role">Send layer &rarr; APNs + FCM; one Publish per device endpoint</div></div>
+    <div class="tech-card"><div class="tech-icon">&#127822;</div><div class="tech-name">APNs + FCM</div><div class="tech-ver">iOS + Android transports</div><div class="tech-role">Required delivery channels. <strong>FCM mandatory for Android.</strong> Both free</div></div>
+    <div class="tech-card"><div class="tech-icon">&#9889;</div><div class="tech-name">FastAPI</div><div class="tech-ver">Python · existing EC2 Server A/B</div><div class="tech-role">API entry (A) + orchestrator/ECS manager (B); <code>/dispatch/respond</code></div></div>
+    <div class="tech-card"><div class="tech-icon">&#128230;</div><div class="tech-name">Fargate Worker</div><div class="tech-ver">Python · <code>redis.asyncio</code> · new</div><div class="tech-role">Async consumer; <strong>20 dispatches concurrent per task</strong></div></div>
+    <div class="tech-card"><div class="tech-icon">&#128293;</div><div class="tech-name">Redis (ElastiCache)</div><div class="tech-ver">cache.t4g.small · new</div><div class="tech-role">Streams (<code>XREADGROUP</code>/<code>XACK</code>/<code>XCLAIM</code>), locks, reply <code>BLPOP</code></div></div>
+    <div class="tech-card"><div class="tech-icon">&#128736;</div><div class="tech-name">AWS ECS Fargate</div><div class="tech-ver">1 vCPU / 2 GB · new</div><div class="tech-role">Serverless worker pool; scales 0&harr;N on toggle</div></div>
+    <div class="tech-card"><div class="tech-icon">&#9729;</div><div class="tech-name">Amazon EC2</div><div class="tech-ver">existing app host</div><div class="tech-role">Runs Server A + Server B (unchanged infra)</div></div>
+    <div class="tech-card"><div class="tech-icon">&#128024;</div><div class="tech-name">Amazon RDS</div><div class="tech-ver">SQL Server · existing</div><div class="tech-role">System of record — technicians, jobs, assignments</div></div>
+    <div class="tech-card"><div class="tech-icon">&#128295;</div><div class="tech-name">boto3</div><div class="tech-ver">AWS SDK for Python</div><div class="tech-role">Server B drives ECS <code>update_service</code> / task scaling; SNS Publish</div></div>
+  </div>
+  <div class="callout"><strong>Why SNS + FCM both:</strong> SNS is only the sender/fan-out. Android push must ride FCM (Google requirement); iOS rides APNs. SNS wraps both behind one Publish API. Push cost is effectively $0 — see Cost Projection.</div>
+</section>
+
+<section id="architecture">
+  <h2>4. High-Level Architecture</h2>
+  <iframe src="./frag-architecture.html" title="Auto-Dispatch — end-to-end architecture diagram" loading="lazy" class="diagram-frame" style="width:100%;height:1650px;border:1px solid var(--border);border-radius:12px;background:#f4f6fa;"></iframe>
+  <h3>Request Flow</h3>
+  <ol style="padding-left:24px;">
+    <li><strong>Dashboard</strong> sends the dispatch request to <strong>Server A</strong>; toggle + config (<code>N</code>) to <strong>Server B</strong>.</li>
+    <li>If the division is <code>ENABLED</code>, Server A publishes the dispatch id to <code>dispatch:stream</code>.</li>
+    <li><strong>Server B</strong> (via boto3) scales the Fargate pool to <code>N</code> on enable, to <code>0</code> on disable.</li>
+    <li>A <strong>Fargate worker</strong> <code>XREADGROUP</code>s the message, locks its candidate technicians (<code>lock:tech:{id}</code>), and runs the assignment flow.</li>
+    <li>The worker notifies technicians via <strong>SNS</strong> and blocks on a per-tech Redis list (<code>BLPOP</code>) for the reply.</li>
+    <li>On assignment the worker writes to <strong>RDS</strong>, releases the lock, and <code>XACK</code>s the message.</li>
+  </ol>
+</section>
+
+<section id="infra">
+  <h2>5. Infrastructure</h2>
+  <div class="infra-grid">
+    <div class="infra-card" style="border-color: var(--primary);"><div class="infra-icon">&#9729;</div><div class="infra-name">EC2 App Host</div><div class="infra-tech">Server A + Server B (FastAPI)</div><div class="infra-port">existing</div></div>
+    <div class="infra-card" style="border-color: #8b5cf6;"><div class="infra-icon">&#128230;</div><div class="infra-name">ECS Fargate Pool</div><div class="infra-tech">1 vCPU / 2 GB · Python worker</div><div class="infra-port">0 &harr; N tasks</div></div>
+    <div class="infra-card" style="border-color: #ef4444;"><div class="infra-icon">&#128293;</div><div class="infra-name">ElastiCache Redis</div><div class="infra-tech">cache.t4g.small</div><div class="infra-port">:6379</div></div>
+    <div class="infra-card" style="border-color: #0ea5e9;"><div class="infra-icon">&#128024;</div><div class="infra-name">Amazon RDS</div><div class="infra-tech">SQL Server · system of record</div><div class="infra-port">:1433</div></div>
+    <div class="infra-card" style="border-color: var(--warning);"><div class="infra-icon">&#128227;</div><div class="infra-name">Amazon SNS</div><div class="infra-tech">Platform apps: APNs + FCM</div><div class="infra-port">push</div></div>
+  </div>
+  <div class="callout" style="border-left-color:var(--warning);background:var(--warning-light);"><strong>ElastiCache HA — single node, accepted risk (this phase):</strong> Redis runs as one <code>cache.t4g.small</code> node, not a Multi-AZ replication group, and is the coordination layer for every ENABLED division — so a node failure halts auto-dispatch platform-wide until the node recovers. This is a deliberate cost trade-off for the pilot, made safe by the fallback below rather than by replication. <strong>Fallback on Redis outage:</strong> the existing manual dispatch flow is untouched and always available — if workers cannot reach Redis, dispatches are handled by an admin exactly as they are today (Section 2 non-goals). Revisit Multi-AZ once auto-dispatch is load-bearing across multiple divisions.</div>
+</section>
+
+<section id="redis">
+  <h2>6. Redis Data Structures</h2>
+  <div class="table-wrapper"><table>
+    <thead><tr><th>Structure</th><th>Key</th><th>Purpose</th></tr></thead>
+    <tbody>
+      <tr><td><span class="badge badge-ws">STREAM</span></td><td><code>dispatch:stream</code></td><td>Durable buffer of incoming dispatch requests between Server A and the Fargate workers. Consumed via a consumer group (<code>XREADGROUP</code>) — all N workers compete; each message goes to exactly one worker.</td></tr>
+      <tr><td><span class="badge badge-patch">MUTEX</span></td><td><code>lock:tech:{techId}</code></td><td>Per-technician distributed lock. A request acquires locks on <em>its candidate technicians</em> before offering, in a fixed order (e.g. ascending <code>techId</code>) to avoid deadlock between overlapping requests. Requests with disjoint candidates run in parallel — even in the same division; requests sharing a technician serialize on that lock, so a tech is never double-offered. TTL self-releases on a crashed worker.</td></tr>
+      <tr><td><span class="badge badge-post">LIST</span></td><td><code>resp:{dispatchId}:{techId}</code></td><td>Per-technician reply channel. EC2 <code>LPUSH</code>es the Accept/Reject; the worker <code>BLPOP</code>s it — instant wake, no polling. <code>EXPIRE 60s</code> self-cleans.</td></tr>
+    </tbody>
+  </table></div>
+  <div class="callout"><strong>Concurrency:</strong> a worker processes up to <strong>20 dispatches concurrently</strong> using async (<code>redis.asyncio</code>) — a blocked <code>BLPOP</code> on one dispatch never stalls the others.</div>
+  <div class="callout" style="border-left-color:var(--warning);background:var(--warning-light);"><strong>Diagram note:</strong> the architecture diagram above still shows a per-division lock (<code>lock:div:*</code>) as a simplification. The implemented model locks per candidate technician as described here — diagram redraw pending.</div>
+</section>
+
+<section id="flows">
+  <h2>7. Operational Flows</h2>
+  <p>Three isolated control flows — Enable, Disable, New-Dispatch — plus the per-request assignment loop, embedded from the interactive architecture source.</p>
+  <iframe src="./frag-flows.html" title="Auto-Dispatch — operational flows &amp; assignment loop" loading="lazy" class="diagram-frame" style="width:100%;height:1300px;border:1px solid var(--border);border-radius:12px;background:#f8fafc;"></iframe>
+</section>
+
+<section id="ranking">
+  <h2>8. Ranking Algorithm</h2>
+  <p>This is the detail behind step&nbsp;3 (<em>"Rank the technicians"</em>) of the assignment loop above. It turns each candidate's availability, distance, and visit history into a single ordered shortlist. One formula covers every case — its behavior is tuned by a single weight <code>w</code> chosen from the job's dispatch type.</p>
+
+  <div class="card">
+    <h4>Inputs</h4>
+    <ul style="padding-left:22px;margin:0;">
+      <li><code>free<sub>i</sub></code> — minutes until technician <code>i</code> is available (time left on current job)</li>
+      <li><code>dist<sub>i</sub></code> — miles from technician <code>i</code> to the jobsite</li>
+      <li><code>visits<sub>i</sub></code> — prior visits by technician <code>i</code> to this customer (familiarity)</li>
+      <li><code>AVG_SPEED</code> — average truck speed in mph, a <strong>configurable constant</strong></li>
+      <li><code>dispatchType</code> — Emergency · High Priority · Medium Priority</li>
+    </ul>
+  </div>
+
+  <div style="text-align:center;color:var(--text-muted);font-size:20px;margin:6px 0;">&darr;</div>
+
+  <div class="card">
+    <h4>Step A &mdash; unify availability + distance into one ETA</h4>
+    <p>Distance can't be compared to wait-time directly. Convert distance to travel time using the average truck speed, then add the wait, so every technician collapses to <strong>one number</strong>: minutes-until-on-site. Lower is better.</p>
+    <pre><code>travel_i = (dist_i / AVG_SPEED) * 60      # miles -> minutes
+eta_i    = free_i + travel_i              # total minutes until tech is on site</code></pre>
+  </div>
+
+  <div style="text-align:center;color:var(--text-muted);font-size:20px;margin:6px 0;">&darr;</div>
+
+  <div class="card">
+    <h4>Step B &mdash; weighted score</h4>
+    <p>Blend ETA and visit count into one score. Both must be on a 0&ndash;1 scale where higher is better, so min-max normalize each across <em>this</em> candidate set, then weight by <code>w</code> (the speed share). A pure ranking is just an endpoint: <code>w=1</code> sorts by ETA only, <code>w=0</code> by visits only — no separate sort needed.</p>
+    <pre><code>speed_score_i = (eta_max - eta_i)      / (eta_max - eta_min)      # lowest eta  -> 1.0
+fam_score_i   = (visits_i - visits_min)/ (visits_max - visits_min) # most visits -> 1.0
+
+score_i = w * speed_score_i + (1 - w) * fam_score_i               # w = speed weight
+# sort score_i descending -> rank 1 = offer target</code></pre>
+    <p style="font-size:13px;color:var(--text-muted);margin-bottom:0;">Edge cases: a single candidate is rank&nbsp;1 by default; if all ETAs tie the speed term is flat and familiarity breaks the tie (and vice-versa).</p>
+  </div>
+
+  <div style="text-align:center;color:var(--text-muted);font-size:20px;margin:6px 0;">&darr;</div>
+
+  <div class="card">
+    <h4>Step C &mdash; pick <code>w</code> from the dispatch type</h4>
+    <p>Emergency and Medium are just the two ends (<code>w=1</code>, <code>w=0</code>) of the same combined formula — so <strong>one code path serves all three</strong>.</p>
+    <div class="table-wrapper"><table>
+      <thead><tr><th>Dispatch Type</th><th>Strategy</th><th><code>w</code> (speed)</th><th>Result</th></tr></thead>
+      <tbody>
+        <tr><td><span class="badge badge-post" style="background:#fee2e2;color:#dc2626;">Emergency</span></td><td>Speed-Based (locked)</td><td><code>1.0</code></td><td>Pure ETA; familiarity ignored — lowest combined time wins</td></tr>
+        <tr><td><span class="badge badge-patch">High Priority</span></td><td>Combined</td><td><code>0.2</code> <span style="color:var(--text-muted)">(Speed 20 / Fam 80)</span></td><td>Weighted blend; weight configurable per strategy</td></tr>
+        <tr><td><span class="badge badge-ws">Medium Priority</span></td><td>Familiarity-Based</td><td><code>0.0</code></td><td>Pure visit count — most familiar tech wins</td></tr>
+      </tbody>
+    </table></div>
+  </div>
+
+  <div class="callout"><strong>One formula, three behaviors:</strong> the dispatch type only sets <code>w</code>. Emergency (<code>w=1</code>) reduces to pure speed, Medium (<code>w=0</code>) to pure familiarity, High blends them — no separate ranking code per type. The resulting ordered shortlist feeds directly into step&nbsp;4 (offer to the top-ranked technician).</div>
+
+  <div class="callout" style="border-left-color:var(--warning);background:var(--warning-light);"><strong>Future factor — skill gate:</strong> when technician skill data is available (<code>1 &le; skill<sub>i</sub> &le; 5</code>) and a job carries a minimum required skill, it enters as a <strong>hard gate, not a score term</strong>. Filter it in step&nbsp;1 when building the candidate list — <em>keep technician <code>i</code> only if <code>skill<sub>i</sub> &ge; job.minSkill</code></em> — so under-skilled technicians never reach ranking. The speed/familiarity scoring is untouched; only the candidate set shrinks.</div>
+</section>
+
+<section id="api">
+  <h2>9. API Reference</h2>
+  <p>New endpoints introduced for Auto-Dispatch. Two callers: the <strong>admin dashboard</strong> (control plane — toggle &amp; config) and the <strong>technician mobile app</strong> (data plane — push registration &amp; replies). All existing endpoints (dispatch ingestion, dispatch status, technician location) are unchanged and out of scope here.</p>
+  <div class="table-wrapper"><table>
+    <thead><tr><th>Method</th><th>Path</th><th>Caller</th><th>Purpose</th></tr></thead>
+    <tbody>
+      <tr>
+        <td><span class="badge badge-post">POST</span></td>
+        <td><code>/divisions/{id}/toggle</code></td>
+        <td>Dashboard &rarr; EC2</td>
+        <td>Turn auto-dispatch ON/OFF for one division. Body <code>{ enabled: bool }</code>. On <em>enable</em>: pull pending requests into the stream and scale the Fargate pool up; on <em>disable</em>: drain and scale to zero (idle = $0).</td>
+      </tr>
+      <tr>
+        <td><span class="badge badge-patch">PUT</span></td>
+        <td><code>/divisions/{id}/config</code></td>
+        <td>Dashboard &rarr; EC2</td>
+        <td>Update per-division ranking weights — distance, familiarity, priority, availability window. Body <code>{ weights: {...} }</code>. Applied to the next assignment loop; no restart needed.</td>
+      </tr>
+      <tr>
+        <td><span class="badge badge-ws">GET</span></td>
+        <td><code>/divisions/{id}/config</code></td>
+        <td>Dashboard &rarr; EC2</td>
+        <td>Read current toggle state + weights so the admin UI can render the switch position and weight sliders. Paired read for the two writes above.</td>
+      </tr>
+      <tr>
+        <td><span class="badge badge-post">POST</span></td>
+        <td><code>/devices/register</code></td>
+        <td>Mobile &rarr; EC2</td>
+        <td>Register/refresh a device push token. Body <code>{ techId, platform: ios|android, token }</code>. EC2 calls SNS <code>CreatePlatformEndpoint</code> and stores <code>techId &rarr; endpointArn</code>. Re-posted whenever the OS rotates the token, so pushes never silently die.</td>
+      </tr>
+      <tr>
+        <td><span class="badge badge-post">POST</span></td>
+        <td><code>/technicians/{id}/availability</code></td>
+        <td>Mobile &rarr; EC2</td>
+        <td>Technician reports <em>when</em> they will be free. Body <code>{ availableAt }</code>. <strong>Not tied to any dispatch</strong> — it updates the technician's general availability state, which the ranking loop reads for whichever request is being processed.</td>
+      </tr>
+      <tr>
+        <td><span class="badge badge-post">POST</span></td>
+        <td><code>/dispatches/{id}/respond</code></td>
+        <td>Mobile &rarr; EC2</td>
+        <td>Technician accepts/rejects a <em>specific</em> offer. Body <code>{ accept: bool }</code>. Deduped via <code>SETNX</code>, then <code>LPUSH</code>ed to <code>resp:{dispatchId}:{techId}</code>; the worker's <code>BLPOP</code> wakes instantly.</td>
+      </tr>
+    </tbody>
+  </table></div>
+
+  <div class="card">
+    <h4>Authentication</h4>
+    <p>No new auth mechanism is introduced. Every endpoint sits behind the platform's <strong>existing auth middleware</strong>, by caller:</p>
+    <ul style="padding-left:22px;">
+      <li><strong>Control plane</strong> (<code>POST /divisions/{id}/toggle</code>, <code>PUT /divisions/{id}/config</code>, <code>GET /divisions/{id}/config</code>) &mdash; behind the <strong>admin Dashboard</strong> auth, identical to the existing Dashboard endpoints. Only authenticated admins can toggle or reconfigure a division.</li>
+      <li><strong>Data plane</strong> (<code>POST /devices/register</code>, <code>POST /technicians/{id}/availability</code>, <code>POST /dispatches/{id}/respond</code>) &mdash; behind the <strong>technician mobile-app</strong> auth, identical to the existing technician endpoints. The authenticated technician identity must match the <code>techId</code>/technician in the path or body.</li>
+    </ul>
+  </div>
+
+  <div class="card">
+    <h4>Error contract</h4>
+    <p>All endpoints return the platform's standard error envelope so a client can handle failures uniformly:</p>
+    <pre style="background:#0f172a;color:#e2e8f0;padding:12px 14px;border-radius:8px;overflow-x:auto;"><code>{ "code": "string",        // stable machine code, e.g. DIVISION_NOT_FOUND
+  "message": "string",     // human-readable
+  "requestId": "string" }  // correlation id for tracing</code></pre>
+    <p>Global status codes apply across all endpoints:</p>
+    <ul style="padding-left:22px;">
+      <li><code>400</code> — malformed body / invalid field (e.g. weight out of range, unknown <code>platform</code>).</li>
+      <li><code>401</code> — missing/invalid credentials · <code>403</code> — authenticated but not permitted (e.g. non-admin hitting a control-plane route, technician acting for another <code>techId</code>).</li>
+      <li><code>404</code> — division / dispatch / technician not found.</li>
+      <li><code>409</code> — duplicate reply on <code>/dispatches/{id}/respond</code> (the <code>SETNX</code> dedupe already rejected it); the first reply stands.</li>
+      <li><code>500</code> — unexpected server error (correlate via <code>requestId</code>).</li>
+    </ul>
+  </div>
+
+  <div class="card">
+    <h4>Two response types — two separate endpoints</h4>
+    <p>The technician's two replies live at different paths because they have different scope:</p>
+    <ul style="padding-left:22px;">
+      <li><strong>Availability</strong> &mdash; <code>POST /technicians/{id}/availability</code>. Tech-scoped, <strong>no <code>dispatchId</code></strong>. A general "I'm free at &hellip;" answer to the availability poll during the ~1&nbsp;min ranking window; updates the technician's availability record that ranking reads.</li>
+      <li><strong>Decision</strong> &mdash; <code>POST /dispatches/{id}/respond</code>. Dispatch-scoped. Accept/reject one specific offer; drives the offer loop, and a reject (or timeout) moves to the next ranked technician. This is the reply the worker is blocked on (<code>BLPOP</code>).</li>
+    </ul>
+  </div>
+</section>
+
+<section id="sns">
+  <h2>10. SNS Round-Trip</h2>
+  <p>SNS is push-out only (fire-and-forget). The reply comes back through EC2 &rarr; Redis, where the worker is already blocked on <code>BLPOP</code> — so it wakes the instant the technician taps Accept.</p>
+  <div class="sequence">Worker (Fargate)        SNS            Phone (Flutter)     EC2 API         Redis
+     |  Publish(endpointArn, {dispatchId,techId,job})       |               |
+     |------------------>|-------------->|                  |               |
+     |                   |   push (APNs/FCM)                |               |
+     |                                   |  tap Accept/Reject|               |
+     |                                   |----------------->|  POST /dispatches/{id}/respond
+     |                                   |                  | SETNX resp:done (dedupe)
+     |                                   |                  | LPUSH resp:{id}:{tech}
+     |                                   |                  |-------------->|
+     |  BLPOP wakes instantly  <-------------------------------------------|
+     |  rank &amp; assign (RDS) -> release lock -> XACK        |               |
+</div>
+  <div class="callout"><strong>Timeout rule:</strong> the worker's <code>BLPOP</code> timeout <code>T</code> must stay below the division lock TTL. On timeout the worker escalates to the next technician batch; the lock is never lost mid-flight.</div>
+</section>
+
+<section id="onboarding">
+  <h2>11. Onboarding Plan</h2>
+  <p>Everything that must be in place to take Auto-Dispatch from an empty production account to a live, division-by-division rollout. Four ordered phases — infra must exist before data seeding, data before client rollout, and everything before the first toggle flip.</p>
+
+  <div class="card" style="border-left:4px solid var(--primary);">
+    <h4>Phase 0 &mdash; Infrastructure provisioning <span style="font-weight:400;color:var(--text-muted);">(one-time)</span></h4>
+    <ul style="padding-left:22px;">
+      <li><strong>ElastiCache Redis</strong> cluster up, and <strong>create the consumer group</strong> (<code>XGROUP CREATE dispatch:stream &hellip;</code>) — workers cannot read the stream until it exists.</li>
+      <li><strong>ECS Fargate</strong> ready: worker image pushed to ECR, task definition (1&nbsp;vCPU&nbsp;/&nbsp;2&nbsp;GB), scale&nbsp;0&#8596;N policy.</li>
+      <li><strong>SNS platform applications</strong> created — one APNs (upload Apple <code>.p8</code> key), one FCM (Google key). Hard precondition for <code>/devices/register</code>: no push endpoint can exist until these are live.</li>
+      <li><strong>IAM roles</strong>: SNS Publish, ECS scale control (boto3), ElastiCache access.</li>
+    </ul>
+  </div>
+
+  <div class="card" style="border-left:4px solid var(--primary);">
+    <h4>Phase 1 &mdash; Data seeding to DB <span style="font-weight:400;color:var(--text-muted);">(per division)</span></h4>
+    <ul style="padding-left:22px;">
+      <li><strong>Default ranking config</strong> — seed each division's weights (distance, familiarity, priority, availability window) directly into the DB at production cutover.</li>
+      <li><strong>Toggle default OFF</strong> — every division starts disabled. Safe default: nothing auto-dispatches until an admin explicitly opts in.</li>
+      <li><strong>Escalation target</strong> — the human dispatcher/queue the "no technician accepted" path hands off to. Without it, escalation has nowhere to go.</li>
+      <li><strong>Technician data readiness</strong> — each tech needs division, location source, and skills populated; ranking silently breaks on missing data.</li>
+    </ul>
+  </div>
+
+  <div class="card" style="border-left:4px solid var(--warning);">
+    <h4>Phase 2 &mdash; Client rollout &amp; SNS push onboarding</h4>
+    <p>Push is new to the platform, but signed-up technicians already exist on iOS/Android with no push token yet. SNS can only ring a technician once an <code>endpointArn</code> exists — <em>an <code>endpointArn</code> is the per-device address SNS returns when you register a push token; you publish to that arn, not to the raw token.</em> Onboarding must create it for both cohorts with no one-off migration job.</p>
+    <div class="two-col" style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin:8px 0;">
+      <div class="card" style="margin:0;">
+        <div class="card-header"><div class="icon" style="background: var(--primary-light); color: var(--primary);">&#43;</div><div><h4>New technician</h4></div></div>
+        <p>Signs up on a push-enabled build &rarr; grants permission &rarr; <code>POST /devices/register</code> fires at once. Arn exists before first dispatch. <strong>No gap.</strong></p>
+      </div>
+      <div class="card" style="margin:0;">
+        <div class="card-header"><div class="icon" style="background: var(--warning-light); color: var(--warning);">&#8635;</div><div><h4>Existing technician</h4></div></div>
+        <p>Account exists but <strong>no token, no arn</strong> — unreachable until they update the app, open it, and grant permission. The one cohort with a temporary gap.</p>
+      </div>
+    </div>
+    <ul style="padding-left:22px;">
+      <li><strong>Ship the push-enabled app + min-version gate</strong> — before enabling any division, or no one is reachable.</li>
+      <li><strong>Token management</strong> — the app registers its token on first login, whenever the OS rotates it (reinstall/restore), and on a periodic (e.g. daily) refresh. Tokens stay valid for months, so this is a few calls per technician, not one per launch.</li>
+      <li><strong>Backend upsert on <code>(techId, token)</code></strong> — first call creates the endpoint, unchanged token no-ops, rotated token updates the arn.</li>
+      <li><strong>Fallback if unreachable</strong> — a tech with no arn (or one SNS reports dead) is skipped to manual/escalation; the dispatch never hard-fails, and the tech re-registers on its next refresh.</li>
+    </ul>
+    <div class="callout" style="margin-top:12px;"><strong>Device token / endpointArn = PII.</strong> The push token and its SNS <code>endpointArn</code> are the one new piece of personal data this project stores (<code>techId &rarr; endpointArn</code>). They are treated as sensitive: encrypted at rest, access-limited to the dispatch backend, and kept only while the device is active — a rotated token overwrites the old arn (upsert) and a dead arn is cleaned up, so stale tokens do not accumulate. <strong>Technician location is not newly stored here</strong> — distance/ETA comes from the platform's existing location system, which auto-dispatch only reads, so its retention is unchanged and out of scope for this project.</div>
+  </div>
+
+  <div class="card" style="border-left:4px solid var(--success, #16a34a);">
+    <h4>Phase 3 &mdash; Go-live sequencing</h4>
+    <ul style="padding-left:22px;">
+      <li><strong>Monitoring/alerting live first</strong> — push-adoption %, stream lag, lock-hold time, BLPOP-timeout rate.</li>
+      <li><strong>Pilot one division</strong> — flip a single division ON, validate exactly-once assignment and the escalation path end-to-end.</li>
+      <li><strong>Expand division-by-division</strong> — enable the rest once the pilot is clean; drop the manual fallback as endpoint adoption nears 100%.</li>
+    </ul>
+  </div>
+
+  <div class="card" style="border-left:4px solid var(--primary);">
+    <h4>Environments &amp; deployment</h4>
+    <ul style="padding-left:22px;">
+      <li><strong>Staging before prod</strong> — the change is validated in a <strong>staging environment</strong> first, then promoted to production. Staging and production each get their <strong>own isolated instances</strong> (separate ElastiCache Redis, separate RDS, separate Fargate service) — no shared state across environments, so a staging run can never touch live technician data.</li>
+      <li><strong>CI/CD — client's existing pipeline.</strong> Auto-Dispatch is a <strong>one-time change</strong> to an existing platform, not a new service, so it introduces no new pipeline. Build, test, deploy, and rollback of the worker image and the Server&nbsp;A/B changes all follow the <strong>client's established deployment strategy</strong>; rollback is whatever that pipeline already provides (e.g. redeploy the previous image/task-definition).</li>
+    </ul>
+  </div>
+
+</section>
+
+<section id="fault">
+  <h2>12. Fault Tolerance</h2>
+  <p>A dispatch request is handed to one worker to process. The system tracks that the request is "handed out but not yet finished." When the worker finishes, it marks the request done and the request clears. The goal: never lose a request if a worker dies, and never process the same request twice.</p>
+  <div class="card" style="border-left:4px solid var(--danger);">
+    <h4>How a crashed or slow worker is handled</h4>
+    <ol style="padding-left:22px;">
+      <li><strong>Problem — worker crashes partway.</strong> The request is still marked "handed out, not finished," but nobody is actually working on it. It is stuck, and the customer waits forever.</li>
+      <li><strong>Rescue.</strong> If a request stays "not finished" for too long, another worker is allowed to take it over and process it. The stuck request is recovered.</li>
+      <li><strong>New danger.</strong> What if the first worker did not crash — just ran slow? Then the second worker takes over and processes the <em>same</em> request while the first is still working it — the same job offered to two technicians.</li>
+      <li><strong>Safeguard.</strong> Before offering a job, a worker must hold a claim on that technician, and only one worker can hold it at a time. If the first worker is just slow it <strong>still holds the claim</strong>, so the second worker is blocked — no double offer. If the first worker truly crashed, its claim <strong>releases automatically</strong> after a short time, so the second worker safely takes over.</li>
+    </ol>
+    <p style="margin-bottom:0;">The claim decides it: still held means "someone is alive and working — stay out"; released means "they are gone — go ahead."</p>
+  </div>
+  <div class="callout"><strong>Net effect — exactly-once:</strong> every request is processed even if a worker dies, and no request is ever processed twice even if a worker is slow. Nothing lost, nothing duplicated.</div>
+</section>
+
+<section id="cost">
+  <h2>13. Cost Projection</h2>
+  <p>Only the Fargate pool is a variable cost — it is the whole point of scale-to-zero. Everything else is fixed or effectively free. All AWS rates are us-east-1; <strong>verify at build time</strong>.</p>
+  <div class="card">
+    <div class="card-header"><div class="icon" style="background: var(--accent-light); color: var(--accent);">&#128181;</div><div><h4>Fargate cost formula</h4><p>Task = 1 vCPU / 2 GB &rarr; $0.04937 per task-hour</p></div></div>
+    <pre><code>monthly_fargate = N x H x 30 x (1 x $0.04048  +  2 x $0.004445)
+                = N x H x 30 x $0.04937
+
+N = number of Fargate tasks (2 assumed; each handles 20 dispatches concurrently)
+H = hours the division is ON per day</code></pre>
+  </div>
+  <div class="card">
+    <div class="card-header"><div class="icon" style="background: var(--primary-light); color: var(--primary);">&#128229;</div><div><h4>Redis + SNS cost (fixed &amp; near-zero)</h4><p>Small, but here is the actual math</p></div></div>
+    <pre><code>elasticache = $0.032/hr x 730 hr/mo  =  ~$23.36/mo   (cache.t4g.small, always on)
+
+sns_push    = $0.50 per 1,000,000 mobile pushes   (first 1M/mo free)
+            e.g. 500 dispatches/day x 5 techs x 30 = 75,000 pushes/mo  ->  $0 (within free tier)
+            FCM (Android) = $0        APNs (iOS) = $0</code></pre>
+  </div>
+  <div class="table-wrapper"><table>
+    <thead><tr><th>Scenario</th><th>N tasks</th><th>Hours ON/day</th><th>Fargate/mo</th><th>ElastiCache/mo</th><th>SNS/push</th><th>Total/mo*</th></tr></thead>
+    <tbody>
+      <tr><td>Light / 2h day</td><td>2</td><td>2</td><td>~$5.92</td><td>~$23</td><td>~$0</td><td><strong>~$29</strong></td></tr>
+      <tr><td>8h-ON daily</td><td>2</td><td>8</td><td>~$23.70</td><td>~$23</td><td>~$0</td><td><strong>~$47</strong></td></tr>
+      <tr><td>24&times;7 always-on</td><td>2</td><td>24</td><td>~$71.09</td><td>~$23</td><td>~$0</td><td><strong>~$94</strong></td></tr>
+    </tbody>
+  </table></div>
+  <p style="font-size:13px;color:var(--text-muted);">*Excludes existing EC2 + RDS (sunk — unchanged by this project). ElastiCache <code>cache.t4g.small</code> ~$0.032/hr fixed.</p>
+  <h3>Line items</h3>
+  <div class="tech-grid">
+    <div class="tech-card"><div class="tech-icon">&#128230;</div><div class="tech-name">Fargate</div><div class="tech-role"><strong>Variable driver.</strong> $0.04048/vCPU-hr + $0.004445/GB-hr. Scales to $0 when OFF</div></div>
+    <div class="tech-card"><div class="tech-icon">&#128293;</div><div class="tech-name">ElastiCache</div><div class="tech-role">Fixed ~$23/mo (cache.t4g.small). Always on — coordination layer</div></div>
+    <div class="tech-card"><div class="tech-icon">&#128227;</div><div class="tech-name">SNS + FCM + APNs</div><div class="tech-role">SNS ~$0.50/million pushes; FCM free; APNs free &rarr; ~$0</div></div>
+    <div class="tech-card"><div class="tech-icon">&#9729;</div><div class="tech-name">EC2 + RDS</div><div class="tech-role">Existing / sunk — excluded from the auto-dispatch delta</div></div>
+  </div>
+  <div class="callout"><strong>Scale-to-zero payoff:</strong> a disabled division drops its Fargate line to $0 — the 24&times;7 vs Light / 2h day rows differ by <strong>~12&times;</strong> on the variable cost. Fixed floor stays ~$23/mo (ElastiCache) regardless.</div>
+</section>
+
+<section id="future">
+  <h2>14. Future Improvements</h2>
+  <div class="tech-grid">
+    <div class="tech-card"><div class="tech-icon">&#128260;</div><div class="tech-name">Beyond new requests</div><div class="tech-role">Today auto-dispatch only picks up <strong>newly created</strong> requests. Extend it to act on other dispatch statuses too — e.g. re-dispatch on reject/timeout, reassign in-progress jobs, or reopen cancelled ones</div></div>
+    <div class="tech-card"><div class="tech-icon">&#127894;</div><div class="tech-name">Reward / feedback loop</div><div class="tech-role">Feed accept/reject and job-outcome history back into ranking — reward technicians who reliably accept and complete, so the shortlist self-tunes over time instead of using static weights</div></div>
+  </div>
+</section>
+
+</div>
+<script>
+// Diagram iframes report their content height via postMessage (works cross-origin,
+// incl. file://). Size each iframe to its fragment so nothing clips or scrolls.
+window.addEventListener('message', function(e){
+  var d = e.data;
+  if(!d || typeof d.odgHeight !== 'number') return;
+  document.querySelectorAll('iframe.diagram-frame').forEach(function(f){
+    if(f.contentWindow === e.source){ f.style.height = (d.odgHeight + 24) + 'px'; }
+  });
+});
+</script>
+</body>
+</html>

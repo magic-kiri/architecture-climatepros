@@ -1,0 +1,750 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Auto-Dispatch — Architecture & Operational Flows · ClimatePros</title>
+<style>
+  :root{
+    --bg:#f4f6fa;
+    --ink:#1e293b;
+    --muted:#64748b;
+    --line:#cbd5e1;
+    --card:#ffffff;
+    --blue:#2563eb;
+    --blue-soft:#eff4ff;
+    --blue-line:#bfdbfe;
+    --amber:#d97706;
+    --amber-soft:#fff7ed;
+    --amber-line:#fed7aa;
+    --green:#059669;
+    --green-soft:#ecfdf5;
+    --red:#dc2626;
+    --red-soft:#fef2f2;
+    --vio:#7c3aed;
+    --vio-soft:#f3e8ff;
+    --shadow:0 1px 2px rgba(15,23,42,.06),0 8px 24px rgba(15,23,42,.06);
+  }
+  *{box-sizing:border-box}
+  body{
+    margin:0;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+    background:var(--bg);color:var(--ink);line-height:1.5;
+    -webkit-font-smoothing:antialiased;
+  }
+  .wrap{max-width:1180px;margin:0 auto;padding:48px 44px 20px;position:relative}
+  #wires{position:absolute;inset:0;width:100%;height:100%;pointer-events:none;z-index:5;overflow:visible}
+  #wires .wg{pointer-events:auto;cursor:pointer}
+  #wires .wg .vis{transition:stroke-width .15s ease, filter .15s ease}
+  #wires .wg:hover .vis{stroke-width:5;filter:drop-shadow(0 1px 4px rgba(15,23,42,.35))}
+  #wires .wg .wlabel{transition:font-size .15s ease}
+  #wires .wg:hover .wlabel{font-size:13px;font-weight:800}
+  #wires .wg:hover .wlabel::selection{background:transparent}
+  /* inline branch arrow (Server B -> Fargate) */
+  .branch-svg{cursor:pointer}
+  .branch-svg svg path{transition:stroke-width .15s ease, filter .15s ease}
+  .branch-svg:hover svg path{stroke-width:4;filter:drop-shadow(0 1px 4px rgba(15,23,42,.3))}
+  header.top{margin-bottom:28px}
+  .eyebrow{font-size:12px;letter-spacing:.14em;text-transform:uppercase;color:var(--blue);font-weight:700;margin-bottom:8px}
+  h1{font-size:30px;margin:0 0 8px;font-weight:700;letter-spacing:-.02em}
+  .sub{color:var(--muted);font-size:15px;max-width:760px}
+
+  .legend{display:flex;gap:20px;flex-wrap:wrap;margin:22px 0 34px;padding:14px 18px;background:var(--card);border:1px solid var(--line);border-radius:12px;box-shadow:var(--shadow)}
+  .legend .item{display:flex;align-items:center;gap:9px;font-size:13px;font-weight:600;color:var(--ink)}
+  .swatch{width:26px;height:16px;border-radius:4px;display:inline-block}
+  .swatch.exist{background:var(--blue-soft);border:1.5px solid var(--blue)}
+  .swatch.new{background:var(--amber-soft);border:1.5px dashed var(--amber)}
+  .legend .note{color:var(--muted);font-weight:500;font-size:12px}
+
+  .layer{background:var(--card);border-radius:16px;box-shadow:var(--shadow);padding:22px;margin-bottom:20px;position:relative;border:1px solid var(--line)}
+  .layer-title{display:flex;align-items:center;gap:10px;font-size:13px;font-weight:700;letter-spacing:.03em;text-transform:uppercase;color:var(--muted);margin-bottom:16px}
+  .tag{font-size:10px;font-weight:700;letter-spacing:.06em;padding:3px 8px;border-radius:999px;text-transform:uppercase}
+  .tag.exist{background:var(--blue-soft);color:var(--blue);border:1px solid var(--blue-line)}
+  .tag.new{background:var(--amber-soft);color:var(--amber);border:1px solid var(--amber-line)}
+
+  .box{border-radius:12px;padding:16px 18px;position:relative}
+
+  /* presentation focus: hover to spotlight a component */
+  .focusable{transition:transform .18s ease, box-shadow .18s ease, filter .18s ease;cursor:pointer}
+  .focusable:hover{transform:translateY(-4px) scale(1.015);box-shadow:0 14px 36px rgba(37,99,235,.22);z-index:6}
+  .focusable:hover::after{content:"";position:absolute;inset:-3px;border:2px solid var(--blue);border-radius:16px;pointer-events:none}
+  .focusable.new-focus:hover{box-shadow:0 14px 36px rgba(217,119,6,.24)}
+  .focusable.new-focus:hover::after{border-color:var(--amber)}
+  .box.exist{background:var(--blue-soft);border:1.5px solid var(--blue)}
+  .box.new{background:var(--amber-soft);border:1.5px dashed var(--amber)}
+  .box h3{margin:0 0 4px;font-size:15px;font-weight:700;display:flex;align-items:center;gap:8px}
+  .box .role{font-size:12px;color:var(--muted);font-weight:600;margin-bottom:8px}
+  .box ul{margin:6px 0 0;padding-left:16px}
+  .box li{font-size:12.5px;color:var(--ink);margin:3px 0}
+  .box .badge{position:absolute;top:12px;right:12px;font-size:9px;font-weight:700;letter-spacing:.06em;padding:2px 7px;border-radius:999px;text-transform:uppercase}
+  .badge.exist{background:var(--blue);color:#fff}
+  .badge.new{background:var(--amber);color:#fff}
+
+  .grid2{display:grid;grid-template-columns:1fr 1fr;gap:18px}
+  .grid3{display:grid;grid-template-columns:repeat(3,1fr);gap:16px}
+  @media(max-width:760px){.grid2,.grid3{grid-template-columns:1fr}}
+
+  /* EC2 shell */
+  .ec2{border:2px solid var(--blue);border-radius:16px;padding:18px;background:linear-gradient(180deg,#f8fbff, #ffffff)}
+  .ec2-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:14px}
+  .ec2-head .name{font-weight:700;font-size:14px;color:var(--blue);display:flex;align-items:center;gap:8px}
+
+  .flow{display:flex;align-items:center;justify-content:center;gap:8px;color:var(--muted);font-size:12px;font-weight:600;margin:2px 0 18px;text-align:center}
+  .arrow-note{text-align:center;color:var(--muted);font-size:12px;font-weight:600;margin:-6px 0 14px}
+  .down{display:flex;justify-content:center;margin:6px 0}
+  .gap-arrows{height:82px}
+
+  /* two-column stage: flow on left, shared DB column on right */
+  .stage{display:flex;gap:150px;align-items:stretch}
+  .main-col{flex:1;min-width:0}
+  .db-col{width:250px;flex:none;display:flex;align-items:center}
+  .db-col .layer{width:100%;margin-bottom:0}
+  @media(max-width:980px){.stage{flex-direction:column;gap:22px}.db-col{width:auto;align-items:stretch}}
+  .down svg{opacity:.6}
+
+  .fargate .box.new{background:#fff;border-color:var(--amber)}
+  .task{background:#fff;border:1.5px solid var(--line);border-radius:12px;padding:14px;position:relative}
+  .task h4{margin:0 0 10px;font-size:13px;font-weight:700;display:flex;align-items:center;gap:7px}
+  .task ol{margin:0;padding-left:18px}
+  .task li{font-size:12px;margin:5px 0;color:var(--ink)}
+  .pill{display:inline-block;font-size:10px;font-weight:700;padding:2px 7px;border-radius:6px;margin-left:4px}
+  .pill.fail{background:var(--red-soft);color:var(--red)}
+  .pill.ok{background:var(--green-soft);color:var(--green)}
+  .dot{width:9px;height:9px;border-radius:50%;display:inline-block}
+  .dot.on{background:var(--green)}
+  .dot.off{background:var(--red)}
+  .dot.warn{background:var(--amber)}
+
+  .scale-row{display:flex;gap:14px;flex-wrap:wrap;margin-top:4px}
+  .scale-chip{flex:1;min-width:240px;display:flex;align-items:center;gap:12px;background:#fff;border:1px solid var(--line);border-radius:10px;padding:12px 16px}
+  .scale-chip .dot{flex:none}
+  .sc-txt{display:flex;flex-direction:column;gap:2px}
+  .sc-txt strong{font-size:13px;font-weight:700;color:var(--ink)}
+  .sc-txt strong em{font-style:italic}
+  .sc-txt>span{font-size:12px;color:var(--muted);font-weight:500}
+
+  .redis-row{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+  @media(max-width:760px){.redis-row{grid-template-columns:1fr}}
+  .redis-item{background:#fff;border:1px dashed var(--amber);border-radius:10px;padding:14px}
+  .redis-item .k{font-family:ui-monospace,Menlo,Consolas,monospace;font-size:12px;color:var(--amber);font-weight:700}
+  .redis-item p{margin:6px 0 0;font-size:12.5px;color:var(--ink)}
+
+  .db-consumers{display:flex;flex-direction:column;gap:8px;margin-top:12px}
+  .db-consumers .consumer{display:flex;align-items:center;gap:6px;background:#fff;border:1px solid var(--blue-line);border-radius:8px;padding:7px 11px;font-size:12px;font-weight:700;color:var(--ink)}
+  .db-consumers .consumer em{font-style:normal;font-weight:500;color:var(--muted);font-size:11.5px}
+
+  .edge{background:var(--red-soft);border:1px solid #fecaca}
+  .edge .layer-title{color:var(--red)}
+  .edge ol{margin:6px 0 0;padding-left:18px}
+  .edge li{font-size:13px;margin:6px 0}
+
+  code{font-family:ui-monospace,Menlo,Consolas,monospace;background:#eef2f7;padding:1px 6px;border-radius:5px;font-size:.88em;color:#334155}
+  .conn{text-align:center;color:var(--muted);font-size:12px;font-weight:600;margin:0 0 6px}
+
+  /* branch connectors */
+  .branch{display:grid;grid-template-columns:1fr 1fr;gap:18px;margin:2px 0 20px;align-items:start}
+  @media(max-width:760px){.branch{grid-template-columns:1fr;gap:26px}}
+  .branch-path{display:flex;flex-direction:column;align-items:center;text-align:center}
+  .branch-svg{line-height:0}
+  .branch-label{margin-top:2px;font-size:12.5px}
+  .branch-label strong{display:block;font-weight:700}
+  .branch-label span{display:block;color:var(--muted);font-size:11.5px;margin-top:2px}
+  .branch-label.a strong{color:var(--blue)}
+  .branch-label.b strong{color:var(--amber)}
+  /* SNS round-trip flow */
+  .rt-cta{margin-top:22px;width:100%;display:flex;align-items:center;gap:14px;cursor:pointer;
+    text-align:left;font-family:inherit;
+    background:linear-gradient(180deg,#fff7ed,#fffdf9);color:var(--ink);
+    border:1.5px dashed var(--amber);border-radius:12px;padding:14px 18px;
+    transition:transform .15s ease, box-shadow .15s ease, background .15s ease}
+  .rt-cta:hover{background:#fff2e0;box-shadow:0 6px 18px rgba(217,119,6,.18);transform:translateY(-1px)}
+  .rt-cta-icon{font-size:22px;flex:none}
+  .rt-cta-text{display:flex;flex-direction:column;gap:2px;flex:1;min-width:0}
+  .rt-cta-title{font-size:14px;font-weight:700;color:var(--ink)}
+  .rt-cta-label{color:var(--amber)}
+  .rt-cta-sub{font-size:12px;font-weight:500;color:var(--muted)}
+  .rt-cta-chevron{flex:none;font-size:16px;font-weight:800;color:var(--amber);
+    background:var(--amber-soft);border:1px solid var(--amber-line);border-radius:8px;
+    width:30px;height:30px;display:flex;align-items:center;justify-content:center;
+    transition:transform .2s ease}
+  .rt-cta[aria-expanded="true"] .rt-cta-chevron{transform:rotate(180deg)}
+  .rt-block{margin-top:16px;padding-top:16px;border-top:1.5px dashed var(--amber-line)}
+  .rt-block.collapsed{display:none}
+  .rt-lane{border-radius:12px;padding:12px 14px}
+  .rt-lane.out{background:var(--amber-soft);border:1px solid var(--amber-line)}
+  .rt-lane.in{background:var(--green-soft);border:1px solid #a7f3d0}
+  .rt-lane-h{display:flex;align-items:center;gap:9px;font-size:12px;font-weight:700;color:var(--ink);margin-bottom:11px}
+  .rt-badge{flex:none;font-size:10px;font-weight:800;letter-spacing:.05em;text-transform:uppercase;padding:3px 10px;border-radius:999px;color:#fff}
+  .rt-badge.out{background:var(--amber)}
+  .rt-badge.in{background:var(--green)}
+  .rt-row{display:flex;align-items:stretch;gap:8px;flex-wrap:nowrap}
+  .rt-node{flex:1 1 0;min-width:0;border-radius:10px;padding:10px 12px;background:#fff;display:flex;flex-direction:column;gap:4px;
+    cursor:pointer;transition:transform .16s ease, box-shadow .16s ease, border-color .16s ease;position:relative}
+  .rt-node:hover{transform:translateY(-4px) scale(1.02);z-index:3}
+  .rt-node.amber{border:1.5px dashed var(--amber)}
+  .rt-node.amber:hover{box-shadow:0 12px 28px rgba(217,119,6,.26);border-color:var(--amber)}
+  .rt-node.blue{border:1.5px solid var(--blue)}
+  .rt-node.blue:hover{box-shadow:0 12px 28px rgba(37,99,235,.26)}
+  .rt-node.green{border:1.5px solid var(--green)}
+  .rt-node.green:hover{box-shadow:0 12px 28px rgba(5,150,105,.26)}
+  .rt-k{font-size:12px;font-weight:700;color:var(--ink);line-height:1.25}
+  .rt-s{font-size:10.5px;color:var(--muted);font-weight:500;line-height:1.35;word-break:break-word}
+  .rt-arr{align-self:center;font-size:16px;font-weight:800;color:var(--amber);flex:none}
+  .rt-arr.green{color:var(--green)}
+  .rt-turn{text-align:center;font-size:12px;font-weight:700;color:var(--green);margin:12px 0}
+  @media(max-width:760px){.rt-row{flex-direction:column;flex-wrap:wrap}.rt-arr{transform:rotate(90deg);align-self:center}}
+  footer{margin-top:36px;color:var(--muted);font-size:12px;text-align:center}
+
+  /* ===== section divider between architecture and flows ===== */
+  .section-divider{max-width:1240px;margin:20px auto 0;padding:0 28px}
+  .section-divider hr{border:none;border-top:1px solid var(--line);margin:0}
+
+  /* ===== Operational Flows section (namespaced to avoid clashing with architecture CSS) ===== */
+  .flows-section{max-width:1240px;margin:0 auto;padding:40px 28px 80px}
+  .flows-section .eyebrow{font-size:12px;letter-spacing:.14em;text-transform:uppercase;color:var(--blue);font-weight:700;margin-bottom:8px}
+  .flows-section h1{font-size:30px;margin:0 0 8px;font-weight:700;letter-spacing:-.02em}
+  .flows-section .sub{color:var(--muted);font-size:15px;max-width:760px;margin-bottom:34px}
+
+  .flows-section .flows{display:grid;grid-template-columns:repeat(3,1fr);gap:24px;align-items:start}
+  @media(max-width:1000px){.flows-section .flows{grid-template-columns:1fr;max-width:520px;margin:0 auto}}
+
+  .flows-section .flow-card{background:var(--card);border:1px solid var(--line);border-radius:16px;box-shadow:var(--shadow);
+    padding:22px 20px 26px;display:flex;flex-direction:column}
+  .flows-section .flow-head{display:flex;align-items:center;gap:10px;margin-bottom:4px}
+  .flows-section .flow-head h2{font-size:16px;margin:0;font-weight:700}
+  .flows-section .trigger{font-size:11px;font-weight:700;letter-spacing:.04em;text-transform:uppercase;
+    padding:3px 9px;border-radius:999px;margin-bottom:18px;align-self:flex-start}
+  .flows-section .t-green{background:var(--green-soft);color:var(--green)}
+  .flows-section .t-red{background:var(--red-soft);color:var(--red)}
+  .flows-section .t-blue{background:var(--blue-soft);color:var(--blue)}
+
+  .flows-section .chain{display:flex;flex-direction:column;align-items:stretch;gap:0}
+  .flows-section .node{border:1.5px solid var(--line);border-radius:12px;padding:13px 15px;background:#fff;
+    transition:transform .16s ease, box-shadow .16s ease, border-color .16s ease;position:relative}
+  .flows-section .node:hover{transform:translateY(-3px);box-shadow:0 10px 26px rgba(15,23,42,.12);z-index:2}
+  .flows-section .node .step{display:inline-flex;align-items:center;justify-content:center;width:22px;height:22px;border-radius:50%;
+    font-size:12px;font-weight:700;color:#fff;margin-right:9px;flex:none}
+  .flows-section .node .step-ecs{background:transparent!important;font-size:16px}
+  .flows-section .node .body{display:flex;align-items:flex-start}
+  .flows-section .node .txt{font-size:13.5px;font-weight:600;color:var(--ink)}
+  .flows-section .node .txt small{display:block;font-weight:500;color:var(--muted);font-size:12px;margin-top:2px}
+
+  .flows-section .node.start{border-color:currentColor}
+  .flows-section .g{color:var(--green)} .flows-section .g .step{background:var(--green)} .flows-section .g.start{background:var(--green-soft)}
+  .flows-section .r{color:var(--red)}   .flows-section .r .step{background:var(--red)}   .flows-section .r.start{background:var(--red-soft)}
+  .flows-section .b{color:var(--blue)}  .flows-section .b .step{background:var(--blue)}  .flows-section .b.start{background:var(--blue-soft)}
+  .flows-section .node .txt{color:var(--ink)}
+
+  .flows-section .conn{display:flex;justify-content:center;height:26px}
+  .flows-section .conn svg{opacity:.75}
+
+  /* decision diamond */
+  .flows-section .decision{align-self:center;width:104px;height:104px;display:flex;align-items:center;justify-content:center;
+    text-align:center;transform:rotate(45deg);border:1.5px solid var(--blue);background:var(--blue-soft);
+    border-radius:12px;margin:22px auto 0;transition:transform .16s ease, box-shadow .16s ease}
+  .flows-section .decision:hover{box-shadow:0 10px 26px rgba(37,99,235,.2)}
+  .flows-section .decision .d-inner{transform:rotate(-45deg);font-size:11px;line-height:1.35;font-weight:700;color:var(--blue);padding:0 6px}
+
+  .flows-section .branch-arms{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin:8px 0 2px}
+  .flows-section .arm{display:flex;flex-direction:column;align-items:center;gap:3px}
+  .flows-section .arm b{font-size:11px;font-weight:800;letter-spacing:.04em}
+  .flows-section .arm b.no{color:var(--muted)} .flows-section .arm b.yes{color:var(--green)}
+  .flows-section .branches{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-top:2px}
+  .flows-section .end{border-radius:999px;padding:11px 14px;text-align:center;font-size:12.5px;font-weight:700;border:1.5px dashed var(--line);color:var(--muted);background:#fff}
+  .flows-section .end.stop{color:var(--muted)}
+  .flows-section .end.go{border-style:solid;border-color:var(--green);color:var(--green);background:var(--green-soft)}
+
+  /* ---- per-request assignment flow (full width) ---- */
+  .flows-section .assign{margin-top:40px;background:var(--card);border:1px solid var(--line);border-radius:16px;box-shadow:var(--shadow);padding:24px 22px 28px}
+  .flows-section .t-vio{background:var(--vio-soft);color:#7c3aed}
+  .flows-section .assign .flow-head h2{font-size:17px}
+  .flows-section .achain{display:flex;flex-direction:column;align-items:stretch;max-width:560px;margin:0 auto}
+  .flows-section .v{color:var(--vio)} .flows-section .v .step{background:var(--vio)}
+  .flows-section .node .tag2{display:inline-block;font-size:10.5px;font-weight:700;padding:2px 8px;border-radius:999px;margin-left:8px;vertical-align:middle}
+  .flows-section .tag-par{background:var(--amber-soft);color:var(--amber)}
+  .flows-section .tag-win{background:var(--blue-soft);color:var(--blue)}
+
+  .flows-section .loop{position:relative;padding-left:52px;margin-top:26px}
+  .flows-section .loop::before{content:"";position:absolute;left:14px;top:20px;bottom:82px;width:24px;
+    border:2.5px solid var(--amber);border-right:none;border-radius:14px 0 0 14px}
+  .flows-section .loop::after{content:"";position:absolute;left:36px;top:13px;width:0;height:0;
+    border:7px solid transparent;border-left-color:var(--amber)}
+  .flows-section .loop-tag{position:absolute;left:8px;top:-2px;white-space:nowrap;font-size:10px;font-weight:800;color:var(--amber);letter-spacing:.02em}
+  .flows-section .loop-box{border-color:var(--vio)}
+  .flows-section .end.move{border-style:solid;border-color:var(--amber);color:var(--amber);background:var(--amber-soft)}
+
+  .flows-section .foot{margin-top:30px;color:var(--muted);font-size:12px;text-align:center}
+  .flows-section code{font-family:ui-monospace,Menlo,Consolas,monospace;background:#eef2f7;padding:1px 6px;border-radius:5px;font-size:.88em;color:#334155}
+</style>
+</head>
+<body>
+
+<!-- ============================ ARCHITECTURE ============================ -->
+<div class="wrap">
+
+  <svg id="wires"></svg>
+
+  <header class="top">
+    <div class="eyebrow">ClimatePros · System Architecture</div>
+    <h1>Auto-Dispatch — End-to-End Architecture</h1>
+    <p class="sub">How an admin toggle drives fully automated, division-isolated dispatch — layered on top of the existing EC2 application servers, with a new Redis + AWS Fargate processing tier for concurrency, fault tolerance, and cost control — plus an Amazon SNS round-trip for real-time technician notification and reply.</p>
+  </header>
+
+  <div class="legend">
+    <div class="item"><span class="swatch exist"></span> Existing system <span class="note">— already live today</span></div>
+    <div class="item"><span class="swatch new"></span> New for auto-dispatch <span class="note">— added by this project</span></div>
+    <div class="item"><span style="width:26px;height:0;border-top:2.5px solid #2563eb;display:inline-block"></span> Dispatch flow</div>
+    <div class="item"><span style="width:26px;height:0;border-top:2.5px solid #7c3aed;display:inline-block"></span> Toggle / configuration flow</div>
+    <div class="item"><span style="width:26px;height:0;border-top:2.5px solid #059669;display:inline-block"></span> DB read / write</div>
+    <div class="item"><span style="width:26px;height:0;border-top:2.5px solid #d97706;display:inline-block"></span> SNS push / technician reply</div>
+  </div>
+
+  <div class="stage">
+  <div class="main-col">
+
+  <!-- CONTROL PLANE -->
+  <section class="layer">
+    <div class="layer-title">1 · Control Plane <span class="tag exist">Existing UI</span></div>
+    <div class="box exist focusable" id="dashboard">
+      <span class="badge exist">Existing</span>
+      <h3>🖥️ Dashboard — Admin UI</h3>
+      <div class="role">Operator control surface</div>
+      <ul>
+        <li><strong>Dispatch request</strong> → handled by Server A</li>
+        <li><strong>New — Auto-Dispatch toggle</strong> → handled by Server B</li>
+        <li><strong>New — Configuration</strong> (e.g. task count <em>N</em>) → handled by Server B</li>
+      </ul>
+    </div>
+  </section>
+
+  <div class="gap-arrows"></div>
+
+  <!-- EC2 -->
+  <section class="layer" id="ec2layer">
+    <div class="layer-title">2 · Existing Application Tier <span class="tag exist">Single EC2 Instance</span></div>
+    <div class="ec2">
+      <div class="ec2-head">
+        <span class="name">☁️ AWS EC2 — Application Host <span class="tag exist" style="margin-left:6px">Existing</span></span>
+      </div>
+      <div class="grid2">
+        <div class="box exist focusable" id="serverA">
+          <span class="badge exist">Existing</span>
+          <h3>🅰️ Server A</h3>
+          <div class="role">Request entry point</div>
+          <ul>
+            <li>API endpoints · user sessions</li>
+            <li><strong>New logic:</strong> if division = <code>ENABLED</code>, publish payload to Redis Stream</li>
+          </ul>
+        </div>
+        <div class="box exist focusable" id="serverB">
+          <span class="badge exist">Existing</span>
+          <h3>🅱️ Server B</h3>
+          <div class="role">Orchestrator</div>
+          <ul>
+            <li>Manual task initiator</li>
+            <li><strong>New logic:</strong> ECS Fargate manager — watches toggles, scales tasks (ON=<em>N</em> configurable · e.g. 3 / OFF=0), flushes stream on disable</li>
+          </ul>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- BRANCH CONNECTOR: Server B -> Fargate (right). Server A -> Stream drawn by #wires rail (left). -->
+  <div class="branch">
+    <div class="branch-path spacer"></div>
+    <div class="branch-path b">
+      <div class="branch-svg">
+        <svg width="60" height="70" viewBox="0 0 60 70">
+          <defs><marker id="arrB" markerWidth="9" markerHeight="9" refX="6" refY="3" orient="auto"><path d="M0,0 L6,3 L0,6 Z" fill="#d97706"/></marker></defs>
+          <path d="M30 0 L30 62" fill="none" stroke="#d97706" stroke-width="2.5" stroke-dasharray="6 4" marker-end="url(#arrB)"/>
+        </svg>
+      </div>
+      <div class="branch-label b"><strong>Server B → Fargate Pool</strong><span>AWS ECS API → scale tasks (ON=<em>N</em>, configurable · e.g. 3 / OFF=0)</span></div>
+    </div>
+  </div>
+
+  <!-- FARGATE POOL -->
+  <section class="layer fargate focusable new-focus" id="fargate">
+    <div class="layer-title">3 · AWS ECS Fargate Pool <span class="tag new">New</span></div>
+    <div class="scale-row" style="margin-bottom:18px">
+      <div class="scale-chip"><span class="dot on"></span><span class="sc-txt"><strong>ON — <em>N</em> tasks running</strong><span>configurable · 3 used here · scales up on enable</span></span></div>
+      <div class="scale-chip"><span class="dot off"></span><span class="sc-txt"><strong>OFF — 0 tasks</strong><span>scales to zero + flushes stream (cost save)</span></span></div>
+    </div>
+
+    <div class="conn">All <em>N</em> tasks read the same group via <code>XREADGROUP</code> — competing consumers <span style="color:var(--muted)">(N configurable; 3 shown below as example)</span></div>
+
+    <div class="grid3">
+      <div class="task">
+        <h4>📦 Task C1</h4>
+        <ol>
+          <li><code>XREADGROUP</code> from <code>dispatch:stream</code></li>
+          <li>Try lock <code>lock:div:Div_A</code></li>
+          <li>Result: <span class="pill fail">✕ FAIL</span> (Div_A held)</li>
+          <li>Back off — NACK / release message for later pickup</li>
+        </ol>
+      </div>
+      <div class="task">
+        <h4>📦 Task C2</h4>
+        <ol>
+          <li><code>XREADGROUP</code> from <code>dispatch:stream</code></li>
+          <li>Try lock <code>lock:div:Div_A</code> → <span class="pill ok">✓ SUCCESS</span></li>
+          <li>Nearest techs (RDS) → <strong>SNS Publish</strong> to each device</li>
+          <li><code>BLPOP resp:{id}:{tech}</code> — block for reply ⏳</li>
+          <li>Rank &amp; assign → release lock · <code>XACK</code></li>
+        </ol>
+      </div>
+      <div class="task">
+        <h4>📦 Task C3</h4>
+        <ol>
+          <li><code>XREADGROUP</code> from <code>dispatch:stream</code></li>
+          <li>Try lock <code>lock:div:Div_B</code> → <span class="pill ok">✓ SUCCESS</span></li>
+          <li>Nearest techs (RDS) → <strong>SNS Publish</strong> to each device</li>
+          <li><code>BLPOP resp:{id}:{tech}</code> — block for reply ⏳</li>
+          <li>Rank &amp; assign → release lock · <code>XACK</code></li>
+        </ol>
+      </div>
+    </div>
+
+    <!-- EXPAND / COLLAPSE CTA -->
+    <button type="button" class="rt-cta" id="rtToggle" aria-expanded="false" aria-controls="snsBlock" onclick="toggleRT(event)">
+      <span class="rt-cta-icon">🔍</span>
+      <span class="rt-cta-text">
+        <span class="rt-cta-title"><span class="rt-cta-label">Expand</span> — how each dispatch request is processed</span>
+        <span class="rt-cta-sub">Drill into the per-technician SNS push → phone → EC2 → Redis → BLPOP reply loop</span>
+      </span>
+      <span class="rt-cta-chevron">▾</span>
+    </button>
+
+    <!-- SNS ROUND-TRIP (inside a winning task's flow) -->
+    <div class="rt-block collapsed" id="snsBlock">
+      <div class="conn" style="margin-top:22px">Inside a winning worker's flow (e.g. C2 / C3): <strong>notify each nearby technician via Amazon SNS</strong>, then block on a per-technician Redis key for the reply — <strong>no polling, instant wake</strong></div>
+
+      <!-- outbound: Task -> SNS -> Phone -->
+      <div class="rt-lane out">
+        <div class="rt-lane-h"><span class="rt-badge out">① Outbound</span> Push notification · Fargate Task → SNS → Technician Phone</div>
+        <div class="rt-row">
+        <div class="rt-node amber"><span class="rt-k">📦 Fargate Task</span><span class="rt-s"><code>SNS Publish</code> · TargetArn = endpointArn<br>msg = { dispatchId, techId, job }</span></div>
+        <div class="rt-arr">→</div>
+        <div class="rt-node amber"><span class="rt-k">📣 Amazon SNS</span><span class="rt-s">Platform apps: <strong>APNs</strong> (iOS) + <strong>FCM</strong> (Android) · per-device endpoints</span></div>
+        <div class="rt-arr">→</div>
+        <div class="rt-node blue"><span class="rt-k">📱 Technician Phone</span><span class="rt-s">Flutter app · push arrives carrying dispatchId + techId</span></div>
+        </div>
+      </div>
+
+      <div class="rt-turn">technician taps Accept / Reject ↓</div>
+
+      <!-- inbound: Phone -> EC2 -> Redis -> Task -->
+      <div class="rt-lane in">
+        <div class="rt-lane-h"><span class="rt-badge in">② Inbound</span> Reply path · Technician Phone → EC2 API → Redis → Fargate Task</div>
+        <div class="rt-row">
+        <div class="rt-node blue"><span class="rt-k">📱 Technician Phone</span><span class="rt-s">POST reply { dispatchId, techId, accept }</span></div>
+        <div class="rt-arr green">→</div>
+        <div class="rt-node blue"><span class="rt-k">🅰️🅱️ EC2 API</span><span class="rt-s"><code>/dispatch/respond</code><br><code>SETNX resp:done</code> (dedupe) · <code>LPUSH</code> reply</span></div>
+        <div class="rt-arr green">→</div>
+        <div class="rt-node amber"><span class="rt-k">🔑 Redis · resp:{id}:{tech}</span><span class="rt-s">LIST · durable buffer · <code>EXPIRE 60s</code></span></div>
+        <div class="rt-arr green">→</div>
+        <div class="rt-node amber"><span class="rt-k">📦 Fargate Task <span style="color:var(--green);font-weight:700">↩ loop closes</span></span><span class="rt-s"><code>BLPOP</code> wakes instantly → rank &amp; assign (RDS)</span></div>
+        </div>
+      </div>
+
+      <p style="margin:14px 0 0;font-size:12px;color:var(--muted)">SNS = push out only (fire-and-forget). Reply path is <strong>Phone → EC2 → Redis → Task</strong>. Worker's <code>BLPOP</code> timeout <em>T</em> must stay below the division lock TTL; on timeout the worker escalates to the next technician batch.</p>
+    </div>
+  </section>
+
+  <div class="down"><svg width="22" height="26"><path d="M11 0v20M4 14l7 7 7-7" fill="none" stroke="#94a3b8" stroke-width="2"/></svg></div>
+
+  <!-- REDIS -->
+  <section class="layer focusable new-focus">
+    <div class="layer-title">4 · Redis Infrastructure Layer <span class="tag new">New</span></div>
+    <div class="redis-row">
+      <div class="redis-item" id="streamBox">
+        <span class="k">STREAM · dispatch:stream</span>
+        <p>Tracks incoming dispatch requests per division. Durable buffer between Server A and the Fargate workers.</p>
+      </div>
+      <div class="redis-item">
+        <span class="k">MUTEX · lock:div:*</span>
+        <p>Distributed per-division lock. Guarantees sequential, non-parallel processing — no two workers touch the same division at once.</p>
+      </div>
+      <div class="redis-item" id="respBox" style="grid-column:1 / -1">
+        <span class="k">LIST · resp:{dispatchId}:{techId}</span>
+        <p>Per-technician reply channel. EC2 <code>LPUSH</code>es the Accept/Reject; the worker <code>BLPOP</code>s it — instant wake, <strong>no polling</strong>. <code>EXPIRE 60s</code> self-cleans.</p>
+      </div>
+    </div>
+  </section>
+
+  <div class="down"><svg width="22" height="26"><path d="M11 0v20M4 14l7 7 7-7" fill="none" stroke="#94a3b8" stroke-width="2"/></svg></div>
+
+  <!-- EDGE CASE -->
+  <section class="layer edge">
+    <div class="layer-title">⚠️ Fault Tolerance — PEL Expiration &amp; Dual-Execution Shield <span class="tag new">New</span></div>
+    <p style="margin:0 0 4px;font-size:13px;color:var(--ink)">If Task C2 crashes <em>or</em> processing exceeds the visibility timeout, its message stays unacknowledged in the Pending Entries List (PEL):</p>
+    <ol>
+      <li>Surviving worker (e.g. C1) claims the stuck message via <code>XCLAIM</code></li>
+      <li>C1 must first acquire <code>lock:div:Div_A</code> before running the flow</li>
+      <li><strong>Guardrail:</strong> if C2 was merely slow (not dead), the live lock <strong>blocks</strong> C1 → prevents dual execution. If C2 truly died, the lock expires and C1 safely takes over.</li>
+    </ol>
+    <p style="margin:8px 0 0;font-size:12.5px;color:var(--muted)">Net effect: exactly-once dispatch to technicians — no duplicate assignments, even under crashes or stalls.</p>
+  </section>
+
+  </div><!-- /main-col -->
+
+  <div class="db-col">
+    <section class="layer">
+      <div class="layer-title">Shared Data Store <span class="tag exist">Existing</span></div>
+      <div class="box exist focusable" id="rdsBox">
+        <h3>🗄️ Amazon RDS</h3>
+        <div class="role">Single SQL database · system of record</div>
+        <div class="db-consumers">
+          <span class="consumer">🅰️🅱️ EC2 Servers <em>read / write</em></span>
+          <span class="consumer">📦 ECS Fargate tasks <em>read / write</em></span>
+        </div>
+      </div>
+    </section>
+  </div><!-- /db-col -->
+
+  </div><!-- /stage -->
+
+  <footer>ClimatePros · Auto-Dispatch Architecture — <span style="color:var(--blue);font-weight:600">blue = existing</span>, <span style="color:var(--amber);font-weight:600">amber dashed = new</span></footer>
+
+</div>
+
+<div class="section-divider"><hr></div>
+
+<!-- ============================ OPERATIONAL FLOWS ============================ -->
+<section class="flows-section">
+
+  <div class="eyebrow">ClimatePros · Auto-Dispatch</div>
+  <h1>Operational Flows</h1>
+  <p class="sub">Three isolated control flows that drive the auto-dispatch system: enabling a division, disabling it, and handling a new dispatch event. Companion to the system architecture diagram above.</p>
+
+  <div class="flows">
+
+    <!-- FLOW 1: ENABLE -->
+    <div class="flow-card">
+      <div class="flow-head"><h2>🟢 Enable Auto-Dispatch</h2></div>
+      <span class="trigger t-green">Trigger · Admin turns ON</span>
+      <div class="chain">
+        <div class="node g start"><div class="body"><span class="step">1</span><span class="txt">User enables auto-dispatch<small>for a division, from the Dashboard</small></span></div></div>
+        <div class="conn"><svg width="18" height="26"><path d="M9 0v18M3 13l6 6 6-6" fill="none" stroke="#059669" stroke-width="2"/></svg></div>
+        <div class="node g"><div class="body"><span class="step">2</span><span class="txt">Server B pulls ready-for-dispatch requests<small>fetch the <code>L</code> pending items</small></span></div></div>
+        <div class="conn"><svg width="18" height="26"><path d="M9 0v18M3 13l6 6 6-6" fill="none" stroke="#059669" stroke-width="2"/></svg></div>
+        <div class="node g"><div class="body"><span class="step">3</span><span class="txt">Reset the Redis auto-dispatch queue<small>clear stale entries, then push all <code>L</code> items in</small></span></div></div>
+        <div class="conn"><svg width="18" height="26"><path d="M9 0v18M3 13l6 6 6-6" fill="none" stroke="#059669" stroke-width="2"/></svg></div>
+        <div class="node g"><div class="body"><span class="step">4</span><span class="txt">Scale up the ECS Fargate pool<small>spin up <code>N</code> tasks to consume the queue</small></span></div></div>
+      </div>
+    </div>
+
+    <!-- FLOW 2: DISABLE -->
+    <div class="flow-card">
+      <div class="flow-head"><h2>🔴 Disable Auto-Dispatch</h2></div>
+      <span class="trigger t-red">Trigger · Admin turns OFF</span>
+      <div class="chain">
+        <div class="node r start"><div class="body"><span class="step">1</span><span class="txt">User disables auto-dispatch<small>for a division, from the Dashboard</small></span></div></div>
+        <div class="conn"><svg width="18" height="26"><path d="M9 0v18M3 13l6 6 6-6" fill="none" stroke="#dc2626" stroke-width="2"/></svg></div>
+        <div class="node r"><div class="body"><span class="step">2</span><span class="txt">Scale in the ECS Fargate pool<small>reduce task count to <code>0</code> — stop all workers</small></span></div></div>
+      </div>
+      <div class="end stop" style="margin-top:16px">⏹ Idle · zero cost until re-enabled</div>
+    </div>
+
+    <!-- FLOW 3: NEW DISPATCH -->
+    <div class="flow-card">
+      <div class="flow-head"><h2>🔵 New Dispatch Arrives</h2></div>
+      <span class="trigger t-blue">Trigger · Dispatch created</span>
+      <div class="chain">
+        <div class="node b start"><div class="body"><span class="step">1</span><span class="txt">New dispatch appears<small>request hits Server A</small></span></div></div>
+        <div class="conn"><svg width="18" height="26"><path d="M9 0v18M3 13l6 6 6-6" fill="none" stroke="#2563eb" stroke-width="2"/></svg></div>
+        <div class="decision"><div class="d-inner">Division has<br>auto-dispatch<br>enabled?</div></div>
+        <div class="branch-arms">
+          <div class="arm"><b class="no">NO</b><svg width="16" height="28"><path d="M8 0v18M3 13l5 6 5-6" fill="none" stroke="#94a3b8" stroke-width="2"/></svg></div>
+          <div class="arm"><b class="yes">YES</b><svg width="16" height="28"><path d="M8 0v18M3 13l5 6 5-6" fill="none" stroke="#059669" stroke-width="2"/></svg></div>
+        </div>
+        <div class="branches">
+          <div class="end stop">Do nothing<br><small style="font-weight:500">manual flow unchanged</small></div>
+          <div class="end go">Push dispatch id<br>→ Redis Stream</div>
+        </div>
+        <div class="conn" style="justify-content:flex-end;padding-right:23%"><svg width="18" height="26"><path d="M9 0v18M3 13l6 6 6-6" fill="none" stroke="#2563eb" stroke-width="2"/></svg></div>
+        <div class="node b"><div class="body"><span class="step step-ecs">📦</span><span class="txt">ECS Fargate pool picks up the dispatch<small>a task consumes it from the Redis Stream → runs the auto-dispatch flow (nearest techs → notify → assign)</small></span></div></div>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- PER-REQUEST ASSIGNMENT FLOW -->
+  <section class="assign">
+    <div class="flow-head"><h2>🧭 Dispatch Assignment — Per Request</h2></div>
+    <span class="trigger t-vio">Core logic · runs for every dispatch request</span>
+    <div class="achain">
+
+      <div class="node v"><div class="body"><span class="step">1</span><span class="txt">Get nearby technicians<small>build candidate list + each tech's distance from the jobsite</small></span></div></div>
+      <div class="conn"><svg width="18" height="26"><path d="M9 0v18M3 13l6 6 6-6" fill="none" stroke="#7c3aed" stroke-width="2"/></svg></div>
+
+      <div class="node v"><div class="body"><span class="step">2</span><span class="txt">Ask each technician for availability<span class="tag2 tag-par">parallel</span><span class="tag2 tag-win">collect ~1 min</span><small>fan out to every candidate at once; gather "when can you be there" replies within the window</small></span></div></div>
+      <div class="conn"><svg width="18" height="26"><path d="M9 0v18M3 13l6 6 6-6" fill="none" stroke="#7c3aed" stroke-width="2"/></svg></div>
+
+      <div class="node v"><div class="body"><span class="step">3</span><span class="txt">Rank the technicians<small>score by priority · distance · familiarity → ordered shortlist</small></span></div></div>
+      <div class="conn"><svg width="18" height="26"><path d="M9 0v18M3 13l6 6 6-6" fill="none" stroke="#7c3aed" stroke-width="2"/></svg></div>
+
+      <!-- LOOP: offer to each ranked tech until one accepts -->
+      <div class="loop">
+        <span class="loop-tag">↺ retry</span>
+
+        <div class="node v loop-box"><div class="body"><span class="step">4</span><span class="txt">Offer to the top-ranked technician<span class="tag2 tag-win">30 s to respond</span><small>send the offer to the current #1 on the shortlist</small></span></div></div>
+        <div class="conn"><svg width="18" height="26"><path d="M9 0v18M3 13l6 6 6-6" fill="none" stroke="#7c3aed" stroke-width="2"/></svg></div>
+
+        <div class="decision" style="border-color:var(--vio);background:var(--vio-soft)"><div class="d-inner" style="color:var(--vio)">Accepts<br>within 30 s?</div></div>
+        <div class="branch-arms">
+          <div class="arm"><b class="no" style="color:var(--amber)">NO / timeout</b><svg width="16" height="28"><path d="M8 0v18M3 13l5 6 5-6" fill="none" stroke="#d97706" stroke-width="2"/></svg></div>
+          <div class="arm"><b class="yes">YES</b><svg width="16" height="28"><path d="M8 0v18M3 13l5 6 5-6" fill="none" stroke="#059669" stroke-width="2"/></svg></div>
+        </div>
+        <div class="branches">
+          <div class="end move">Move to next ranked tech<br><small style="font-weight:500">↺ loop back to step 4</small></div>
+          <div class="end go">Assigned ✓<br><small style="font-weight:500">exit the loop</small></div>
+        </div>
+      </div>
+
+      <div class="branch-arms" style="margin-top:2px"><div class="arm"><svg width="18" height="26"><path d="M9 0v18M3 13l6 6 6-6" fill="none" stroke="#dc2626" stroke-width="2"/></svg></div><div class="arm"></div></div>
+      <div class="node v" style="border-color:var(--red)"><div class="body"><span class="step" style="background:var(--red)">5</span><span class="txt">Shortlist exhausted — no technician accepted<span class="tag2" style="background:var(--red-soft);color:var(--red)">escalate to human</span><small>after the last ranked tech times out, hand the request to a human dispatcher for manual assignment</small></span></div></div>
+
+    </div>
+  </section>
+
+  <div class="foot">ClimatePros · Auto-Dispatch operational flows — <span style="color:var(--green);font-weight:600">enable</span> · <span style="color:var(--red);font-weight:600">disable</span> · <span style="color:var(--blue);font-weight:600">new-dispatch event</span></div>
+
+</section>
+
+<script>
+(function(){
+  var svg = document.getElementById('wires');
+  var wrap = document.querySelector('.wrap');
+  var A = document.getElementById('serverA');
+  var B = document.getElementById('serverB');
+  var D = document.getElementById('dashboard');
+  var S = document.getElementById('streamBox');
+  var NS = 'http://www.w3.org/2000/svg';
+
+  function mk(tag, attrs){ var e=document.createElementNS(NS,tag); for(var k in attrs) e.setAttribute(k,attrs[k]); return e; }
+
+  // hoverable wire: fat transparent hit-path + visible path, grouped so hover thickens the visible one
+  function wire(d, stroke, extra){
+    var g = mk('g',{'class':'wg'});
+    g.appendChild(mk('path',{d:d, fill:'none', stroke:'transparent', 'stroke-width':16, 'pointer-events':'stroke'}));
+    var attrs = {d:d, fill:'none', stroke:stroke, 'stroke-width':2.5, 'class':'vis'};
+    for(var k in (extra||{})) attrs[k]=extra[k];
+    var vp = mk('path', attrs);
+    g.appendChild(vp);
+    svg.appendChild(g);
+    return g;
+  }
+
+  function draw(){
+    while(svg.firstChild) svg.removeChild(svg.firstChild);
+    var w = wrap.getBoundingClientRect();
+    var a = A.getBoundingClientRect();
+    var s = S.getBoundingClientRect();
+
+    // points relative to wrap
+    var ax = a.left - w.left;            // Server A left edge
+    var ay = a.top - w.top + a.height/2; // Server A vertical center
+    var sx = s.left - w.left;            // Stream box left edge
+    var sy = s.top - w.top + s.height/2; // Stream box vertical center
+    var gutter = 16;                      // left rail x
+
+    // markers
+    var defs = document.createElementNS(NS,'defs');
+    defs.innerHTML =
+      '<marker id="rail-arrow" markerWidth="10" markerHeight="10" refX="7" refY="3.5" orient="auto"><path d="M0,0 L7,3.5 L0,7 Z" fill="#2563eb"/></marker>' +
+      '<marker id="ctrl-arrow" markerWidth="10" markerHeight="10" refX="7" refY="3.5" orient="auto"><path d="M0,0 L7,3.5 L0,7 Z" fill="#7c3aed"/></marker>' +
+      '<marker id="db-arrow" markerWidth="10" markerHeight="10" refX="7" refY="3.5" orient="auto"><path d="M0,0 L7,3.5 L0,7 Z" fill="#059669"/></marker>' +
+      '<marker id="db-arrow-r" markerWidth="10" markerHeight="10" refX="1" refY="3.5" orient="auto"><path d="M7,0 L0,3.5 L7,7 Z" fill="#059669"/></marker>';
+    svg.appendChild(defs);
+
+    // ---- Dashboard -> EC2 tier top, aligned over each server column ----
+    // Arrows stop at the EC2 card's top edge (never pierce the card content).
+    var dashBottom = D.getBoundingClientRect().bottom - w.top;
+    var ec2Top = document.getElementById('ec2layer').getBoundingClientRect().top - w.top;
+    function ctrlArrow(colEl, color, marker, label, anchor){
+      var r = colEl.getBoundingClientRect();
+      var cx = r.left - w.left + r.width/2;
+      var g = wire('M '+cx+' '+(dashBottom+2)+' V '+(ec2Top-3), color, {'marker-end':'url(#'+marker+')'});
+      g.appendChild(mk('circle',{cx:cx, cy:dashBottom+2, r:4, fill:color}));
+      var midY = (dashBottom + ec2Top)/2 + 4;
+      var dx = anchor === 'end' ? -9 : 9;
+      var t = mk('text',{x:cx+dx, y:midY, fill:color, 'font-size':11.5, 'font-weight':700, 'text-anchor':anchor, 'class':'wlabel'});
+      t.textContent = label;
+      g.appendChild(t);
+    }
+    ctrlArrow(A, '#2563eb', 'rail-arrow', 'Dispatch request', 'end');
+    ctrlArrow(B, '#7c3aed', 'ctrl-arrow', 'Toggle + Configuration (N)', 'start');
+
+    // ---- EC2 tier -> RDS  &  Fargate pool -> RDS (right column, read/write) ----
+    var db = document.getElementById('rdsBox');
+    var ec2 = document.getElementById('ec2layer');
+    var fg = document.getElementById('fargate');
+    if (db && ec2 && fg){
+      var dbR = db.getBoundingClientRect();
+      var dbLeft = dbR.left - w.left;
+      var dbTop = dbR.top - w.top;
+      var dbH = dbR.height;
+      var dbW = dbR.width;
+      // only draw the horizontal wiring when DB is actually in the right column (wide layout)
+      if (dbLeft > ec2.getBoundingClientRect().right - w.left - 20){
+        // EC2 -> RDS: single L-turn entering the DB ceiling (top edge)
+        (function(){
+          var r = ec2.getBoundingClientRect();
+          var sx = r.right - w.left, sy = r.top - w.top + r.height/2;
+          var colX = dbLeft + dbW*0.5;
+          var g = wire('M '+(sx+2)+' '+sy+' H '+colX+' V '+(dbTop-2), '#059669',
+            {'stroke-linejoin':'round','marker-end':'url(#db-arrow)','marker-start':'url(#db-arrow-r)'});
+          var t = mk('text',{x:(sx+colX)/2, y:sy-9, fill:'#059669','font-size':11,'font-weight':700,'text-anchor':'middle','class':'wlabel'});
+          t.textContent = 'EC2 ⇄ RDS'; g.appendChild(t);
+        })();
+        // Fargate -> RDS: straight horizontal line into the DB left edge
+        (function(){
+          var r = fg.getBoundingClientRect();
+          var sx = r.right - w.left, sy = r.top - w.top + r.height/2;
+          var y = Math.max(dbTop+14, Math.min(sy, dbTop+dbH-14));
+          var g = wire('M '+(sx+2)+' '+y+' H '+(dbLeft-2), '#059669',
+            {'marker-end':'url(#db-arrow)','marker-start':'url(#db-arrow-r)'});
+          var t = mk('text',{x:(sx+dbLeft)/2, y:y-9, fill:'#059669','font-size':11,'font-weight':700,'text-anchor':'middle','class':'wlabel'});
+          t.textContent = 'Fargate ⇄ RDS'; g.appendChild(t);
+        })();
+      }
+    }
+
+    // orthogonal path: A.left -> gutter -> down -> into Stream.left
+    var d = 'M '+ax+' '+ay+
+            ' H '+gutter+
+            ' V '+sy+
+            ' H '+sx;
+    var rg = wire(d, '#2563eb', {'stroke-linejoin':'round','marker-end':'url(#rail-arrow)'});
+
+    // start dot at Server A
+    rg.appendChild(mk('circle',{cx:ax, cy:ay, r:4, fill:'#2563eb'}));
+
+    // rotated label along the vertical rail
+    var midY = (ay + sy)/2;
+    var t = mk('text',{x:gutter-7, y:midY, fill:'#2563eb','font-size':11,'font-weight':700,
+      'text-anchor':'middle','class':'wlabel','transform':'rotate(-90 '+(gutter-7)+' '+midY+')'});
+    t.textContent = 'Server A → publish → dispatch:stream';
+    rg.appendChild(t);
+  }
+
+  window.addEventListener('load', draw);
+  window.addEventListener('resize', draw);
+  // fonts/emoji can shift layout; redraw shortly after load
+  setTimeout(draw, 300);
+})();
+
+// Expand / collapse the per-request SNS ⇄ Redis round-trip
+function toggleRT(e){
+  if(e){ e.stopPropagation(); }
+  var block = document.getElementById('snsBlock');
+  var btn = document.getElementById('rtToggle');
+  var isOpen = !block.classList.toggle('collapsed'); // toggle returns true when NOW collapsed
+  btn.setAttribute('aria-expanded', isOpen ? 'true' : 'false');
+  btn.querySelector('.rt-cta-label').textContent = isOpen ? 'Collapse' : 'Expand';
+  // height changed → nudge the SVG wire engine to recompute rail positions
+  window.dispatchEvent(new Event('resize'));
+}
+</script>
+</body>
+</html>
