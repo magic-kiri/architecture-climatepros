@@ -67,7 +67,7 @@
   </div>
 </div>
 <div id="diagram-body" style="overflow-x:auto;background:#fff;border:1px solid var(--border);border-radius:12px;padding:12px 8px;">
-<svg viewBox="0 0 1200 990" width="100%" style="min-width:1040px;font-family:inherit;">
+<svg viewBox="0 0 1200 1020" width="100%" style="min-width:1040px;font-family:inherit;">
  <defs>
   <marker id="b" markerWidth="10" markerHeight="10" refX="7" refY="3.5" orient="auto"><path d="M0,0 L7,3.5 L0,7 Z" fill="#2563eb"/></marker>
   <marker id="b-r" markerWidth="10" markerHeight="10" refX="1" refY="3.5" orient="auto"><path d="M7,0 L0,3.5 L7,7 Z" fill="#2563eb"/></marker>
@@ -222,12 +222,19 @@
  <path d="M980 812 V844" fill="none" stroke="#7c3aed" stroke-width="1.8" stroke-dasharray="6 4" marker-end="url(#p)"/>
  <text x="980" y="832" text-anchor="middle" font-size="9" font-weight="700" fill="#7c3aed" stroke="#fff" stroke-width="3.5" paint-order="stroke">fallback</text>
 
+ <!-- ===================== OBSERVABILITY (abstract) ===================== -->
+ <rect x="64" y="668" width="300" height="112" rx="14" fill="#ecfeff" stroke="#0891b2" stroke-width="1.6" stroke-dasharray="6 4"/>
+ <text x="214" y="700" text-anchor="middle" font-size="13" font-weight="800" fill="#0e7490">&#128225; Observability &amp; Tracing</text>
+ <text x="214" y="722" text-anchor="middle" font-size="9.5" fill="#64748b">OpenTelemetry &middot; distributed tracing (abstract)</text>
+ <text x="214" y="740" text-anchor="middle" font-size="9.5" fill="#64748b">CloudWatch &middot; logs</text>
+ <text x="214" y="762" text-anchor="middle" font-size="8.5" font-style="italic" fill="#94a3b8">all services emit telemetry &#8594; not yet designed</text>
+
  <!-- ===================== LEGEND ===================== -->
- <line x1="70" y1="678" x2="100" y2="678" stroke="#2563eb" stroke-width="2.5"/><text x="106" y="682" font-size="10.5" fill="#475569">existing &middot; unchanged</text>
- <line x1="70" y1="704" x2="100" y2="704" stroke="#d97706" stroke-width="2.5"/><text x="106" y="708" font-size="10.5" fill="#475569">new &middot; this project</text>
- <line x1="70" y1="730" x2="100" y2="730" stroke="#7c3aed" stroke-width="2.5"/><text x="106" y="734" font-size="10.5" fill="#475569">model path (off-cloud)</text>
- <line x1="70" y1="756" x2="100" y2="756" stroke="#059669" stroke-width="2.5"/><text x="106" y="760" font-size="10.5" fill="#475569">data persist / embed</text>
- <line x1="70" y1="782" x2="100" y2="782" stroke="#7c3aed" stroke-width="2" stroke-dasharray="6 4"/><text x="106" y="786" font-size="10.5" fill="#475569">async / fallback</text>
+ <line x1="70" y1="990" x2="100" y2="990" stroke="#2563eb" stroke-width="2.5"/><text x="106" y="994" font-size="10.5" fill="#475569">existing &middot; unchanged</text>
+ <line x1="250" y1="990" x2="280" y2="990" stroke="#d97706" stroke-width="2.5"/><text x="286" y="994" font-size="10.5" fill="#475569">new &middot; this project</text>
+ <line x1="430" y1="990" x2="460" y2="990" stroke="#7c3aed" stroke-width="2.5"/><text x="466" y="994" font-size="10.5" fill="#475569">model path (off-cloud)</text>
+ <line x1="620" y1="990" x2="650" y2="990" stroke="#059669" stroke-width="2.5"/><text x="656" y="994" font-size="10.5" fill="#475569">data persist / embed</text>
+ <line x1="800" y1="990" x2="830" y2="990" stroke="#7c3aed" stroke-width="2" stroke-dasharray="6 4"/><text x="836" y="994" font-size="10.5" fill="#475569">async / fallback</text>
 </svg>
 </div>
 </section>
@@ -261,6 +268,7 @@
    <li><b>.NET additions</b> — AI proxy route + ECS scale monitor on the existing Microservices API <span class="pill aws">AWS EC2</span></li>
    <li><b>LiteLLM Gateway + self-hosted LLM + embedding</b> — private model infra, on-prem <span class="pill office">CP Office</span></li>
    <li><b>Google Gemini</b> — managed fallback only <span class="pill office">external</span></li>
+   <li><b>Observability &amp; Tracing</b> — abstract placeholder; OpenTelemetry tracing + CloudWatch logs. Not yet designed <span class="pill ecs">future</span></li>
   </ul>
  </div>
 
@@ -288,6 +296,7 @@
     [/ECS Tasks/g,      'Container Apps'],
     [/ECS Task/g,       'Container App'],
     [/ECS scale monitor/g, 'Container scale monitor'],
+    [/CloudWatch/g,     'Azure Monitor'],
     [/Fargate workers/g, 'workers'],
     [/SNS Publish/g,    'Publish'],
     [/SNS/g,            'Notification Hubs'],
