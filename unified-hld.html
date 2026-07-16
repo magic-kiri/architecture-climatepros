@@ -1,0 +1,324 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ClimatePros · Unified High-Level Architecture</title>
+<style>
+ :root {
+   --primary:#1a56db; --primary-light:#e8effc; --primary-dark:#0f3a8e;
+   --bg:#f8fafc; --surface:#ffffff; --border:#e2e8f0;
+   --text:#1e293b; --text-muted:#64748b;
+   --blue:#2563eb; --amber:#d97706; --amber-dark:#b45309;
+   --green:#059669; --green-dark:#047857; --purple:#7c3aed; --purple-dark:#5b21b6;
+ }
+ *{margin:0;padding:0;box-sizing:border-box;}
+ body{font-family:'Segoe UI',system-ui,-apple-system,sans-serif;background:var(--bg);color:var(--text);line-height:1.6;}
+ .main{max-width:1220px;margin:0 auto;padding:40px 40px 80px;}
+ .hero{background:linear-gradient(135deg,var(--primary) 0%,var(--primary-dark) 100%);color:#fff;padding:34px 42px;border-radius:16px;margin-bottom:34px;}
+ .hero h1{font-size:29px;font-weight:800;margin-bottom:6px;}
+ .hero .subtitle{font-size:15.5px;opacity:.9;}
+ section{margin-bottom:44px;}
+ h2{font-size:22px;font-weight:700;color:var(--primary-dark);margin-bottom:16px;padding-bottom:9px;border-bottom:2px solid var(--primary-light);}
+
+ .inv{display:grid;grid-template-columns:1fr 1fr;gap:18px;}
+ @media(max-width:860px){.inv{grid-template-columns:1fr;}}
+ .inv-card{border-radius:14px;padding:20px 22px;border:1.5px solid var(--border);background:var(--surface);}
+ .inv-card.exist{border-color:var(--blue);background:#f5f9ff;}
+ .inv-card.new{border-color:var(--amber);background:#fffaf3;border-style:dashed;}
+ .inv-card h3{font-size:15px;font-weight:700;margin-bottom:4px;}
+ .inv-card.exist h3{color:var(--primary-dark);}
+ .inv-card.new h3{color:var(--amber-dark);}
+ .inv-card .cap{font-size:11px;font-weight:800;letter-spacing:1px;text-transform:uppercase;color:var(--text-muted);margin-bottom:10px;}
+ .inv-card ul{list-style:none;}
+ .inv-card li{font-size:13px;padding:7px 0;border-top:1px solid var(--border);display:flex;gap:9px;align-items:flex-start;}
+ .inv-card li:first-of-type{border-top:none;}
+ .inv-card li b{font-weight:700;}
+ .pill{display:inline-block;font-size:10px;font-weight:800;padding:2px 8px;border-radius:999px;margin-left:auto;white-space:nowrap;}
+ .pill.aws{background:var(--primary-light);color:var(--primary-dark);}
+ .pill.ecs{background:#fff7ed;color:var(--amber-dark);}
+ .pill.office{background:#f3e8ff;color:var(--purple-dark);}
+ .counts{display:flex;gap:14px;flex-wrap:wrap;margin-top:16px;}
+ .count{flex:1;min-width:150px;background:var(--surface);border:1.5px dashed var(--amber);border-radius:12px;padding:14px 16px;}
+ .count .n{font-size:26px;font-weight:800;color:var(--amber-dark);line-height:1;}
+ .count .l{font-size:12px;color:var(--text-muted);margin-top:5px;}
+
+ .sec-head{display:flex;align-items:center;justify-content:space-between;gap:16px;margin-bottom:16px;border-bottom:2px solid var(--primary-light);padding-bottom:9px;}
+ .sec-head h2{margin:0;padding:0;border:none;}
+ .cloud-toggle{display:inline-flex;background:var(--primary-light);border:1.5px solid var(--border);border-radius:999px;padding:3px;gap:2px;user-select:none;}
+ .cloud-toggle button{font:inherit;font-size:12.5px;font-weight:700;border:none;background:transparent;color:var(--text-muted);padding:6px 16px;border-radius:999px;cursor:pointer;transition:all .15s;}
+ .cloud-toggle button.active{background:var(--primary);color:#fff;box-shadow:0 1px 3px rgba(0,0,0,.15);}
+</style>
+</head>
+<body>
+<div class="main">
+
+<div class="hero">
+  <h1>ClimatePros · Unified High-Level Architecture</h1>
+  <div class="subtitle">What exists today &middot; what this project introduces &middot; how the new Auto-Dispatch tier and central AI server plug into the existing FieldJetX platform</div>
+</div>
+
+<section id="diagram-section">
+<div class="sec-head">
+  <h2>System Diagram</h2>
+  <div class="cloud-toggle" id="cloudToggle">
+    <button data-cloud="aws" class="active">AWS</button>
+    <button data-cloud="azure">Azure</button>
+  </div>
+</div>
+<div id="diagram-body" style="overflow-x:auto;background:#fff;border:1px solid var(--border);border-radius:12px;padding:12px 8px;">
+<svg viewBox="0 0 1200 990" width="100%" style="min-width:1040px;font-family:inherit;">
+ <defs>
+  <marker id="b" markerWidth="10" markerHeight="10" refX="7" refY="3.5" orient="auto"><path d="M0,0 L7,3.5 L0,7 Z" fill="#2563eb"/></marker>
+  <marker id="b-r" markerWidth="10" markerHeight="10" refX="1" refY="3.5" orient="auto"><path d="M7,0 L0,3.5 L7,7 Z" fill="#2563eb"/></marker>
+  <marker id="a" markerWidth="10" markerHeight="10" refX="7" refY="3.5" orient="auto"><path d="M0,0 L7,3.5 L0,7 Z" fill="#d97706"/></marker>
+  <marker id="g" markerWidth="10" markerHeight="10" refX="7" refY="3.5" orient="auto"><path d="M0,0 L7,3.5 L0,7 Z" fill="#059669"/></marker>
+  <marker id="g-r" markerWidth="10" markerHeight="10" refX="1" refY="3.5" orient="auto"><path d="M7,0 L0,3.5 L7,7 Z" fill="#059669"/></marker>
+  <marker id="p" markerWidth="10" markerHeight="10" refX="7" refY="3.5" orient="auto"><path d="M0,0 L7,3.5 L0,7 Z" fill="#7c3aed"/></marker>
+ </defs>
+
+ <!-- ===================== ZONES ===================== -->
+ <rect x="40" y="40" width="520" height="120" rx="16" fill="#f1f6ff" stroke="#93c5fd" stroke-width="1.4" stroke-dasharray="7 5"/>
+ <text x="300" y="60" text-anchor="middle" font-size="11.5" font-weight="800" fill="#0f3a8e" letter-spacing="1">CLIENTS</text>
+
+ <rect x="40" y="190" width="520" height="430" rx="16" fill="#eff4ff" stroke="#60a5fa" stroke-width="1.5" stroke-dasharray="7 5"/>
+ <text x="300" y="209" text-anchor="middle" font-size="11.5" font-weight="800" fill="#0f3a8e" letter-spacing="0.4">EXISTING &middot; FIELDJETX PLATFORM</text>
+ <text x="300" y="225" text-anchor="middle" font-size="9.5" font-weight="600" fill="#64748b">AWS &middot; unchanged</text>
+
+ <rect x="640" y="40" width="400" height="650" rx="16" fill="#fffaf3" stroke="#d97706" stroke-width="1.5" stroke-dasharray="7 5"/>
+ <text x="840" y="60" text-anchor="middle" font-size="12" font-weight="800" fill="#b45309" letter-spacing="1">NEW INFRASTRUCTURE &middot; THIS PROJECT &nbsp;<tspan font-size="10" font-weight="600" fill="#b45309">AWS</tspan></text>
+
+ <rect x="640" y="720" width="400" height="240" rx="16" fill="#faf5ff" stroke="#7c3aed" stroke-width="1.5" stroke-dasharray="7 5"/>
+ <text x="830" y="744" text-anchor="middle" font-size="10.5" font-weight="800" fill="#5b21b6" letter-spacing="0.3">PRIVATE MODEL INFRA &middot; CLIMATEPROS OFFICE &nbsp;<tspan font-size="9.5" font-weight="600" fill="#7c6aa6">on-prem</tspan></text>
+
+ <!-- ===================== CLIENTS ===================== -->
+ <rect x="80" y="72" width="200" height="72" rx="14" fill="#fff" stroke="#93c5fd" stroke-width="1.5"/>
+ <text x="180" y="105" text-anchor="middle" font-size="13" font-weight="700" fill="#0f3a8e">&#128421;&#65039; FieldJetX Web App</text>
+ <text x="180" y="124" text-anchor="middle" font-size="10" fill="#64748b">admin / office console</text>
+ <rect x="320" y="72" width="200" height="72" rx="14" fill="#fff" stroke="#93c5fd" stroke-width="1.5"/>
+ <text x="420" y="105" text-anchor="middle" font-size="13" font-weight="700" fill="#0f3a8e">&#128241; Mobile App</text>
+ <text x="420" y="124" text-anchor="middle" font-size="10" fill="#64748b">FieldJetX (Flutter)</text>
+
+ <!-- ===================== EXISTING ===================== -->
+ <rect x="66" y="250" width="468" height="158" rx="14" fill="#f8fbff" stroke="#2563eb" stroke-width="2"/>
+ <text x="88" y="274" font-size="11.5" font-weight="800" fill="#2563eb">&#9729;&#65039; AWS EC2 &middot; Application Host</text>
+ <text x="512" y="274" text-anchor="end" font-size="9.5" fill="#64748b">one physical server</text>
+ <rect x="88" y="296" width="200" height="96" rx="10" fill="#fff" stroke="#93c5fd" stroke-width="1.5"/>
+ <text x="188" y="338" text-anchor="middle" font-size="12.5" font-weight="700" fill="#1e293b">.NET Legacy API</text>
+ <text x="188" y="360" text-anchor="middle" font-size="9.5" fill="#64748b">existing service</text>
+ <rect x="312" y="296" width="200" height="96" rx="10" fill="#fff" stroke="#93c5fd" stroke-width="2"/>
+ <text x="412" y="326" text-anchor="middle" font-size="12" font-weight="700" fill="#1e293b">.NET Microservices API</text>
+ <text x="412" y="346" text-anchor="middle" font-size="9" font-weight="700" fill="#d97706">+ AI proxy route (new)</text>
+ <text x="412" y="360" text-anchor="middle" font-size="9" font-weight="700" fill="#d97706">+ ECS scale monitor (new)</text>
+
+ <path d="M200 500 h200 v58 a100,13 0 0 1 -200 0 z" fill="#fff" stroke="#2563eb" stroke-width="2"/>
+ <ellipse cx="300" cy="500" rx="100" ry="13" fill="#fff" stroke="#2563eb" stroke-width="2"/>
+ <text x="300" y="528" text-anchor="middle" font-size="12.5" font-weight="700" fill="#0f3a8e">&#128451;&#65039; SQL Server DB</text>
+
+ <!-- ===================== NEW INFRA (vertical column) ===================== -->
+ <rect x="700" y="223" width="280" height="64" rx="12" fill="#fff" stroke="#d97706" stroke-width="1.8" stroke-dasharray="6 4"/>
+ <rect x="922" y="215" width="40" height="16" rx="8" fill="#d97706"/><text x="942" y="227" text-anchor="middle" font-size="9" font-weight="800" fill="#fff">NEW</text>
+ <text x="840" y="251" text-anchor="middle" font-size="13" font-weight="700" fill="#b45309">&#128260; Redis Stream</text>
+ <text x="840" y="270" text-anchor="middle" font-size="9.5" fill="#64748b">durable job stream &middot; consumer groups</text>
+
+ <rect x="700" y="330" width="280" height="80" rx="12" fill="#fff" stroke="#d97706" stroke-width="2"/>
+ <rect x="922" y="322" width="40" height="16" rx="8" fill="#d97706"/><text x="942" y="334" text-anchor="middle" font-size="9" font-weight="800" fill="#fff">NEW</text>
+ <text x="840" y="360" text-anchor="middle" font-size="13.5" font-weight="700" fill="#1e293b">&#128230; ECS Tasks</text>
+ <text x="840" y="379" text-anchor="middle" font-size="9.5" fill="#64748b">AWS ECS Fargate &middot; workers</text>
+ <text x="840" y="395" text-anchor="middle" font-size="9.5" font-weight="700" fill="#b45309">scaling 0&#8211;1 (on / off)</text>
+
+ <rect x="700" y="453" width="280" height="98" rx="12" fill="#fff" stroke="#d97706" stroke-width="2.5"/>
+ <rect x="922" y="445" width="40" height="16" rx="8" fill="#d97706"/><text x="942" y="457" text-anchor="middle" font-size="9" font-weight="800" fill="#fff">NEW</text>
+ <text x="840" y="485" text-anchor="middle" font-size="14" font-weight="700" fill="#1e293b">&#9889; FastAPI AI Server</text>
+ <text x="840" y="505" text-anchor="middle" font-size="10" fill="#64748b">AWS ECS Fargate</text>
+ <text x="840" y="522" text-anchor="middle" font-size="9.5" font-weight="700" fill="#b45309">central service &middot; all AI use cases</text>
+ <text x="840" y="536" text-anchor="middle" font-size="9.5" font-weight="700" fill="#b45309">only path to the models</text>
+
+ <rect x="700" y="594" width="280" height="82" rx="12" fill="#fff" stroke="#d97706" stroke-width="1.8" stroke-dasharray="6 4"/>
+ <rect x="922" y="586" width="40" height="16" rx="8" fill="#d97706"/><text x="942" y="598" text-anchor="middle" font-size="9" font-weight="800" fill="#fff">NEW</text>
+ <text x="840" y="624" text-anchor="middle" font-size="13.5" font-weight="700" fill="#b45309">&#129526; Vector DB</text>
+ <text x="840" y="644" text-anchor="middle" font-size="9.5" fill="#64748b">new infra &middot; embedded history index</text>
+
+ <!-- ===================== SNS (outbound push to mobile) ===================== -->
+ <rect x="700" y="115" width="280" height="60" rx="12" fill="#fff" stroke="#d97706" stroke-width="1.8"/>
+ <rect x="922" y="107" width="40" height="16" rx="8" fill="#d97706"/><text x="942" y="119" text-anchor="middle" font-size="9" font-weight="800" fill="#fff">NEW</text>
+ <text x="840" y="141" text-anchor="middle" font-size="13" font-weight="700" fill="#b45309">&#128227; Amazon SNS</text>
+ <text x="840" y="159" text-anchor="middle" font-size="9.5" fill="#64748b">APNs / FCM &middot; push to device</text>
+
+ <!-- ===================== MODELS ===================== -->
+ <rect x="680" y="756" width="320" height="56" rx="12" fill="#f3e8ff" stroke="#7c3aed" stroke-width="2"/>
+ <text x="840" y="781" text-anchor="middle" font-size="12.5" font-weight="700" fill="#5b21b6">&#128257; LiteLLM Gateway</text>
+ <text x="840" y="798" text-anchor="middle" font-size="9.5" fill="#7c6aa6">routing &middot; primary + fallback</text>
+
+ <rect x="664" y="844" width="118" height="94" rx="12" fill="#f3e8ff" stroke="#7c3aed" stroke-width="1.8"/>
+ <text x="723" y="882" text-anchor="middle" font-size="10.5" font-weight="700" fill="#5b21b6">&#129504; Self-hosted LLM</text>
+ <text x="723" y="900" text-anchor="middle" font-size="9" fill="#7c6aa6">qwen3-vl-moe</text>
+ <text x="723" y="912" text-anchor="middle" font-size="9" fill="#7c6aa6">vLLM</text>
+
+ <rect x="794" y="844" width="118" height="94" rx="12" fill="#f3e8ff" stroke="#7c3aed" stroke-width="1.8"/>
+ <text x="853" y="886" text-anchor="middle" font-size="10.5" font-weight="700" fill="#5b21b6">&#129513; Embedding</text>
+ <text x="853" y="904" text-anchor="middle" font-size="9" fill="#7c6aa6">bge-m3</text>
+
+ <rect x="924" y="844" width="112" height="94" rx="12" fill="#fff" stroke="#7c3aed" stroke-width="1.8" stroke-dasharray="6 4"/>
+ <text x="980" y="882" text-anchor="middle" font-size="10.5" font-weight="700" fill="#5b21b6">&#10022; Gemini</text>
+ <text x="980" y="900" text-anchor="middle" font-size="9" fill="#7c6aa6">backup</text>
+ <text x="980" y="912" text-anchor="middle" font-size="9" fill="#7c6aa6">external</text>
+
+ <!-- ===================== ARROWS ===================== -->
+ <!-- clients -> EC2 -->
+ <path d="M180 144 V250" fill="none" stroke="#2563eb" stroke-width="2.4" marker-end="url(#b)"/>
+ <text x="196" y="178" font-size="10" font-weight="700" fill="#2563eb" stroke="#fff" stroke-width="3.5" paint-order="stroke">requests</text>
+ <path d="M420 144 V250" fill="none" stroke="#2563eb" stroke-width="2.4" marker-end="url(#b)"/>
+ <text x="436" y="178" font-size="10" font-weight="700" fill="#2563eb" stroke="#fff" stroke-width="3.5" paint-order="stroke">requests</text>
+
+ <!-- EC2 <-> SQL -->
+ <path d="M300 408 V486" fill="none" stroke="#2563eb" stroke-width="2.4" marker-end="url(#b)" marker-start="url(#b-r)"/>
+ <text x="288" y="450" text-anchor="middle" font-size="10" font-weight="700" fill="#2563eb" stroke="#fff" stroke-width="4" paint-order="stroke" transform="rotate(-90 288 450)">reads / writes</text>
+
+ <!-- .NET -> Redis (publish) -->
+ <path d="M534 310 H627 Q634 310 634 303 V262 Q634 255 641 255 H700" fill="none" stroke="#d97706" stroke-width="2.4" marker-end="url(#a)"/>
+ <text x="588" y="303" text-anchor="middle" font-size="10" font-weight="700" fill="#b45309" stroke="#fff" stroke-width="4" paint-order="stroke">publish</text>
+
+ <!-- .NET -> ECS Tasks (monitor / scale 0-1, straight) -->
+ <path d="M534 370 H700" fill="none" stroke="#d97706" stroke-width="2" stroke-dasharray="6 4" marker-end="url(#a)"/>
+ <text x="612" y="363" text-anchor="middle" font-size="9.5" font-weight="700" fill="#b45309" stroke="#fff" stroke-width="4" paint-order="stroke">monitor &middot; scale 0&#8211;1</text>
+
+ <!-- .NET -> FastAPI (AI request, from micro box bottom) -->
+ <path d="M412 408 V468 Q412 475 419 475 H700" fill="none" stroke="#d97706" stroke-width="2.4" marker-end="url(#a)"/>
+ <text x="600" y="469" text-anchor="middle" font-size="10" font-weight="700" fill="#b45309" stroke="#fff" stroke-width="4" paint-order="stroke">AI request</text>
+
+ <!-- Redis -> ECS Tasks -->
+ <path d="M840 287 V330" fill="none" stroke="#d97706" stroke-width="2.4" marker-end="url(#a)"/>
+ <text x="854" y="313" font-size="10" font-weight="700" fill="#b45309" stroke="#fff" stroke-width="4" paint-order="stroke">consume</text>
+
+ <!-- ECS Task -> SNS (outbound: SNS Publish) -->
+ <path d="M980 380 H1008 Q1015 380 1015 373 V152 Q1015 145 1008 145 H980" fill="none" stroke="#d97706" stroke-width="2.4" marker-end="url(#a)"/>
+ <text x="1030" y="262" text-anchor="middle" font-size="9.5" font-weight="700" fill="#b45309" stroke="#fff" stroke-width="4" paint-order="stroke" transform="rotate(-90 1030 262)">SNS Publish</text>
+
+ <!-- SNS -> Mobile App (push) -->
+ <path d="M700 145 H617 Q610 145 610 138 V115 Q610 108 603 108 H520" fill="none" stroke="#d97706" stroke-width="2.4" marker-end="url(#a)"/>
+ <text x="562" y="101" text-anchor="middle" font-size="9.5" font-weight="700" fill="#b45309" stroke="#fff" stroke-width="4" paint-order="stroke">APNs / FCM push</text>
+
+ <!-- FastAPI -> Vector -->
+ <path d="M840 551 V594" fill="none" stroke="#d97706" stroke-width="2.2" marker-end="url(#a)"/>
+ <text x="854" y="573" font-size="10" font-weight="700" fill="#b45309" stroke="#fff" stroke-width="4" paint-order="stroke">query &middot; upsert</text>
+
+ <!-- ECS Tasks <-> SQL -->
+ <path d="M700 395 H667 Q660 395 660 402 V501 Q660 508 653 508 H402" fill="none" stroke="#059669" stroke-width="2.2" marker-end="url(#g)" marker-start="url(#g-r)"/>
+ <text x="500" y="502" text-anchor="middle" font-size="10" font-weight="700" fill="#047857" stroke="#fff" stroke-width="4" paint-order="stroke">reads / writes</text>
+
+ <!-- FastAPI <-> SQL (straight) -->
+ <path d="M700 526 H402" fill="none" stroke="#059669" stroke-width="2.2" marker-end="url(#g)" marker-start="url(#g-r)"/>
+ <text x="500" y="540" text-anchor="middle" font-size="10" font-weight="700" fill="#047857" stroke="#fff" stroke-width="4" paint-order="stroke">read stock &middot; persist parts</text>
+
+
+ <!-- FastAPI -> LiteLLM (down to models) -->
+ <path d="M980 500 H1068 Q1075 500 1075 507 V777 Q1075 784 1068 784 H1000" fill="none" stroke="#7c3aed" stroke-width="2.4" marker-end="url(#p)"/>
+ <text x="1061" y="648" text-anchor="middle" font-size="10" font-weight="700" fill="#7c3aed" stroke="#fff" stroke-width="4" paint-order="stroke" transform="rotate(-90 1061 648)">inference</text>
+
+ <!-- LiteLLM -> models -->
+ <path d="M723 812 V844" fill="none" stroke="#7c3aed" stroke-width="2" marker-end="url(#p)"/>
+ <path d="M853 812 V844" fill="none" stroke="#7c3aed" stroke-width="2" marker-end="url(#p)"/>
+ <path d="M980 812 V844" fill="none" stroke="#7c3aed" stroke-width="1.8" stroke-dasharray="6 4" marker-end="url(#p)"/>
+ <text x="980" y="832" text-anchor="middle" font-size="9" font-weight="700" fill="#7c3aed" stroke="#fff" stroke-width="3.5" paint-order="stroke">fallback</text>
+
+ <!-- ===================== LEGEND ===================== -->
+ <line x1="70" y1="678" x2="100" y2="678" stroke="#2563eb" stroke-width="2.5"/><text x="106" y="682" font-size="10.5" fill="#475569">existing &middot; unchanged</text>
+ <line x1="70" y1="704" x2="100" y2="704" stroke="#d97706" stroke-width="2.5"/><text x="106" y="708" font-size="10.5" fill="#475569">new &middot; this project</text>
+ <line x1="70" y1="730" x2="100" y2="730" stroke="#7c3aed" stroke-width="2.5"/><text x="106" y="734" font-size="10.5" fill="#475569">model path (off-cloud)</text>
+ <line x1="70" y1="756" x2="100" y2="756" stroke="#059669" stroke-width="2.5"/><text x="106" y="760" font-size="10.5" fill="#475569">data persist / embed</text>
+ <line x1="70" y1="782" x2="100" y2="782" stroke="#7c3aed" stroke-width="2" stroke-dasharray="6 4"/><text x="106" y="786" font-size="10.5" fill="#475569">async / fallback</text>
+</svg>
+</div>
+</section>
+
+<section id="inventory-section">
+<h2>What We Have vs What We Introduce</h2>
+<div class="inv">
+
+ <div class="inv-card exist">
+  <div class="cap">Existing &middot; reused as-is</div>
+  <h3>&#128241; FieldJetX Platform</h3>
+  <ul>
+   <li><b>Mobile App</b> — FieldJetX (Flutter) <span class="pill aws">client</span></li>
+   <li><b>FieldJetX Web App</b> — admin / office console <span class="pill aws">client</span></li>
+   <li><b>AWS EC2</b> — one physical server hosting both .NET services <span class="pill aws">AWS</span></li>
+   <li><b>.NET Legacy API</b> — existing service on EC2 <span class="pill aws">AWS EC2</span></li>
+   <li><b>.NET Microservices API</b> — existing service on EC2 <span class="pill aws">AWS EC2</span></li>
+   <li><b>SQL Server DB</b> — system of record <span class="pill aws">AWS</span></li>
+  </ul>
+ </div>
+
+ <div class="inv-card new">
+  <div class="cap">New &middot; introduced by this project</div>
+  <h3>&#9889; Auto-Dispatch tier + central AI server</h3>
+  <ul>
+   <li><b>Redis Stream</b> — durable dispatch queue for Auto-Dispatch <span class="pill ecs">AWS</span></li>
+   <li><b>ECS Tasks</b> — Fargate workers (scaling 0–1); consume the stream, read/write SQL Server <span class="pill ecs">AWS ECS</span></li>
+   <li><b>FastAPI AI Server</b> — central AI service for all use cases; only component that reaches the models <span class="pill ecs">AWS ECS</span></li>
+   <li><b>Vector DB</b> — new embedded history index <span class="pill ecs">AWS</span></li>
+   <li><b>Amazon SNS</b> — outbound push to technician phones (APNs / FCM); ECS Task → SNS → Mobile App <span class="pill ecs">AWS</span></li>
+   <li><b>.NET additions</b> — AI proxy route + ECS scale monitor on the existing Microservices API <span class="pill aws">AWS EC2</span></li>
+   <li><b>LiteLLM Gateway + self-hosted LLM + embedding</b> — private model infra, on-prem <span class="pill office">CP Office</span></li>
+   <li><b>Google Gemini</b> — managed fallback only <span class="pill office">external</span></li>
+  </ul>
+ </div>
+
+</div>
+
+<div class="counts">
+ <div class="count"><div class="n">2</div><div class="l">new compute servers<br>ECS Tasks (0–1) + FastAPI AI Server</div></div>
+ <div class="count"><div class="n">2</div><div class="l">new data stores<br>Redis Stream + Vector DB</div></div>
+ <div class="count"><div class="n">3</div><div class="l">off-cloud model entities<br>LiteLLM + LLM + embedding</div></div>
+ <div class="count"><div class="n">1</div><div class="l">external backup<br>Google Gemini (fallback only)</div></div>
+</div>
+</section>
+
+</div>
+
+<script>
+(function(){
+  // Ordered AWS -> Azure replacements. Longest / most specific first so
+  // compounds are handled before the bare "AWS" catch-all.
+  var MAP = [
+    [/AWS ECS Fargate/g, 'Azure Container Apps'],
+    [/AWS ECS/g,        'Azure Container Apps'],
+    [/AWS EC2/g,        'Azure VM'],
+    [/Amazon SNS/g,     'Azure Notification Hubs'],
+    [/ECS Tasks/g,      'Container Apps'],
+    [/ECS Task/g,       'Container App'],
+    [/ECS scale monitor/g, 'Container scale monitor'],
+    [/Fargate workers/g, 'workers'],
+    [/SNS Publish/g,    'Publish'],
+    [/SNS/g,            'Notification Hubs'],
+    [/Redis Stream/g,   'Azure Cache for Redis'],
+    [/\bEC2\b/g,        'VM'],
+    [/\bAWS\b/g,        'Azure']
+  ];
+
+  function toAzure(html){
+    MAP.forEach(function(r){ html = html.replace(r[0], r[1]); });
+    return html;
+  }
+
+  var body = document.getElementById('diagram-body');
+  var inv  = document.getElementById('inventory-section');
+
+  // cache original (AWS) markup
+  var awsBody = body.innerHTML, awsInv = inv.innerHTML;
+  var azBody  = toAzure(awsBody), azInv = toAzure(awsInv);
+
+  var toggle = document.getElementById('cloudToggle');
+  toggle.addEventListener('click', function(e){
+    var btn = e.target.closest('button'); if(!btn) return;
+    var cloud = btn.dataset.cloud;
+    toggle.querySelectorAll('button').forEach(function(b){
+      b.classList.toggle('active', b === btn);
+    });
+    body.innerHTML = cloud === 'azure' ? azBody : awsBody;
+    inv.innerHTML  = cloud === 'azure' ? azInv  : awsInv;
+  });
+})();
+</script>
+</body>
+</html>
