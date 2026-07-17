@@ -1928,11 +1928,138 @@ Tolerance.</div>
 
 </section>
 
+<style>
+/* -- §7 Data & Schema: namespaced s7-* additions --
+   s7-er-*: ER-diagram card grid for B's ai.* schema (usecase-b-architecture.html has no
+   equivalent classes in this document's shared _style.css, so they are defined here, scoped
+   under .s7-er-diagram so the generic-sounding inner names — col-name/col-type/pk/fk — never
+   leak onto/collide with the rest of the document).
+   s7-badge: Redis structure-type tags (STREAM/MUTEX/LIST), colors matched to system-design.html's
+   badge-ws/badge-patch/badge-post. Reuses .cl-table-wrap/.cl-table/.cl-pre/.cl-c/.callout/.pill
+   from §6 and the base sheet — those are already shared, cross-section components. -- */
+.s7-er-diagram{display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:16px;margin:16px 0;}
+.s7-er-diagram .s7-er-table{background:var(--surface);border:2px solid var(--border);border-radius:10px;overflow:hidden;}
+.s7-er-diagram .s7-er-table-name{background:var(--primary);color:#fff;padding:10px 16px;font-weight:700;font-size:14px;letter-spacing:.5px;}
+.s7-er-diagram .s7-er-cols{padding:8px 0;}
+.s7-er-diagram .s7-er-col{padding:4px 16px;font-size:13px;font-family:ui-monospace,Consolas,monospace;display:flex;justify-content:space-between;gap:10px;}
+.s7-er-diagram .s7-er-col:nth-child(even){background:#fafbfc;}
+.s7-er-diagram .col-name{font-weight:600;}
+.s7-er-diagram .col-type{color:var(--text-muted);font-size:12px;text-align:right;white-space:nowrap;}
+.s7-er-diagram .pk{color:var(--amber);}
+.s7-er-diagram .fk{color:var(--primary);}
+
+.s7-badge{display:inline-block;font-size:11px;font-weight:700;padding:3px 10px;border-radius:6px;white-space:nowrap;}
+.s7-badge.purple{background:#ede9fe;color:#7c3aed;}
+.s7-badge.amber{background:#fef3c7;color:#d97706;}
+.s7-badge.green{background:#d1fae5;color:#059669;}
+</style>
 <section id="s7">
 <h2>7. Data &amp; Schema</h2>
-<!-- filled in Task 9 -->
-</section>
+<p>Three data footprints, one per use case, lifted at full fidelity from each source design. A
+coordinates purely through ephemeral <b>Azure Cache for Redis</b> structures &mdash; no data model of
+its own. B and C each persist AI output into their own isolated <code>ai.*</code> schema inside the
+shared <b>AWS SQL Server</b>, zero mixing with business tables (&sect;3). C additionally maintains a
+semantic vector index over historical dispatches for retrieval.</p>
 
+<h3><span class="chip">A</span> Auto-Dispatch &mdash; Azure Cache for Redis Data Structures</h3>
+<p>The three Redis structures that coordinate dispatch across the Container Apps worker pool.
+Adapted from <b>system-design.html &sect;6 Redis Data Structures</b>.</p>
+<div class="cl-table-wrap"><table class="cl-table">
+<thead><tr><th>Structure</th><th>Key</th><th>Purpose</th></tr></thead>
+<tbody>
+<tr><td><span class="s7-badge purple">STREAM</span></td><td><code>dispatch:stream</code></td><td>Durable buffer of incoming dispatch requests between Server A and the Container Apps workers. Consumed via a consumer group (<code>XREADGROUP</code>) &mdash; all N workers compete; each message goes to exactly one worker.</td></tr>
+<tr><td><span class="s7-badge amber">MUTEX</span></td><td><code>lock:tech:{techId}</code></td><td>Per-technician distributed lock. A request acquires locks on <em>its candidate technicians</em> before offering, in a fixed order (e.g. ascending <code>techId</code>) to avoid deadlock between overlapping requests. Requests with disjoint candidates run in parallel &mdash; even in the same division; requests sharing a technician serialize on that lock, so a tech is never double-offered. TTL self-releases on a crashed worker.</td></tr>
+<tr><td><span class="s7-badge green">LIST</span></td><td><code>resp:{dispatchId}:{techId}</code></td><td>Per-technician reply channel. The Azure VM API <code>LPUSH</code>es the Accept/Reject; the worker <code>BLPOP</code>s it &mdash; instant wake, no polling. <code>EXPIRE 60s</code> self-cleans.</td></tr>
+</tbody>
+</table></div>
+<div class="callout azure"><b>Concurrency:</b> a worker processes up to <strong>20 dispatches
+concurrently</strong> using async (<code>redis.asyncio</code>) &mdash; a blocked <code>BLPOP</code> on
+one dispatch never stalls the others.</div>
+<div class="callout warn"><b>Diagram note:</b> the &sect;2 architecture diagram still shows a
+per-division lock (<code>lock:div:*</code>) as a simplification. The implemented model locks per
+candidate technician as described here &mdash; diagram redraw pending.</div>
+
+<h3 style="margin-top:38px"><span class="chip">B</span> Job Summarisation &mdash; the <code>ai.*</code> Schema</h3>
+<p>All AI output lives in an isolated <code>ai.*</code> schema inside the FieldJetX SQL Server: same
+database, separate namespace and permission boundary, zero mixing with business tables. Indicative
+structure below; final DDL is agreed with the client DBA. Adapted from
+<b>usecase-b-architecture.html &sect;9 Data &amp; the ai.* Schema</b>.</p>
+<div class="s7-er-diagram">
+<div class="s7-er-table">
+<div class="s7-er-table-name">ai.summaries</div>
+<div class="s7-er-cols">
+<div class="s7-er-col"><span class="col-name pk">summary_id</span><span class="col-type">PK</span></div>
+<div class="s7-er-col"><span class="col-name fk">dispatch_id</span><span class="col-type">FK &rarr; dispatch</span></div>
+<div class="s7-er-col"><span class="col-name">sections</span><span class="col-type">json &middot; 12 sections</span></div>
+<div class="s7-er-col"><span class="col-name">procedure_results</span><span class="col-type">json</span></div>
+<div class="s7-er-col"><span class="col-name">status</span><span class="col-type">draft / accepted</span></div>
+<div class="s7-er-col"><span class="col-name">accepted_at</span><span class="col-type">datetime</span></div>
+<div class="s7-er-col"><span class="col-name">embedding</span><span class="col-type">varbinary &middot; stage 1</span></div>
+</div>
+</div>
+<div class="s7-er-table">
+<div class="s7-er-table-name">ai.llm_calls</div>
+<div class="s7-er-cols">
+<div class="s7-er-col"><span class="col-name pk">call_id</span><span class="col-type">PK</span></div>
+<div class="s7-er-col"><span class="col-name fk">dispatch_id</span><span class="col-type">FK</span></div>
+<div class="s7-er-col"><span class="col-name">provider / model</span><span class="col-type">gateway &middot; qwen3-vl</span></div>
+<div class="s7-er-col"><span class="col-name">tokens_in / tokens_out</span><span class="col-type">int</span></div>
+<div class="s7-er-col"><span class="col-name">latency_ms</span><span class="col-type">int</span></div>
+<div class="s7-er-col"><span class="col-name">outcome</span><span class="col-type">ok / parse_fail / error</span></div>
+</div>
+</div>
+<div class="s7-er-table">
+<div class="s7-er-table-name">ai.summary_edits</div>
+<div class="s7-er-cols">
+<div class="s7-er-col"><span class="col-name pk">edit_id</span><span class="col-type">PK</span></div>
+<div class="s7-er-col"><span class="col-name fk">summary_id</span><span class="col-type">FK &rarr; ai.summaries</span></div>
+<div class="s7-er-col"><span class="col-name">section</span><span class="col-type">which of the 12</span></div>
+<div class="s7-er-col"><span class="col-name">before_text / after_text</span><span class="col-type">the correction</span></div>
+<div class="s7-er-col"><span class="col-name">edited_by / edited_at</span><span class="col-type">who &middot; when</span></div>
+</div>
+</div>
+</div>
+<div class="callout azure"><b>About the embedding column:</b> it is a placeholder for the optional
+future vector layer (&sect;6), stored as <code>varbinary</code> because the client's SQL Server 2022
+Web Edition (compatibility level 140) has no native vector type. It stays empty unless that layer is
+added. Open client items: DBA approval for the schema and the dispatch-assignment trigger mechanism.</div>
+
+<h3 style="margin-top:38px"><span class="chip">C</span> Parts Finder &mdash; Data Model</h3>
+<p>Two stores cooperate: the relational system of record (SQL Server <code>fieldgetics</code>) owns
+dispatches, inventory, and stock; the vector store &mdash; an <b>Azure-hosted vector store</b>
+&mdash; holds the semantic index used for prediction. AI-written data lands in a <b>new
+<code>ai.*</code> schema</b> in the same SQL Server &mdash; clear isolation from the existing tables.
+Adapted from <b>usecase-C-system-design.html &sect;6 Data Model</b>.</p>
+
+<h4>System of record &mdash; <code>fieldgetics</code> (SQL Server) <span class="pill aws">AWS</span></h4>
+<div class="cl-table-wrap"><table class="cl-table">
+<thead><tr><th>Entity</th><th>Key fields used</th><th>Purpose in this system</th></tr></thead>
+<tbody>
+<tr><td><code>Dispatch</code></td><td><code>reason</code>, <code>problemCode</code>, <code>repairCategory</code>, <code>priority</code>, <code>nte</code>, <code>branchWarehouse</code></td><td>The <code>reason</code> text is the prediction input; completion feeds the learning loop.</td></tr>
+<tr><td><code>DispatchPartsRequest</code> / <code>Inventory</code></td><td>part number, name, category</td><td>Parts catalog and the parts a dispatch requests/uses.</td></tr>
+<tr><td><code>InventoryLocationXref</code></td><td>location, quantity-on-hand</td><td>Stock by location &mdash; drives own-stock (truck + warehouse) availability in sourcing.</td></tr>
+<tr><td><code>InventorySupplierXREF</code></td><td><code>currentcost</code></td><td>Vendor price for a part (the United API returns stock + location; price is applied from here).</td></tr>
+</tbody>
+</table></div>
+
+<h4 style="margin-top:26px">New <code>ai.*</code> schema &mdash; AI-owned relational data</h4>
+<p>Everything the AI layer <em>writes</em> to SQL Server lives in its own schema: the parts lists a
+technician commits (with per-source allocations), prediction acceptance signals, and indexing
+bookkeeping. Nothing in the existing <code>dbo</code> tables changes &mdash; the AI footprint can be
+audited, backed up, or dropped independently.</p>
+
+<h4 style="margin-top:26px">Vector store &mdash; dispatch-parts index <span class="pill ecs">Azure</span></h4>
+<p>Each historical <em>completed</em> dispatch becomes one record, indexed for cosine similarity:</p>
+<pre class="cl-pre"><code><span class="cl-c"># one record per completed dispatch</span>
+id        = dispatchNo                 <span class="cl-c"># stable key &rarr; idempotent upsert</span>
+document  = dispatch.reason            <span class="cl-c"># the embedded text</span>
+embedding = embed(reason, DOCUMENT)    <span class="cl-c"># vector (cosine / HNSW)</span>
+metadata  = { partsUsed: [ {partNo, qty}, ... ] }</code></pre>
+<div class="callout azure"><b>Derived, not authoritative:</b> the vector store holds only the
+<b>reason text</b> and the <b>parts that were actually used</b>. It is a derived, rebuildable index
+&mdash; the relational database remains the system of record.</div>
+
+</section>
 <section id="s8">
 <h2>8. API Reference</h2>
 <!-- filled in Task 10 -->
