@@ -99,6 +99,12 @@
  .callout{margin-top:16px;padding:14px 18px;border-radius:10px;font-size:13px;line-height:1.6;border:1px solid;}
  .callout.azure{background:var(--primary-light);border-color:var(--primary);color:var(--text);}
  .callout.azure b{color:var(--primary-dark);}
+
+ /* -- §2: sub-heading + diagram note, for the 2a/2b diagram blocks -- */
+ h3{font-size:16.5px;font-weight:700;color:var(--text);margin:26px 0 12px;}
+ h3:first-child{margin-top:0;}
+ .diagram-note{margin-top:10px;font-size:12.5px;color:var(--text-muted);}
+ .diagram-note b{color:var(--text);font-weight:700;}
 </style>
 </head>
 <body>
@@ -190,7 +196,182 @@
 
 <section id="s2">
 <h2>2. High-Level Architecture</h2>
-<!-- filled in Task 3 -->
+
+<h3>2a &middot; Unified system diagram</h3>
+<div class="diagram-frame">
+<svg viewBox="0 0 1200 1020" width="100%" style="min-width:1040px;font-family:inherit;">
+ <defs>
+  <marker id="b" markerWidth="10" markerHeight="10" refX="7" refY="3.5" orient="auto"><path d="M0,0 L7,3.5 L0,7 Z" fill="#2563eb"/></marker>
+  <marker id="b-r" markerWidth="10" markerHeight="10" refX="1" refY="3.5" orient="auto"><path d="M7,0 L0,3.5 L7,7 Z" fill="#2563eb"/></marker>
+  <marker id="a" markerWidth="10" markerHeight="10" refX="7" refY="3.5" orient="auto"><path d="M0,0 L7,3.5 L0,7 Z" fill="#d97706"/></marker>
+  <marker id="g" markerWidth="10" markerHeight="10" refX="7" refY="3.5" orient="auto"><path d="M0,0 L7,3.5 L0,7 Z" fill="#059669"/></marker>
+  <marker id="g-r" markerWidth="10" markerHeight="10" refX="1" refY="3.5" orient="auto"><path d="M7,0 L0,3.5 L7,7 Z" fill="#059669"/></marker>
+  <marker id="p" markerWidth="10" markerHeight="10" refX="7" refY="3.5" orient="auto"><path d="M0,0 L7,3.5 L0,7 Z" fill="#7c3aed"/></marker>
+ </defs>
+
+ <!-- ===================== ZONES ===================== -->
+ <rect x="40" y="40" width="520" height="120" rx="16" fill="#f1f6ff" stroke="#93c5fd" stroke-width="1.4" stroke-dasharray="7 5"/>
+ <text x="300" y="60" text-anchor="middle" font-size="11.5" font-weight="800" fill="#0f3a8e" letter-spacing="1">CLIENTS</text>
+
+ <rect x="40" y="190" width="520" height="430" rx="16" fill="#eff4ff" stroke="#60a5fa" stroke-width="1.5" stroke-dasharray="7 5"/>
+ <text x="300" y="209" text-anchor="middle" font-size="11.5" font-weight="800" fill="#0f3a8e" letter-spacing="0.4">EXISTING &middot; FIELDJETX PLATFORM</text>
+ <text x="300" y="225" text-anchor="middle" font-size="9.5" font-weight="600" fill="#64748b">Azure &middot; restated</text>
+
+ <rect x="640" y="40" width="400" height="650" rx="16" fill="#fffaf3" stroke="#d97706" stroke-width="1.5" stroke-dasharray="7 5"/>
+ <text x="840" y="60" text-anchor="middle" font-size="12" font-weight="800" fill="#b45309" letter-spacing="1">NEW INFRASTRUCTURE &middot; THIS PROJECT &nbsp;<tspan font-size="10" font-weight="600" fill="#b45309">Azure</tspan></text>
+
+ <rect x="640" y="720" width="400" height="240" rx="16" fill="#faf5ff" stroke="#7c3aed" stroke-width="1.5" stroke-dasharray="7 5"/>
+ <text x="830" y="744" text-anchor="middle" font-size="10.5" font-weight="800" fill="#5b21b6" letter-spacing="0.3">PRIVATE MODEL INFRA &middot; CLIMATEPROS OFFICE &nbsp;<tspan font-size="9.5" font-weight="600" fill="#7c6aa6">on-prem</tspan></text>
+
+ <!-- ===================== CLIENTS ===================== -->
+ <rect x="80" y="72" width="200" height="72" rx="14" fill="#fff" stroke="#93c5fd" stroke-width="1.5"/>
+ <text x="180" y="105" text-anchor="middle" font-size="13" font-weight="700" fill="#0f3a8e">&#128421;&#65039; FieldJetX Web App</text>
+ <text x="180" y="124" text-anchor="middle" font-size="10" fill="#64748b">admin / office console</text>
+ <rect x="320" y="72" width="200" height="72" rx="14" fill="#fff" stroke="#93c5fd" stroke-width="1.5"/>
+ <text x="420" y="105" text-anchor="middle" font-size="13" font-weight="700" fill="#0f3a8e">&#128241; Mobile App</text>
+ <text x="420" y="124" text-anchor="middle" font-size="10" fill="#64748b">FieldJetX (Flutter)</text>
+
+ <!-- ===================== EXISTING ===================== -->
+ <rect x="66" y="250" width="468" height="158" rx="14" fill="#f8fbff" stroke="#2563eb" stroke-width="2"/>
+ <text x="88" y="274" font-size="11.5" font-weight="800" fill="#2563eb">&#9729;&#65039; Azure VM &middot; Application Host</text>
+ <text x="512" y="274" text-anchor="end" font-size="9.5" fill="#64748b">one physical server</text>
+ <rect x="88" y="296" width="200" height="96" rx="10" fill="#fff" stroke="#93c5fd" stroke-width="1.5"/>
+ <text x="188" y="338" text-anchor="middle" font-size="12.5" font-weight="700" fill="#1e293b">.NET Legacy API</text>
+ <text x="188" y="360" text-anchor="middle" font-size="9.5" fill="#64748b">existing service</text>
+ <rect x="312" y="296" width="200" height="96" rx="10" fill="#fff" stroke="#93c5fd" stroke-width="2"/>
+ <text x="412" y="326" text-anchor="middle" font-size="12" font-weight="700" fill="#1e293b">.NET Microservices API</text>
+ <text x="412" y="346" text-anchor="middle" font-size="9" font-weight="700" fill="#d97706">+ AI proxy route (new)</text>
+ <text x="412" y="360" text-anchor="middle" font-size="9" font-weight="700" fill="#d97706">+ Container scale monitor (new)</text>
+
+ <path d="M200 500 h200 v58 a100,13 0 0 1 -200 0 z" fill="#fff" stroke="#2563eb" stroke-width="2"/>
+ <ellipse cx="300" cy="500" rx="100" ry="13" fill="#fff" stroke="#2563eb" stroke-width="2"/>
+ <text x="300" y="528" text-anchor="middle" font-size="12.5" font-weight="700" fill="#0f3a8e">&#128451;&#65039; SQL Server DB</text>
+ <rect x="404" y="516" width="42" height="17" rx="8.5" fill="#1a56db"/><text x="425" y="528.5" text-anchor="middle" font-size="9" font-weight="800" fill="#fff">AWS</text>
+
+ <!-- ===================== NEW INFRA (vertical column) ===================== -->
+ <rect x="700" y="223" width="280" height="64" rx="12" fill="#fff" stroke="#d97706" stroke-width="1.8" stroke-dasharray="6 4"/>
+ <rect x="922" y="215" width="40" height="16" rx="8" fill="#d97706"/><text x="942" y="227" text-anchor="middle" font-size="9" font-weight="800" fill="#fff">NEW</text>
+ <text x="840" y="251" text-anchor="middle" font-size="12" font-weight="700" fill="#b45309">&#128260; Azure Cache for Redis</text>
+ <text x="840" y="270" text-anchor="middle" font-size="9.5" fill="#64748b">durable job stream &middot; consumer groups</text>
+
+ <rect x="700" y="330" width="280" height="80" rx="12" fill="#fff" stroke="#d97706" stroke-width="2"/>
+ <rect x="922" y="322" width="40" height="16" rx="8" fill="#d97706"/><text x="942" y="334" text-anchor="middle" font-size="9" font-weight="800" fill="#fff">NEW</text>
+ <text x="840" y="360" text-anchor="middle" font-size="13.5" font-weight="700" fill="#1e293b">&#128230; Container Apps</text>
+ <text x="840" y="379" text-anchor="middle" font-size="9.5" fill="#64748b">Azure Container Apps &middot; workers</text>
+ <text x="840" y="395" text-anchor="middle" font-size="9.5" font-weight="700" fill="#b45309">scaling 0&#8211;1 (on / off)</text>
+
+ <rect x="700" y="453" width="280" height="98" rx="12" fill="#fff" stroke="#d97706" stroke-width="2.5"/>
+ <rect x="922" y="445" width="40" height="16" rx="8" fill="#d97706"/><text x="942" y="457" text-anchor="middle" font-size="9" font-weight="800" fill="#fff">NEW</text>
+ <text x="840" y="485" text-anchor="middle" font-size="14" font-weight="700" fill="#1e293b">&#9889; FastAPI AI Server</text>
+ <text x="840" y="505" text-anchor="middle" font-size="10" fill="#64748b">Azure Container Apps</text>
+ <text x="840" y="522" text-anchor="middle" font-size="9.5" font-weight="700" fill="#b45309">central service &middot; all AI use cases</text>
+ <text x="840" y="536" text-anchor="middle" font-size="9.5" font-weight="700" fill="#b45309">only path to the models</text>
+
+ <rect x="700" y="594" width="280" height="82" rx="12" fill="#fff" stroke="#d97706" stroke-width="1.8" stroke-dasharray="6 4"/>
+ <rect x="922" y="586" width="40" height="16" rx="8" fill="#d97706"/><text x="942" y="598" text-anchor="middle" font-size="9" font-weight="800" fill="#fff">NEW</text>
+ <text x="840" y="624" text-anchor="middle" font-size="13.5" font-weight="700" fill="#b45309">&#129526; Vector DB</text>
+ <text x="840" y="644" text-anchor="middle" font-size="9.5" fill="#64748b">new infra &middot; embedded history index</text>
+
+ <!-- ===================== NOTIFICATION HUBS (outbound push to mobile) ===================== -->
+ <rect x="700" y="115" width="280" height="60" rx="12" fill="#fff" stroke="#d97706" stroke-width="1.8"/>
+ <rect x="922" y="107" width="40" height="16" rx="8" fill="#d97706"/><text x="942" y="119" text-anchor="middle" font-size="9" font-weight="800" fill="#fff">NEW</text>
+ <text x="840" y="141" text-anchor="middle" font-size="12" font-weight="700" fill="#b45309">&#128227; Azure Notification Hubs</text>
+ <text x="840" y="159" text-anchor="middle" font-size="9.5" fill="#64748b">APNs / FCM &middot; push to device</text>
+
+ <!-- ===================== MODELS (on-prem, unchanged) ===================== -->
+ <rect x="680" y="756" width="320" height="56" rx="12" fill="#f3e8ff" stroke="#7c3aed" stroke-width="2"/>
+ <text x="840" y="781" text-anchor="middle" font-size="12.5" font-weight="700" fill="#5b21b6">&#128257; LiteLLM Gateway</text>
+ <text x="840" y="798" text-anchor="middle" font-size="9.5" fill="#7c6aa6">routing &middot; primary + fallback</text>
+
+ <rect x="664" y="844" width="118" height="94" rx="12" fill="#f3e8ff" stroke="#7c3aed" stroke-width="1.8"/>
+ <text x="723" y="882" text-anchor="middle" font-size="10.5" font-weight="700" fill="#5b21b6">&#129504; Self-hosted LLM</text>
+ <text x="723" y="900" text-anchor="middle" font-size="9" fill="#7c6aa6">qwen3-vl-moe</text>
+ <text x="723" y="912" text-anchor="middle" font-size="9" fill="#7c6aa6">vLLM</text>
+
+ <rect x="794" y="844" width="118" height="94" rx="12" fill="#f3e8ff" stroke="#7c3aed" stroke-width="1.8"/>
+ <text x="853" y="886" text-anchor="middle" font-size="10.5" font-weight="700" fill="#5b21b6">&#129513; Embedding</text>
+ <text x="853" y="904" text-anchor="middle" font-size="9" fill="#7c6aa6">bge-m3</text>
+
+ <rect x="924" y="844" width="112" height="94" rx="12" fill="#fff" stroke="#7c3aed" stroke-width="1.8" stroke-dasharray="6 4"/>
+ <text x="980" y="882" text-anchor="middle" font-size="10.5" font-weight="700" fill="#5b21b6">&#10022; Gemini</text>
+ <text x="980" y="900" text-anchor="middle" font-size="9" fill="#7c6aa6">backup</text>
+ <text x="980" y="912" text-anchor="middle" font-size="9" fill="#7c6aa6">external</text>
+
+ <!-- ===================== ARROWS ===================== -->
+ <!-- clients -> Azure VM -->
+ <path d="M180 144 V250" fill="none" stroke="#2563eb" stroke-width="2.4" marker-end="url(#b)"/>
+ <text x="196" y="178" font-size="10" font-weight="700" fill="#2563eb" stroke="#fff" stroke-width="3.5" paint-order="stroke">requests</text>
+ <path d="M420 144 V250" fill="none" stroke="#2563eb" stroke-width="2.4" marker-end="url(#b)"/>
+ <text x="436" y="178" font-size="10" font-weight="700" fill="#2563eb" stroke="#fff" stroke-width="3.5" paint-order="stroke">requests</text>
+
+ <!-- Azure VM <-> SQL -->
+ <path d="M300 408 V486" fill="none" stroke="#2563eb" stroke-width="2.4" marker-end="url(#b)" marker-start="url(#b-r)"/>
+ <text x="288" y="450" text-anchor="middle" font-size="10" font-weight="700" fill="#2563eb" stroke="#fff" stroke-width="4" paint-order="stroke" transform="rotate(-90 288 450)">reads / writes</text>
+
+ <!-- .NET -> Redis (publish) -->
+ <path d="M534 310 H627 Q634 310 634 303 V262 Q634 255 641 255 H700" fill="none" stroke="#d97706" stroke-width="2.4" marker-end="url(#a)"/>
+ <text x="588" y="303" text-anchor="middle" font-size="10" font-weight="700" fill="#b45309" stroke="#fff" stroke-width="4" paint-order="stroke">publish</text>
+
+ <!-- .NET -> Container Apps (monitor / scale 0-1, straight) -->
+ <path d="M534 370 H700" fill="none" stroke="#d97706" stroke-width="2" stroke-dasharray="6 4" marker-end="url(#a)"/>
+ <text x="612" y="363" text-anchor="middle" font-size="9.5" font-weight="700" fill="#b45309" stroke="#fff" stroke-width="4" paint-order="stroke">monitor &middot; scale 0&#8211;1</text>
+
+ <!-- .NET -> FastAPI (AI request, from micro box bottom) -->
+ <path d="M412 408 V468 Q412 475 419 475 H700" fill="none" stroke="#d97706" stroke-width="2.4" marker-end="url(#a)"/>
+ <text x="600" y="469" text-anchor="middle" font-size="10" font-weight="700" fill="#b45309" stroke="#fff" stroke-width="4" paint-order="stroke">AI request</text>
+
+ <!-- Redis -> Container Apps -->
+ <path d="M840 287 V330" fill="none" stroke="#d97706" stroke-width="2.4" marker-end="url(#a)"/>
+ <text x="854" y="313" font-size="10" font-weight="700" fill="#b45309" stroke="#fff" stroke-width="4" paint-order="stroke">consume</text>
+
+ <!-- Container App -> Notification Hubs (outbound: Publish) -->
+ <path d="M980 380 H1008 Q1015 380 1015 373 V152 Q1015 145 1008 145 H980" fill="none" stroke="#d97706" stroke-width="2.4" marker-end="url(#a)"/>
+ <text x="1030" y="262" text-anchor="middle" font-size="9.5" font-weight="700" fill="#b45309" stroke="#fff" stroke-width="4" paint-order="stroke" transform="rotate(-90 1030 262)">Publish</text>
+
+ <!-- Notification Hubs -> Mobile App (push) -->
+ <path d="M700 145 H617 Q610 145 610 138 V115 Q610 108 603 108 H520" fill="none" stroke="#d97706" stroke-width="2.4" marker-end="url(#a)"/>
+ <text x="562" y="101" text-anchor="middle" font-size="9.5" font-weight="700" fill="#b45309" stroke="#fff" stroke-width="4" paint-order="stroke">APNs / FCM push</text>
+
+ <!-- FastAPI -> Vector -->
+ <path d="M840 551 V594" fill="none" stroke="#d97706" stroke-width="2.2" marker-end="url(#a)"/>
+ <text x="854" y="573" font-size="10" font-weight="700" fill="#b45309" stroke="#fff" stroke-width="4" paint-order="stroke">query &middot; upsert</text>
+
+ <!-- Container Apps <-> SQL -->
+ <path d="M700 395 H667 Q660 395 660 402 V501 Q660 508 653 508 H402" fill="none" stroke="#059669" stroke-width="2.2" marker-end="url(#g)" marker-start="url(#g-r)"/>
+ <text x="500" y="502" text-anchor="middle" font-size="10" font-weight="700" fill="#047857" stroke="#fff" stroke-width="4" paint-order="stroke">reads / writes</text>
+
+ <!-- FastAPI <-> SQL (straight) -->
+ <path d="M700 526 H402" fill="none" stroke="#059669" stroke-width="2.2" marker-end="url(#g)" marker-start="url(#g-r)"/>
+ <text x="500" y="540" text-anchor="middle" font-size="10" font-weight="700" fill="#047857" stroke="#fff" stroke-width="4" paint-order="stroke">read stock &middot; persist parts</text>
+
+
+ <!-- FastAPI -> LiteLLM (down to models) -->
+ <path d="M980 500 H1068 Q1075 500 1075 507 V777 Q1075 784 1068 784 H1000" fill="none" stroke="#7c3aed" stroke-width="2.4" marker-end="url(#p)"/>
+ <text x="1061" y="648" text-anchor="middle" font-size="10" font-weight="700" fill="#7c3aed" stroke="#fff" stroke-width="4" paint-order="stroke" transform="rotate(-90 1061 648)">inference</text>
+
+ <!-- LiteLLM -> models -->
+ <path d="M723 812 V844" fill="none" stroke="#7c3aed" stroke-width="2" marker-end="url(#p)"/>
+ <path d="M853 812 V844" fill="none" stroke="#7c3aed" stroke-width="2" marker-end="url(#p)"/>
+ <path d="M980 812 V844" fill="none" stroke="#7c3aed" stroke-width="1.8" stroke-dasharray="6 4" marker-end="url(#p)"/>
+ <text x="980" y="832" text-anchor="middle" font-size="9" font-weight="700" fill="#7c3aed" stroke="#fff" stroke-width="3.5" paint-order="stroke">fallback</text>
+
+ <!-- ===================== OBSERVABILITY (abstract) ===================== -->
+ <rect x="40" y="668" width="300" height="112" rx="14" fill="#ecfeff" stroke="#0891b2" stroke-width="1.6" stroke-dasharray="6 4"/>
+ <text x="190" y="700" text-anchor="middle" font-size="13" font-weight="800" fill="#0e7490">&#128225; Observability &amp; Tracing</text>
+ <text x="190" y="722" text-anchor="middle" font-size="9.5" fill="#64748b">OpenTelemetry &middot; distributed tracing (abstract)</text>
+ <text x="190" y="740" text-anchor="middle" font-size="9.5" fill="#64748b">Azure Monitor &middot; logs</text>
+ <text x="190" y="762" text-anchor="middle" font-size="8.5" font-style="italic" fill="#94a3b8">all services emit telemetry &#8594; not yet designed</text>
+
+ <!-- ===================== LEGEND ===================== -->
+ <line x1="70" y1="990" x2="100" y2="990" stroke="#2563eb" stroke-width="2.5"/><text x="106" y="994" font-size="10.5" fill="#475569">existing &middot; unchanged</text>
+ <line x1="250" y1="990" x2="280" y2="990" stroke="#d97706" stroke-width="2.5"/><text x="286" y="994" font-size="10.5" fill="#475569">new &middot; this project</text>
+ <line x1="430" y1="990" x2="460" y2="990" stroke="#7c3aed" stroke-width="2.5"/><text x="466" y="994" font-size="10.5" fill="#475569">model path (off-cloud)</text>
+ <line x1="620" y1="990" x2="650" y2="990" stroke="#059669" stroke-width="2.5"/><text x="656" y="994" font-size="10.5" fill="#475569">data persist / embed</text>
+ <line x1="800" y1="990" x2="830" y2="990" stroke="#7c3aed" stroke-width="2" stroke-dasharray="6 4"/><text x="836" y="994" font-size="10.5" fill="#475569">async / fallback</text>
+</svg>
+</div>
+<p class="diagram-note">All components <b>Azure</b> except the SQL Server system of record <b>(AWS)</b> &mdash; the single cross-cloud dependency.</p>
+
 <!-- filled in Task 4 -->
 </section>
 
