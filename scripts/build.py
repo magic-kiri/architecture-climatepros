@@ -1,16 +1,18 @@
 #!/usr/bin/env python3
-"""OPTIONAL bundler. The primary deliverable is the thin loader shell
-`stream1-unified-architecture.html`, which loads sections/*.html at runtime
-(needs an http server). Run this only when you want a SINGLE self-contained
-file that also opens via file:// — e.g. for offline sharing.
+"""Assemble the section fragments into the single, self-contained
+`stream1-unified-architecture.html` — the deliverable that opens anywhere
+(double-click / file://, local server, or GitHub Pages).
 
-Output: stream1-unified-architecture.bundle.html (inlines style.css + hero +
-every section fragment in document order). Edit the fragments, never the bundle."""
+Edit the small source files, then run this to regenerate the output:
+  - sections/style.css   shared stylesheet (inlined into <style>)
+  - sections/_hero.html  the page hero
+  - sections/NN.html      one <section> per concern, in numeric order
+Never hand-edit stream1-unified-architecture.html — it is generated."""
 import pathlib
 
 ROOT = pathlib.Path(__file__).resolve().parent.parent
 SEC = ROOT / "sections"
-OUT = ROOT / "stream1-unified-architecture.bundle.html"
+OUT = ROOT / "stream1-unified-architecture.html"
 
 style = (SEC / "style.css").read_text(encoding="utf-8")
 hero = (SEC / "_hero.html").read_text(encoding="utf-8")
@@ -25,4 +27,4 @@ html = (
     + hero + "\n" + "\n".join(sections) + "\n</div>\n</body>\n</html>\n"
 )
 OUT.write_text(html, encoding="utf-8")
-print(f"bundled {len(sections)} sections -> {OUT.name} ({len(html):,} bytes)")
+print(f"built {OUT.name} from {len(sections)} sections ({len(html):,} bytes)")
