@@ -1,0 +1,334 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>The Problem — Use Cases A, B, C · ClimatePros</title>
+<style>
+  :root{
+    --bg:#f4f6fa; --ink:#1e293b; --muted:#64748b; --line:#cbd5e1; --card:#fff;
+    --blue:#2563eb; --blue-soft:#eff4ff; --blue-line:#bfdbfe;
+    --amber:#d97706; --amber-soft:#fff7ed; --amber-line:#fed7aa;
+    --green:#059669; --green-soft:#ecfdf5; --green-line:#a7f3d0;
+    --red:#dc2626; --red-soft:#fef2f2; --red-line:#fecaca;
+    --shadow:0 1px 2px rgba(15,23,42,.06),0 8px 24px rgba(15,23,42,.06);
+  }
+  *{box-sizing:border-box}
+  body{margin:0;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+    background:var(--bg);color:var(--ink);line-height:1.5;-webkit-font-smoothing:antialiased}
+  .wrap{max-width:1080px;margin:0 auto;padding:48px 40px 56px}
+
+  header.top{margin-bottom:30px}
+  .eyebrow{font-size:12px;letter-spacing:.14em;text-transform:uppercase;color:var(--blue);font-weight:700;margin-bottom:8px}
+  h1{font-size:30px;margin:0 0 10px;font-weight:700;letter-spacing:-.02em}
+  .sub{color:var(--muted);font-size:15px;max-width:780px}
+  .sub b{color:var(--ink);font-weight:650}
+
+  .uc{background:var(--card);border:1px solid var(--line);border-radius:16px;
+    box-shadow:var(--shadow);padding:24px 26px;margin-bottom:22px}
+  .uc-head{display:flex;align-items:baseline;gap:12px;flex-wrap:wrap;margin-bottom:4px}
+  .chip{font-size:11px;font-weight:800;letter-spacing:.06em;padding:4px 10px;border-radius:999px;
+    background:var(--blue);color:#fff}
+  .kind{font-size:10px;font-weight:800;letter-spacing:.07em;text-transform:uppercase;
+    padding:3px 9px;border-radius:999px;border:1px solid}
+  .kind.algo{background:var(--green-soft);color:var(--green);border-color:var(--green-line)}
+  .kind.ai{background:#f3e8ff;color:#7c3aed;border-color:#e9d5ff}
+  .uc h2{margin:0;font-size:19px;font-weight:700;letter-spacing:-.01em}
+  .where{font-size:12px;font-weight:650;color:var(--muted);padding:3px 9px;
+    background:#f1f5f9;border:1px solid var(--line);border-radius:999px}
+  .pain-line{font-size:14px;color:var(--muted);margin:8px 0 18px;max-width:820px}
+  .pain-line b{color:var(--ink);font-weight:650}
+
+  /* flow diagram */
+  .flow{display:flex;align-items:stretch;gap:0;flex-wrap:nowrap;overflow-x:auto;padding:4px 0 10px}
+  .step{flex:1 1 0;min-width:118px;border:1.5px solid var(--blue-line);background:var(--blue-soft);
+    border-radius:10px;padding:10px 11px;position:relative}
+  .step.ok{border-color:var(--green-line);background:var(--green-soft)}
+  .step.hot{border:2px solid var(--red);background:var(--red-soft);box-shadow:0 6px 18px rgba(220,38,38,.16)}
+  .step.dead{border:1.5px dashed var(--red-line);background:var(--red-soft)}
+  .step .n{font-size:9px;font-weight:800;letter-spacing:.08em;text-transform:uppercase;
+    color:var(--muted);margin-bottom:4px}
+  .step.hot .n{color:var(--red)}
+  .step .t{font-size:12.5px;font-weight:680;line-height:1.35}
+  .step .m{font-size:11px;color:var(--muted);margin-top:5px;line-height:1.4}
+  .step.hot .m{color:var(--red);font-weight:650}
+  .arrow{flex:0 0 22px;display:flex;align-items:center;justify-content:center;color:var(--line);
+    font-size:16px;font-weight:700}
+
+  .bottleneck{margin-top:12px;display:flex;gap:10px;align-items:flex-start;
+    background:var(--red-soft);border:1px solid var(--red-line);border-radius:10px;padding:11px 14px}
+  .bottleneck .k{font-size:9.5px;font-weight:800;letter-spacing:.07em;text-transform:uppercase;
+    color:var(--red);white-space:nowrap;padding-top:2px}
+  .bottleneck .v{font-size:12.5px;color:var(--ink)}
+  .bottleneck .v b{color:var(--red)}
+
+  .solve{margin-top:14px;display:flex;gap:10px;align-items:flex-start;
+    background:var(--amber-soft);border:1px solid var(--amber-line);border-radius:10px;padding:11px 14px}
+  .solve .k{font-size:9.5px;font-weight:800;letter-spacing:.07em;text-transform:uppercase;
+    color:var(--amber);white-space:nowrap;padding-top:2px}
+  .solve .v{font-size:12.5px;color:var(--ink)}
+  .solve .v b{font-weight:680}
+
+  .foot{margin-top:34px;padding:18px 22px;background:var(--card);border:1px solid var(--line);
+    border-radius:14px;box-shadow:var(--shadow)}
+  .foot h3{margin:0 0 10px;font-size:13px;letter-spacing:.03em;text-transform:uppercase;color:var(--muted)}
+  .foot p{margin:0;font-size:13.5px;color:var(--muted)}
+  .foot p b{color:var(--ink);font-weight:650}
+  .caveat{margin-top:16px;font-size:11.5px;color:var(--muted);line-height:1.6}
+
+  @media (max-width:820px){
+    .wrap{padding:32px 20px}
+    .flow{flex-wrap:wrap;gap:8px}
+    .arrow{display:none}
+    .step{flex:1 1 44%}
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <header class="top">
+    <div class="eyebrow">ClimatePros · Stream 1 · Problem Definition</div>
+    <h1>Three places a job leaks time — and what we automate</h1>
+    <p class="sub">
+      ClimatePros runs commercial refrigeration &amp; HVAC field service: <b>~900–1,000 technicians</b>,
+      <b>46 branches</b>, <b>10,000+ sites</b>. Work orders arrive automatically. Everything after that
+      still runs on a <b>phone call and a technician's memory</b>. Three use cases, three bottlenecks,
+      one job.
+    </p>
+    <p class="sub" style="margin-top:10px">
+      <b>Where AI sits:</b> Use Case A is a <b>deterministic algorithm — no LLM</b>. It replaces a
+      decision a dispatcher already makes by hand, so it must be explainable and repeatable.
+      Use Cases B and C use AI, and in both the <b>technician can always override it</b>.
+    </p>
+  </header>
+
+  <!-- ================= USE CASE A ================= -->
+  <section class="uc">
+    <div class="uc-head">
+      <span class="chip">A</span>
+      <h2>Dispatch — finding the right technician</h2>
+      <span class="kind algo">Algorithm · no LLM</span>
+      <span class="where">Web portal · Dispatcher</span>
+    </div>
+    <p class="pain-line">
+      A dispatcher has a job ready and ~40 technicians in the region. Picking one is manual, and
+      confirming one means <b>dialling them one at a time</b>.
+    </p>
+
+    <div class="flow">
+      <div class="step ok">
+        <div class="n">Step 1 · automated</div>
+        <div class="t">Work order arrives</div>
+        <div class="m">~95% by email → "Ready for Dispatch"</div>
+      </div>
+      <div class="arrow">→</div>
+      <div class="step">
+        <div class="n">Step 2</div>
+        <div class="t">Dispatcher opens board</div>
+        <div class="m">Must filter first — unfiltered load 2–3 min</div>
+      </div>
+      <div class="arrow">→</div>
+      <div class="step">
+        <div class="n">Step 3</div>
+        <div class="t">Weighs distance, familiarity, availability, urgency</div>
+        <div class="m">GPS map, 25-mi radius · prior-visit counts and current load sit behind separate clicks</div>
+      </div>
+      <div class="arrow">→</div>
+      <div class="step hot">
+        <div class="n">Step 4 · bottleneck</div>
+        <div class="t">Phones techs one-by-one</div>
+        <div class="m">~2–3 min each · no answer → call next</div>
+      </div>
+      <div class="arrow">→</div>
+      <div class="step">
+        <div class="n">Step 5</div>
+        <div class="t">Assign</div>
+        <div class="m">Drag-and-drop, fully manual</div>
+      </div>
+    </div>
+
+    <div class="bottleneck">
+      <div class="k">Why it hurts</div>
+      <div class="v">
+        The dispatcher juggles four factors at once — <b>how far, how familiar, how soon free, how
+        urgent</b> — and every one of them is buried behind clicks or held in their head. Two
+        dispatchers per branch are the throughput ceiling: more volume means more headcount.
+      </div>
+    </div>
+
+    <div class="solve">
+      <div class="k">We solve</div>
+      <div class="v">
+        Rank techs automatically on the same four factors the dispatcher uses today —
+        <b>distance</b>, <b>number of prior visits to the site</b> (familiarity),
+        <b>time until they're free</b>, and the <b>job's priority</b> (emergency / high / low).
+        Push an <b>accept/decline offer</b> to the best one, cascade to the next on decline or timeout,
+        escalate to a human only when the list runs out. Weights configurable per branch by a
+        non-programmer. Pure <b>rules and math — no LLM</b>, so every assignment is explainable.
+        <b>Not route optimization</b> — closest-available-responder, like a 911 dispatch.
+      </div>
+    </div>
+  </section>
+
+  <!-- ================= USE CASE C ================= -->
+  <section class="uc">
+    <div class="uc-head">
+      <span class="chip">C</span>
+      <h2>Parts — finding the part that isn't on the truck</h2>
+      <span class="kind ai">AI · tech overrides</span>
+      <span class="where">Mobile · Technician on-site</span>
+    </div>
+    <p class="pain-line">
+      Customer said "the fridge isn't working." On site, the tech finds a leaking compressor and needs
+      a part. Four places it could be. <b>The first three the app already answers</b> — the fourth is
+      where the tech puts the phone to their ear.
+    </p>
+
+    <div class="flow">
+      <div class="step ok">
+        <div class="n">Source 1 · works today</div>
+        <div class="t">My truck</div>
+        <div class="m">Every tech carries their own stock</div>
+      </div>
+      <div class="arrow">→</div>
+      <div class="step ok">
+        <div class="n">Source 2 · works today</div>
+        <div class="t">Nearby techs' trucks</div>
+        <div class="m">Searchable on mobile — borrow from a tech near me</div>
+      </div>
+      <div class="arrow">→</div>
+      <div class="step ok">
+        <div class="n">Source 3 · works today</div>
+        <div class="t">Branch warehouse</div>
+        <div class="m">One assigned warehouse per state</div>
+      </div>
+      <div class="arrow">→</div>
+      <div class="step hot">
+        <div class="n">Source 4 · bottleneck</div>
+        <div class="t">Third-party supplier — phones them, hopes they answer</div>
+        <div class="m">Google search, 1–3 calls · billable hours burned · store product at risk</div>
+      </div>
+      <div class="arrow">→</div>
+      <div class="step dead">
+        <div class="n">Failure</div>
+        <div class="t">Writes a return dispatch</div>
+        <div class="m">Second truck roll — job can't finish today</div>
+      </div>
+    </div>
+
+    <div class="bottleneck">
+      <div class="k">Why it hurts</div>
+      <div class="v">
+        The same physical part carries <b>a different number at every vendor</b>, and the supplier API
+        matches on exact part number only — <b>no fuzzy logic</b>. So today a human bridges the gap by
+        phone, under emergency pressure. <b>This matching problem is the core technical risk.</b>
+      </div>
+    </div>
+
+    <div class="solve">
+      <div class="k">We solve</div>
+      <div class="v">
+        Two steps, both on mobile. <b>Suggest the part</b> — AI proposes a shortlist from the problem and
+        the equipment; the tech can add, swap or ignore it. <b>Show where it is</b> — one search across
+        all four sources, each hit with its location and distance.
+        <br><br>
+        <b>Where we stop:</b> we show the part, the place and the distance.
+        <b>The tech decides where to pick it up</b> — we don't rank by price and we don't order
+        anything. Supplier API is already integrated; <b>one supplier for the POC</b>, more later.
+      </div>
+    </div>
+  </section>
+
+  <!-- ================= USE CASE B ================= -->
+  <section class="uc">
+    <div class="uc-head">
+      <span class="chip">B</span>
+      <h2>Closeout — changing the job status</h2>
+      <span class="kind ai">AI · tech overrides</span>
+      <span class="where">Mobile · Technician at end of job</span>
+    </div>
+    <p class="pain-line">
+      Every job ends with a status change — <b>completed</b>, <b>need parts</b>, <b>follow-up</b>. It is
+      <b>mandatory, every single time</b>. And behind that status change sits a wall of forms plus two
+      free-text notes — one for the customer, one for the office.
+    </p>
+
+    <div class="flow">
+      <div class="step">
+        <div class="n">Step 1 · every job</div>
+        <div class="t">Tech changes job status</div>
+        <div class="m">~13 statuses · often a machine room with no signal</div>
+      </div>
+      <div class="arrow">→</div>
+      <div class="step hot">
+        <div class="n">Step 2 · bottleneck</div>
+        <div class="t">Fills every form field and types both notes by hand</div>
+        <div class="m">Doing it properly takes 10–15 min · voice dictation only ~30% accurate here</div>
+      </div>
+      <div class="arrow">→</div>
+      <div class="step dead">
+        <div class="n">Step 3 · what actually ships</div>
+        <div class="t">Tech skimps</div>
+        <div class="m">~40% of 16.3M notes are ≤40 chars — "checked history" is the most common</div>
+      </div>
+      <div class="arrow">→</div>
+      <div class="step dead">
+        <div class="n">Step 4 · downstream</div>
+        <div class="t">Office can't bill or route</div>
+        <div class="m">"Replaced motor" — but no motor in the parts list</div>
+      </div>
+    </div>
+
+    <div class="bottleneck">
+      <div class="k">Why it hurts</div>
+      <div class="v">
+        Note quality "ranges from excellent to <b>fvdfdsfdsfds</b>" and <b>no quality rubric exists</b>.
+        The app already knows the metadata with zero typing — but what the tech
+        <b>found</b>, the <b>root cause</b>, and the <b>verified reading</b> live only in their head.
+      </div>
+    </div>
+
+    <div class="solve">
+      <div class="k">We solve</div>
+      <div class="v">
+        Two halves. <b>(1) Summarize</b> — take the tech's rough words and restructure them into a clean,
+        properly formatted note, split into what the customer sees and what the office needs.
+        <b>(2) Copilot</b> — as the tech fills the form, suggest the likely values from
+        <b>similar jobs in history</b>, the way an editor suggests the next line. The tech accepts or
+        ignores each one.
+        <br><br>
+        The headline isn't prettier prose — that's table stakes. It's <b>completeness</b>: cross-check
+        the note against the parts, time and photos actually logged, and surface what's missing.
+        <b>Never fabricates. Never blocks Save.</b> Target: <b>10–15 min → ~15 s</b>.
+      </div>
+    </div>
+  </section>
+
+  <div class="foot">
+    <h3>One job, three fixes</h3>
+    <p>
+      Work order in → <b>(A)</b> the right tech is offered the job on the web portal → tech arrives on site →
+      <b>(C)</b> the missing part is found on mobile without a phone call → <b>(B)</b> the closeout note
+      writes itself. Each removes a manual step that today costs either a dispatcher's hour, a
+      technician's billable hour, or a second visit.
+    </p>
+    <p class="caveat">
+      <b>On the history B and C learn from.</b> ClimatePros has <b>10–12 years</b> of operational data —
+      <b>200,000+ jobs in the last six months alone</b>, and <b>16.3 million</b> note records across the
+      full span. It is <b>messy by our own admission</b>: ~40% of notes are ≤40 characters, and the most
+      common note in the database is literally "checked history". That is the problem we're solving, so
+      it is also the data we inherit. We will <b>not train on the raw dump</b> — the corpus gets
+      de-duplicated down to unique cases first, and personally identifiable information is stripped
+      before anything reaches a model.
+    </p>
+    <p class="caveat">
+      Numbers sourced from discovery transcripts and read-only production/staging data. The
+      <b>10–15 min → ~15 s</b> figure (B) is the only before/after target currently claimed;
+      A and C have baselines measured but no savings target agreed yet.
+    </p>
+  </div>
+
+</div>
+</body>
+</html>
