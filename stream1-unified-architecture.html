@@ -2916,6 +2916,8 @@ is introduced, &sect;11 Onboarding &amp; Fault Tolerance.</p>
 <ul>
 <li><b>Not route optimization</b> &mdash; closest-available-responder, like a 911 dispatch. It ranks who
 answers next, not the most efficient multi-stop route.</li>
+<li><b>Deterministic, no LLM</b> &mdash; a weighted-sum over stated inputs with configured (not learned)
+weights, so every assignment is explainable and repeatable.</li>
 <li>The existing manual dispatch flow is <b>untouched</b> &mdash; a division with the toggle OFF behaves
 exactly as today.</li>
 <li><b>No UI change</b> beyond the toggle and its configuration (task count <code>N</code>).</li>
@@ -2993,7 +2995,7 @@ short-lived caching.</li>
 <li><b>The vector store holds no direct customer PII</b> &mdash; only dispatch reason text and used part
 numbers &mdash; reducing the sensitivity of the derived index (&sect;7 Data &amp; Schema).</li>
 </ul>
-<div class="callout good"><b>&#128274; Derived and rebuildable:</b> because the vector store is derived from
+<div class="callout good"><b>&#128274; Derived and rebuildable:</b> because the Azure-hosted vector store is derived from
 SQL Server rather than an independent source of truth, it can be re-seeded at any time &mdash; supporting
 deletion and data-retention requests handled at the SQL Server layer.</div>
 
