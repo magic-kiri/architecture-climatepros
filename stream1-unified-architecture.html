@@ -2261,9 +2261,114 @@ retry.</td></tr>
 </table></div>
 
 </section>
+<style>
+/* -- §9 Observability & Evals: namespaced s9-* additions --
+   s9-card-head / s9-icon: card header + icon-badge combo, lifted from usecase-b-architecture.html's
+   §13 Observability & Evals card. Not present in the shared _style.css since no earlier section used
+   it; colors reuse the existing --primary/--primary-light vars so it stays on-palette rather than
+   introducing new --warning-* tokens the source doc used.
+   s9-otel: 3-up signal grid (traces / logs / correlation) for the unified tracing block. Local to
+   this section — a smaller, flatter cousin of .opsflow-card that doesn't need that component's
+   trigger/step/chain machinery. -- */
+.s9-card-head{display:flex;align-items:center;gap:12px;margin-bottom:14px;}
+.s9-icon{width:40px;height:40px;border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:20px;flex:none;}
+.s9-card-head h4{margin:0;font-size:17px;}
+.s9-card-head p{margin:0;font-size:13px;color:var(--text-muted);}
+.s9-otel{display:grid;grid-template-columns:repeat(3,1fr);gap:14px;margin:16px 0;}
+@media(max-width:820px){.s9-otel{grid-template-columns:1fr;}}
+.s9-otel-item{background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:16px 18px;}
+.s9-otel-item h5{margin:0 0 6px;font-size:13.5px;font-weight:700;color:var(--primary-dark);}
+.s9-otel-item p{margin:0;font-size:12.5px;color:var(--text-muted);line-height:1.55;}
+</style>
 <section id="s9">
 <h2>9. Observability &amp; Evals</h2>
-<!-- filled in Task 11 -->
+<p>Two different concerns share this section. <b>Observability</b> is operational and unified: one
+tracing/logging layer, introduced fresh by this project (&sect;3 Technology Stack, &sect;4
+Infrastructure), watches all three use cases the same way. <b>Evals</b> are about AI output quality and
+only apply where a model is in the loop &mdash; Auto-Dispatch (A) is a deterministic ranking formula
+(&sect;6 Core Logic) with nothing to eval; Job Summarisation (B) already has a working,
+production-grounded eval loop, lifted at full fidelity below; Parts Finder (C) today only validates
+retrieval quality on a held-out set of recent dispatches and does not yet have B&rsquo;s
+correction-based feedback loop &mdash; closing that gap is future work, not part of this
+architecture.</p>
+
+<h3>Unified Observability &mdash; OpenTelemetry Tracing + Azure Monitor Logs</h3>
+<p>Every service in the new AI tier &mdash; the Azure VM host running both .NET APIs, both Azure
+Container Apps pools (Auto-Dispatch workers and the FastAPI AI server), the Redis-fed worker loop, and
+every vector-store call &mdash; emits <b>OpenTelemetry</b> traces and structured logs into a single
+<b>Azure Monitor</b> workspace (&sect;3, &sect;4). This was an abstract, &ldquo;not yet
+designed&rdquo; placeholder in the source design; here it is the one piece of infrastructure every use
+case shares, so it is specified once instead of three times.</p>
+
+<div class="s9-otel">
+<div class="s9-otel-item"><h5>&#128225; Distributed traces</h5><p>One trace per request, spanning every
+hop it takes &mdash; .NET proxy &rarr; Container Apps &rarr; AI server &rarr; LiteLLM &rarr; model, or
+.NET &rarr; Redis Stream &rarr; worker &rarr; SQL Server. The cross-cloud hop to <b>AWS SQL
+Server</b> (&sect;4) is a span like any other, so the added round-trip is visible, not hidden.</p></div>
+<div class="s9-otel-item"><h5>&#128203; Structured logs</h5><p>Every service logs to Azure Monitor in
+one schema. Each entry carries the same <code>requestId</code> issued in the error envelope (&sect;8 API
+Reference), so a failed call traces from the client-visible error code back through every hop it
+touched.</p></div>
+<div class="s9-otel-item"><h5>&#128260; Correlation</h5><p><code>requestId</code> is the join key across
+traces, logs, and the AI-specific tables in &sect;7 Data &amp; Schema
+(<code>ai.llm_calls</code>, <code>ai.summary_edits</code>) &mdash; so a slow trace, a log line, and an
+eval finding for the same request all resolve to one id.</p></div>
+</div>
+
+<div class="callout amber"><b>P95 targets &mdash; open item:</b> &sect;4 Infrastructure flags that
+cross-cloud AWS SQL Server round-trips must be budgeted into per-flow P95 targets, especially the
+Auto-Dispatch worker&rsquo;s per-request SQL calls. No formal SLOs exist yet in any of the three source
+designs; the inputs this document already establishes are the ~1&nbsp;min technician-availability
+window and BLPOP reply-wait timeout (A, &sect;5 Operational Flows), the ~6&ndash;7s LLM-bound
+<code>/summarise</code> / <code>/analyse</code> calls (B, &sect;8), and the &lt;200ms / &lt;50ms
+deterministic endpoints (B/C, &sect;8). Setting numeric P95 targets per flow, inclusive of the
+cross-cloud SQL leg, is follow-up work once Azure Monitor is live and has real traffic to baseline
+against &mdash; not something any source design specified.</div>
+
+<h3 style="margin-top:38px"><span class="chip">B</span> Evals &mdash; the Feedback Loop</h3>
+<p>Every AI interaction is persisted in the client&rsquo;s own database, so quality is measured from
+production reality, not vibes. Adapted from <b>usecase-b-architecture.html &sect;13 Observability
+&amp; Evals</b>.</p>
+
+<div class="card">
+<div class="s9-card-head">
+<div class="s9-icon" style="background:var(--primary-light);color:var(--primary);">&#128200;</div>
+<div><h4>The feedback loop</h4><p>Log everything &rarr; corrections become ground truth &rarr; changes
+must beat the eval set.</p></div>
+</div>
+<ul style="padding-left:22px;margin:0;">
+<li><strong><code>ai.llm_calls</code></strong> records provider, model, tokens, latency, and outcome for
+every call: cost and reliability are queryable at any time.</li>
+<li><strong><code>ai.summary_edits</code></strong> records every human correction to an AI section: this
+is labelled ground truth generated by normal usage.</li>
+<li><strong>Eval set</strong> is built from those corrected rows and re-run before any prompt,
+ticket-standard, or provider/model change ships.</li>
+<li><strong>Headline metric: edit-rate per section</strong>: which of the 12 sections the AI gets right,
+tracked over time and per customer.</li>
+</ul>
+</div>
+
+<div class="callout azure"><b>Traceability:</b> because prompts are built from a versioned
+<code>ticket_standard.md</code> and every call is logged with its model id, any ticket in production
+can be traced back to exactly which standard version and model produced it.</div>
+
+<div class="callout amber"><b>How we view it:</b> a lightweight dashboard page
+(<code>GET /admin/dashboard</code>, &sect;8 API Reference) is served by the same FastAPI container and
+reads straight from the <code>ai.*</code> schema: no separate web app, no new hosting. Access is
+<strong>proxied through the .NET backend</strong> with an admin-role check on the existing Entra token,
+the same pattern as every other AI route, so the service stays fully private and no new login surface is
+created. Eval runs themselves are offline jobs over <code>ai.summary_edits</code>, not a hosted
+service.</div>
+
+<div class="callout warn"><b>The eval set inherits weak labels, not clean ones:</b> the same audit that
+shaped the retrieval baseline (&sect;6 Core Logic &middot; B &middot; Label-quality reality) found the
+structured outcome codes are mostly dead signal &mdash; root-cause/failure codes unused since 2021,
+problem code <code>OTHER</code> at 38%, summary code <code>SERVICE</code> for 88% of filled rows. The
+real predictive signal is free text (<code>DispatchReason</code>, technician notes).
+<code>ai.summary_edits</code> works around this because it labels the model&rsquo;s actual output, not
+the weak structured codes &mdash; but it also means the eval set is only as good as what technicians
+bother to correct, not an independently audited ground truth.</div>
+
 </section>
 
 <section id="s10">
