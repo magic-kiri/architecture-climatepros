@@ -1,0 +1,687 @@
+<section id="s2">
+<h2>2. High-Level Architecture</h2>
+
+<h3>2a &middot; Unified system diagram</h3>
+<div class="diagram-frame">
+<svg viewBox="0 0 1200 1020" width="100%" style="min-width:1040px;font-family:inherit;">
+ <defs>
+  <marker id="b" markerWidth="10" markerHeight="10" refX="7" refY="3.5" orient="auto"><path d="M0,0 L7,3.5 L0,7 Z" fill="#2563eb"/></marker>
+  <marker id="b-r" markerWidth="10" markerHeight="10" refX="1" refY="3.5" orient="auto"><path d="M7,0 L0,3.5 L7,7 Z" fill="#2563eb"/></marker>
+  <marker id="a" markerWidth="10" markerHeight="10" refX="7" refY="3.5" orient="auto"><path d="M0,0 L7,3.5 L0,7 Z" fill="#d97706"/></marker>
+  <marker id="g" markerWidth="10" markerHeight="10" refX="7" refY="3.5" orient="auto"><path d="M0,0 L7,3.5 L0,7 Z" fill="#059669"/></marker>
+  <marker id="g-r" markerWidth="10" markerHeight="10" refX="1" refY="3.5" orient="auto"><path d="M7,0 L0,3.5 L7,7 Z" fill="#059669"/></marker>
+  <marker id="p" markerWidth="10" markerHeight="10" refX="7" refY="3.5" orient="auto"><path d="M0,0 L7,3.5 L0,7 Z" fill="#7c3aed"/></marker>
+ </defs>
+
+ <!-- ===================== ZONES ===================== -->
+ <rect x="40" y="40" width="520" height="120" rx="16" fill="#f1f6ff" stroke="#93c5fd" stroke-width="1.4" stroke-dasharray="7 5"/>
+ <text x="300" y="60" text-anchor="middle" font-size="11.5" font-weight="800" fill="#0f3a8e" letter-spacing="1">CLIENTS</text>
+
+ <rect x="40" y="190" width="520" height="430" rx="16" fill="#eff4ff" stroke="#60a5fa" stroke-width="1.5" stroke-dasharray="7 5"/>
+ <text x="300" y="209" text-anchor="middle" font-size="11.5" font-weight="800" fill="#0f3a8e" letter-spacing="0.4">EXISTING &middot; FIELDJETX PLATFORM</text>
+ <text x="300" y="225" text-anchor="middle" font-size="9.5" font-weight="600" fill="#64748b">Azure &middot; restated</text>
+
+ <rect x="640" y="40" width="400" height="650" rx="16" fill="#fffaf3" stroke="#d97706" stroke-width="1.5" stroke-dasharray="7 5"/>
+ <text x="840" y="60" text-anchor="middle" font-size="12" font-weight="800" fill="#b45309" letter-spacing="1">NEW INFRASTRUCTURE &middot; THIS PROJECT &nbsp;<tspan font-size="10" font-weight="600" fill="#b45309">Azure</tspan></text>
+
+ <rect x="640" y="720" width="400" height="240" rx="16" fill="#faf5ff" stroke="#7c3aed" stroke-width="1.5" stroke-dasharray="7 5"/>
+ <text x="830" y="744" text-anchor="middle" font-size="10.5" font-weight="800" fill="#5b21b6" letter-spacing="0.3">PRIVATE MODEL INFRA &middot; CLIMATEPROS OFFICE &nbsp;<tspan font-size="9.5" font-weight="600" fill="#7c6aa6">on-prem</tspan></text>
+
+ <!-- ===================== CLIENTS ===================== -->
+ <rect x="80" y="72" width="200" height="72" rx="14" fill="#fff" stroke="#93c5fd" stroke-width="1.5"/>
+ <text x="180" y="105" text-anchor="middle" font-size="13" font-weight="700" fill="#0f3a8e">&#128421;&#65039; FieldJetX Web App</text>
+ <text x="180" y="124" text-anchor="middle" font-size="10" fill="#64748b">admin / office console</text>
+ <rect x="320" y="72" width="200" height="72" rx="14" fill="#fff" stroke="#93c5fd" stroke-width="1.5"/>
+ <text x="420" y="105" text-anchor="middle" font-size="13" font-weight="700" fill="#0f3a8e">&#128241; Mobile App</text>
+ <text x="420" y="124" text-anchor="middle" font-size="10" fill="#64748b">FieldJetX (Flutter)</text>
+
+ <!-- ===================== EXISTING ===================== -->
+ <rect x="66" y="250" width="468" height="158" rx="14" fill="#f8fbff" stroke="#2563eb" stroke-width="2"/>
+ <text x="88" y="274" font-size="11.5" font-weight="800" fill="#2563eb">&#9729;&#65039; Azure VM &middot; Application Host</text>
+ <text x="512" y="274" text-anchor="end" font-size="9.5" fill="#64748b">one physical server</text>
+ <rect x="88" y="296" width="200" height="96" rx="10" fill="#fff" stroke="#93c5fd" stroke-width="1.5"/>
+ <text x="188" y="338" text-anchor="middle" font-size="12.5" font-weight="700" fill="#1e293b">.NET Legacy API</text>
+ <text x="188" y="360" text-anchor="middle" font-size="9.5" fill="#64748b">existing service</text>
+ <rect x="312" y="296" width="200" height="96" rx="10" fill="#fff" stroke="#93c5fd" stroke-width="2"/>
+ <text x="412" y="326" text-anchor="middle" font-size="12" font-weight="700" fill="#1e293b">.NET Microservices API</text>
+ <text x="412" y="346" text-anchor="middle" font-size="9" font-weight="700" fill="#d97706">+ AI proxy route (new)</text>
+ <text x="412" y="360" text-anchor="middle" font-size="9" font-weight="700" fill="#d97706">+ Container scale monitor (new)</text>
+
+ <path d="M200 500 h200 v58 a100,13 0 0 1 -200 0 z" fill="#fff" stroke="#2563eb" stroke-width="2"/>
+ <ellipse cx="300" cy="500" rx="100" ry="13" fill="#fff" stroke="#2563eb" stroke-width="2"/>
+ <text x="300" y="528" text-anchor="middle" font-size="12.5" font-weight="700" fill="#0f3a8e">&#128451;&#65039; SQL Server DB</text>
+ <rect x="154" y="516" width="42" height="17" rx="8.5" fill="#1a56db"/><text x="175" y="528.5" text-anchor="middle" font-size="9" font-weight="800" fill="#fff">AWS</text>
+
+ <!-- ===================== NEW INFRA (vertical column) ===================== -->
+ <rect x="700" y="223" width="280" height="64" rx="12" fill="#fff" stroke="#d97706" stroke-width="1.8" stroke-dasharray="6 4"/>
+ <rect x="922" y="215" width="40" height="16" rx="8" fill="#d97706"/><text x="942" y="227" text-anchor="middle" font-size="9" font-weight="800" fill="#fff">NEW</text>
+ <text x="840" y="251" text-anchor="middle" font-size="12" font-weight="700" fill="#b45309">&#128260; Azure Cache for Redis</text>
+ <text x="840" y="270" text-anchor="middle" font-size="9.5" fill="#64748b">durable job stream &middot; consumer groups</text>
+
+ <rect x="700" y="330" width="280" height="80" rx="12" fill="#fff" stroke="#d97706" stroke-width="2"/>
+ <rect x="922" y="322" width="40" height="16" rx="8" fill="#d97706"/><text x="942" y="334" text-anchor="middle" font-size="9" font-weight="800" fill="#fff">NEW</text>
+ <text x="840" y="360" text-anchor="middle" font-size="13.5" font-weight="700" fill="#1e293b">&#128230; Container Apps</text>
+ <text x="840" y="379" text-anchor="middle" font-size="9.5" fill="#64748b">Azure Container Apps &middot; workers</text>
+ <text x="840" y="395" text-anchor="middle" font-size="9.5" font-weight="700" fill="#b45309">scaling 0&#8211;1 (on / off)</text>
+
+ <rect x="700" y="453" width="280" height="98" rx="12" fill="#fff" stroke="#d97706" stroke-width="2.5"/>
+ <rect x="922" y="445" width="40" height="16" rx="8" fill="#d97706"/><text x="942" y="457" text-anchor="middle" font-size="9" font-weight="800" fill="#fff">NEW</text>
+ <text x="840" y="485" text-anchor="middle" font-size="14" font-weight="700" fill="#1e293b">&#9889; FastAPI AI Server</text>
+ <text x="840" y="505" text-anchor="middle" font-size="10" fill="#64748b">Azure Container Apps</text>
+ <text x="840" y="522" text-anchor="middle" font-size="9.5" font-weight="700" fill="#b45309">central service &middot; all AI use cases</text>
+ <text x="840" y="536" text-anchor="middle" font-size="9.5" font-weight="700" fill="#b45309">only path to the models</text>
+
+ <rect x="700" y="594" width="280" height="82" rx="12" fill="#fff" stroke="#d97706" stroke-width="1.8" stroke-dasharray="6 4"/>
+ <rect x="922" y="586" width="40" height="16" rx="8" fill="#d97706"/><text x="942" y="598" text-anchor="middle" font-size="9" font-weight="800" fill="#fff">NEW</text>
+ <text x="840" y="624" text-anchor="middle" font-size="13.5" font-weight="700" fill="#b45309">&#129526; Vector DB</text>
+ <text x="840" y="644" text-anchor="middle" font-size="9.5" fill="#64748b">new infra &middot; embedded history index</text>
+
+ <!-- ===================== NOTIFICATION HUBS (outbound push to mobile) ===================== -->
+ <rect x="700" y="115" width="280" height="60" rx="12" fill="#fff" stroke="#d97706" stroke-width="1.8"/>
+ <rect x="922" y="107" width="40" height="16" rx="8" fill="#d97706"/><text x="942" y="119" text-anchor="middle" font-size="9" font-weight="800" fill="#fff">NEW</text>
+ <text x="840" y="141" text-anchor="middle" font-size="12" font-weight="700" fill="#b45309">&#128227; Azure Notification Hubs</text>
+ <text x="840" y="159" text-anchor="middle" font-size="9.5" fill="#64748b">APNs / FCM &middot; push to device</text>
+
+ <!-- ===================== MODELS (on-prem, unchanged) ===================== -->
+ <rect x="680" y="756" width="320" height="56" rx="12" fill="#f3e8ff" stroke="#7c3aed" stroke-width="2"/>
+ <text x="840" y="781" text-anchor="middle" font-size="12.5" font-weight="700" fill="#5b21b6">&#128257; LiteLLM Gateway</text>
+ <text x="840" y="798" text-anchor="middle" font-size="9.5" fill="#7c6aa6">routing &middot; primary + fallback</text>
+
+ <rect x="664" y="844" width="118" height="94" rx="12" fill="#f3e8ff" stroke="#7c3aed" stroke-width="1.8"/>
+ <text x="723" y="882" text-anchor="middle" font-size="10.5" font-weight="700" fill="#5b21b6">&#129504; Self-hosted LLM</text>
+ <text x="723" y="900" text-anchor="middle" font-size="9" fill="#7c6aa6">qwen3-vl-moe</text>
+ <text x="723" y="912" text-anchor="middle" font-size="9" fill="#7c6aa6">vLLM</text>
+
+ <rect x="794" y="844" width="118" height="94" rx="12" fill="#f3e8ff" stroke="#7c3aed" stroke-width="1.8"/>
+ <text x="853" y="886" text-anchor="middle" font-size="10.5" font-weight="700" fill="#5b21b6">&#129513; Embedding</text>
+ <text x="853" y="904" text-anchor="middle" font-size="9" fill="#7c6aa6">bge-m3</text>
+
+ <rect x="924" y="844" width="112" height="94" rx="12" fill="#fff" stroke="#7c3aed" stroke-width="1.8" stroke-dasharray="6 4"/>
+ <text x="980" y="882" text-anchor="middle" font-size="10.5" font-weight="700" fill="#5b21b6">&#10022; Gemini</text>
+ <text x="980" y="900" text-anchor="middle" font-size="9" fill="#7c6aa6">backup</text>
+ <text x="980" y="912" text-anchor="middle" font-size="9" fill="#7c6aa6">external</text>
+
+ <!-- ===================== ARROWS ===================== -->
+ <!-- clients -> Azure VM -->
+ <path d="M180 144 V250" fill="none" stroke="#2563eb" stroke-width="2.4" marker-end="url(#b)"/>
+ <text x="196" y="178" font-size="10" font-weight="700" fill="#2563eb" stroke="#fff" stroke-width="3.5" paint-order="stroke">requests</text>
+ <path d="M420 144 V250" fill="none" stroke="#2563eb" stroke-width="2.4" marker-end="url(#b)"/>
+ <text x="436" y="178" font-size="10" font-weight="700" fill="#2563eb" stroke="#fff" stroke-width="3.5" paint-order="stroke">requests</text>
+
+ <!-- Azure VM <-> SQL -->
+ <path d="M300 408 V486" fill="none" stroke="#2563eb" stroke-width="2.4" marker-end="url(#b)" marker-start="url(#b-r)"/>
+ <text x="288" y="450" text-anchor="middle" font-size="10" font-weight="700" fill="#2563eb" stroke="#fff" stroke-width="4" paint-order="stroke" transform="rotate(-90 288 450)">reads / writes</text>
+
+ <!-- .NET -> Redis (publish) -->
+ <path d="M534 310 H627 Q634 310 634 303 V262 Q634 255 641 255 H700" fill="none" stroke="#d97706" stroke-width="2.4" marker-end="url(#a)"/>
+ <text x="588" y="303" text-anchor="middle" font-size="10" font-weight="700" fill="#b45309" stroke="#fff" stroke-width="4" paint-order="stroke">publish</text>
+
+ <!-- .NET -> Container Apps (monitor / scale 0-1, straight) -->
+ <path d="M534 370 H700" fill="none" stroke="#d97706" stroke-width="2" stroke-dasharray="6 4" marker-end="url(#a)"/>
+ <text x="612" y="363" text-anchor="middle" font-size="9.5" font-weight="700" fill="#b45309" stroke="#fff" stroke-width="4" paint-order="stroke">monitor &middot; scale 0&#8211;1</text>
+
+ <!-- .NET -> FastAPI (AI request, from micro box bottom) -->
+ <path d="M412 408 V468 Q412 475 419 475 H700" fill="none" stroke="#d97706" stroke-width="2.4" marker-end="url(#a)"/>
+ <text x="600" y="469" text-anchor="middle" font-size="10" font-weight="700" fill="#b45309" stroke="#fff" stroke-width="4" paint-order="stroke">AI request</text>
+
+ <!-- Redis -> Container Apps -->
+ <path d="M840 287 V330" fill="none" stroke="#d97706" stroke-width="2.4" marker-end="url(#a)"/>
+ <text x="854" y="313" font-size="10" font-weight="700" fill="#b45309" stroke="#fff" stroke-width="4" paint-order="stroke">consume</text>
+
+ <!-- Container App -> Notification Hubs (outbound: Publish) -->
+ <path d="M980 380 H1008 Q1015 380 1015 373 V152 Q1015 145 1008 145 H980" fill="none" stroke="#d97706" stroke-width="2.4" marker-end="url(#a)"/>
+ <text x="1030" y="262" text-anchor="middle" font-size="9.5" font-weight="700" fill="#b45309" stroke="#fff" stroke-width="4" paint-order="stroke" transform="rotate(-90 1030 262)">Publish</text>
+
+ <!-- Notification Hubs -> Mobile App (push) -->
+ <path d="M700 145 H617 Q610 145 610 138 V115 Q610 108 603 108 H520" fill="none" stroke="#d97706" stroke-width="2.4" marker-end="url(#a)"/>
+ <text x="562" y="101" text-anchor="middle" font-size="9.5" font-weight="700" fill="#b45309" stroke="#fff" stroke-width="4" paint-order="stroke">APNs / FCM push</text>
+
+ <!-- FastAPI -> Vector -->
+ <path d="M840 551 V594" fill="none" stroke="#d97706" stroke-width="2.2" marker-end="url(#a)"/>
+ <text x="854" y="573" font-size="10" font-weight="700" fill="#b45309" stroke="#fff" stroke-width="4" paint-order="stroke">query &middot; upsert</text>
+
+ <!-- Container Apps <-> SQL -->
+ <path d="M700 395 H667 Q660 395 660 402 V501 Q660 508 653 508 H402" fill="none" stroke="#059669" stroke-width="2.2" marker-end="url(#g)" marker-start="url(#g-r)"/>
+ <text x="500" y="502" text-anchor="middle" font-size="10" font-weight="700" fill="#047857" stroke="#fff" stroke-width="4" paint-order="stroke">reads / writes</text>
+
+ <!-- FastAPI <-> SQL (straight) -->
+ <path d="M700 526 H402" fill="none" stroke="#059669" stroke-width="2.2" marker-end="url(#g)" marker-start="url(#g-r)"/>
+ <text x="500" y="540" text-anchor="middle" font-size="10" font-weight="700" fill="#047857" stroke="#fff" stroke-width="4" paint-order="stroke">read stock &middot; persist parts</text>
+
+
+ <!-- FastAPI -> LiteLLM (down to models) -->
+ <path d="M980 500 H1068 Q1075 500 1075 507 V777 Q1075 784 1068 784 H1000" fill="none" stroke="#7c3aed" stroke-width="2.4" marker-end="url(#p)"/>
+ <text x="1061" y="648" text-anchor="middle" font-size="10" font-weight="700" fill="#7c3aed" stroke="#fff" stroke-width="4" paint-order="stroke" transform="rotate(-90 1061 648)">inference</text>
+
+ <!-- LiteLLM -> models -->
+ <path d="M723 812 V844" fill="none" stroke="#7c3aed" stroke-width="2" marker-end="url(#p)"/>
+ <path d="M853 812 V844" fill="none" stroke="#7c3aed" stroke-width="2" marker-end="url(#p)"/>
+ <path d="M980 812 V844" fill="none" stroke="#7c3aed" stroke-width="1.8" stroke-dasharray="6 4" marker-end="url(#p)"/>
+ <text x="980" y="832" text-anchor="middle" font-size="9" font-weight="700" fill="#7c3aed" stroke="#fff" stroke-width="3.5" paint-order="stroke">fallback</text>
+
+ <!-- ===================== OBSERVABILITY (abstract) ===================== -->
+ <rect x="40" y="668" width="300" height="112" rx="14" fill="#ecfeff" stroke="#0891b2" stroke-width="1.6" stroke-dasharray="6 4"/>
+ <text x="190" y="700" text-anchor="middle" font-size="13" font-weight="800" fill="#0e7490">&#128225; Observability &amp; Tracing</text>
+ <text x="190" y="722" text-anchor="middle" font-size="9.5" fill="#64748b">OpenTelemetry &middot; distributed tracing (abstract)</text>
+ <text x="190" y="740" text-anchor="middle" font-size="9.5" fill="#64748b">Azure Monitor &middot; logs</text>
+ <text x="190" y="762" text-anchor="middle" font-size="8.5" font-style="italic" fill="#94a3b8">all services emit telemetry &#8594; not yet designed</text>
+
+ <!-- ===================== LEGEND ===================== -->
+ <line x1="70" y1="990" x2="100" y2="990" stroke="#2563eb" stroke-width="2.5"/><text x="106" y="994" font-size="10.5" fill="#475569">existing &middot; unchanged</text>
+ <line x1="250" y1="990" x2="280" y2="990" stroke="#d97706" stroke-width="2.5"/><text x="286" y="994" font-size="10.5" fill="#475569">new &middot; this project</text>
+ <line x1="430" y1="990" x2="460" y2="990" stroke="#7c3aed" stroke-width="2.5"/><text x="466" y="994" font-size="10.5" fill="#475569">model path (off-cloud)</text>
+ <line x1="620" y1="990" x2="650" y2="990" stroke="#059669" stroke-width="2.5"/><text x="656" y="994" font-size="10.5" fill="#475569">data persist / embed</text>
+ <line x1="800" y1="990" x2="830" y2="990" stroke="#7c3aed" stroke-width="2" stroke-dasharray="6 4"/><text x="836" y="994" font-size="10.5" fill="#475569">async / fallback</text>
+</svg>
+</div>
+<p class="diagram-note">All components <b>Azure</b> except the SQL Server system of record <b>(AWS)</b> &mdash; the single cross-cloud dependency.</p>
+
+<h3>2b &middot; Detailed architecture per use case</h3>
+
+<p class="uc-adds"><span class="chip">A</span> <b>A adds:</b> durable dispatch queue + Container Apps worker + push-offer cascade.</p>
+<div class="diagram-frame">
+<div class="uca-diagram">
+
+<div class="uca-legend">
+  <div class="uca-legend-item"><span class="uca-swatch uca-swatch--exist"></span> Existing system <span class="uca-legend-note">&mdash; already live today</span></div>
+  <div class="uca-legend-item"><span class="uca-swatch uca-swatch--new"></span> New for auto-dispatch <span class="uca-legend-note">&mdash; added by this project</span></div>
+  <div class="uca-legend-item"><span style="width:26px;height:0;border-top:2.5px solid #2563eb;display:inline-block"></span> Dispatch flow</div>
+  <div class="uca-legend-item"><span style="width:26px;height:0;border-top:2.5px solid #7c3aed;display:inline-block"></span> Toggle / configuration flow</div>
+  <div class="uca-legend-item"><span style="width:26px;height:0;border-top:2.5px solid #059669;display:inline-block"></span> DB read / write</div>
+  <div class="uca-legend-item"><span style="width:26px;height:0;border-top:2.5px solid #d97706;display:inline-block"></span> Notification Hubs push / technician reply</div>
+</div>
+
+<div class="uca-stage">
+<div class="uca-main-col">
+
+<section class="uca-layer">
+  <div class="uca-layer-title">1 &middot; Control Plane <span class="uca-tag uca-tag--exist">Existing UI</span></div>
+  <div class="uca-box uca-box--exist">
+    <span class="uca-badge uca-badge--exist">Existing</span>
+    <h4>🖥️ Dashboard &mdash; Admin UI</h4>
+    <div class="role">Operator control surface</div>
+    <ul>
+      <li><strong>Dispatch request</strong> &rarr; handled by Server A</li>
+      <li><strong>New &mdash; Auto-Dispatch toggle</strong> &rarr; handled by Server B</li>
+      <li><strong>New &mdash; Configuration</strong> (e.g. task count <em>N</em>) &rarr; handled by Server B</li>
+    </ul>
+  </div>
+</section>
+
+<div class="uca-arrow-row">
+  <div class="uca-arrow-col uca-arrow-col--blue">
+    <svg width="22" height="26" viewBox="0 0 22 26"><path d="M11 0v20M4 14l7 7 7-7" fill="none" stroke="#2563eb" stroke-width="2"/></svg>
+    Dispatch request
+  </div>
+  <div class="uca-arrow-col uca-arrow-col--vio">
+    <svg width="22" height="26" viewBox="0 0 22 26"><path d="M11 0v20M4 14l7 7 7-7" fill="none" stroke="#7c3aed" stroke-width="2"/></svg>
+    Toggle + Configuration (N)
+  </div>
+</div>
+
+<section class="uca-layer">
+  <div class="uca-layer-title">2 &middot; Existing Application Tier <span class="uca-tag uca-tag--exist">Single Azure VM Instance</span></div>
+  <div class="uca-ec2">
+    <div class="uca-ec2-head">
+      <span class="uca-ec2-name">☁ Azure VM &mdash; Application Host <span class="uca-tag uca-tag--exist" style="margin-left:6px">Existing</span></span>
+    </div>
+    <div class="uca-grid2">
+      <div class="uca-box uca-box--exist">
+        <span class="uca-badge uca-badge--exist">Existing</span>
+        <h4>🅰️ Server A</h4>
+        <div class="role">Request entry point</div>
+        <ul>
+          <li>API endpoints &middot; user sessions</li>
+          <li><strong>New logic:</strong> if division = <code>ENABLED</code>, publish payload to Redis Stream</li>
+        </ul>
+      </div>
+      <div class="uca-box uca-box--exist">
+        <span class="uca-badge uca-badge--exist">Existing</span>
+        <h4>🅱️ Server B</h4>
+        <div class="role">Orchestrator</div>
+        <ul>
+          <li>Manual task initiator</li>
+          <li><strong>New logic:</strong> Container Apps manager &mdash; watches toggles, scales apps (ON=<em>N</em> configurable &middot; e.g. 3 / OFF=0), flushes stream on disable</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+</section>
+
+<div class="uca-branch">
+  <div class="uca-branch-path"></div>
+  <div class="uca-branch-path">
+    <div class="uca-branch-svg">
+      <svg width="60" height="70" viewBox="0 0 60 70">
+        <defs><marker id="uca-arrB" markerWidth="9" markerHeight="9" refX="6" refY="3" orient="auto"><path d="M0,0 L6,3 L0,6 Z" fill="#d97706"/></marker></defs>
+        <path d="M30 0 L30 62" fill="none" stroke="#d97706" stroke-width="2.5" stroke-dasharray="6 4" marker-end="url(#uca-arrB)"/>
+      </svg>
+    </div>
+    <div class="uca-branch-label uca-branch-label--b"><strong>Server B &rarr; Container Apps Pool</strong><span>Azure Container Apps API &rarr; scale replicas (ON=<em>N</em>, configurable &middot; e.g. 3 / OFF=0)</span></div>
+  </div>
+</div>
+
+<section class="uca-layer uca-fargate">
+  <div class="uca-layer-title">3 &middot; Azure Container Apps Pool <span class="uca-tag uca-tag--new">New</span></div>
+  <div class="uca-scale-row" style="margin-bottom:18px">
+    <div class="uca-scale-chip"><span class="uca-dot uca-dot--on"></span><span class="uca-sc-txt"><strong>ON &mdash; <em>N</em> replicas running</strong><span>configurable &middot; 3 used here &middot; scales up on enable</span></span></div>
+    <div class="uca-scale-chip"><span class="uca-dot uca-dot--off"></span><span class="uca-sc-txt"><strong>OFF &mdash; 0 replicas</strong><span>scales to zero + flushes stream (cost save)</span></span></div>
+  </div>
+
+  <div class="uca-conn">All <em>N</em> tasks read the same group via <code>XREADGROUP</code> &mdash; competing consumers <span style="color:var(--muted)">(N configurable; 3 shown below as example)</span></div>
+
+  <div class="uca-grid3">
+    <div class="uca-task">
+      <h5>📦 Task C1</h5>
+      <ol>
+        <li><code>XREADGROUP</code> from <code>dispatch:stream</code></li>
+        <li>Try lock <code>lock:div:Div_A</code></li>
+        <li>Result: <span class="uca-pill uca-pill--fail">✕ FAIL</span> (Div_A held)</li>
+        <li>Back off &mdash; NACK / release message for later pickup</li>
+      </ol>
+    </div>
+    <div class="uca-task">
+      <h5>📦 Task C2</h5>
+      <ol>
+        <li><code>XREADGROUP</code> from <code>dispatch:stream</code></li>
+        <li>Try lock <code>lock:div:Div_A</code> &rarr; <span class="uca-pill uca-pill--ok">✓ SUCCESS</span></li>
+        <li>Nearest techs (RDS) &rarr; <strong>Notification Hubs Publish</strong> to each device</li>
+        <li><code>BLPOP resp:{id}:{tech}</code> &mdash; block for reply ⏳</li>
+        <li>Rank &amp; assign &rarr; release lock &middot; <code>XACK</code></li>
+      </ol>
+    </div>
+    <div class="uca-task">
+      <h5>📦 Task C3</h5>
+      <ol>
+        <li><code>XREADGROUP</code> from <code>dispatch:stream</code></li>
+        <li>Try lock <code>lock:div:Div_B</code> &rarr; <span class="uca-pill uca-pill--ok">✓ SUCCESS</span></li>
+        <li>Nearest techs (RDS) &rarr; <strong>Notification Hubs Publish</strong> to each device</li>
+        <li><code>BLPOP resp:{id}:{tech}</code> &mdash; block for reply ⏳</li>
+        <li>Rank &amp; assign &rarr; release lock &middot; <code>XACK</code></li>
+      </ol>
+    </div>
+  </div>
+
+  <div class="uca-rt-block">
+    <div class="uca-conn">Inside a winning worker's flow (e.g. C2 / C3): <strong>notify each nearby technician via Azure Notification Hubs</strong>, then block on a per-technician Redis key for the reply &mdash; <strong>no polling, instant wake</strong></div>
+
+    <div class="uca-rt-lane uca-rt-lane--out">
+      <div class="uca-rt-lane-h"><span class="uca-rt-badge uca-rt-badge--out">① Outbound</span> Push notification &middot; Container Apps instance &rarr; Notification Hubs &rarr; Technician Phone</div>
+      <div class="uca-rt-row">
+        <div class="uca-rt-node uca-rt-node--amber"><span class="uca-rt-k">📦 Container Apps instance</span><span class="uca-rt-s">Notification Hubs send &middot; installation id = deviceInstallationId<br>msg = { dispatchId, techId, job }</span></div>
+        <div class="uca-rt-arr">&rarr;</div>
+        <div class="uca-rt-node uca-rt-node--amber"><span class="uca-rt-k">📣 Azure Notification Hubs</span><span class="uca-rt-s">APNs (iOS) + FCM (Android) &middot; per-device registration</span></div>
+        <div class="uca-rt-arr">&rarr;</div>
+        <div class="uca-rt-node uca-rt-node--blue"><span class="uca-rt-k">📱 Technician Phone</span><span class="uca-rt-s">Flutter app &middot; push arrives carrying dispatchId + techId</span></div>
+      </div>
+    </div>
+
+    <div class="uca-rt-turn">technician taps Accept / Reject &darr;</div>
+
+    <div class="uca-rt-lane uca-rt-lane--in">
+      <div class="uca-rt-lane-h"><span class="uca-rt-badge uca-rt-badge--in">② Inbound</span> Reply path &middot; Technician Phone &rarr; Azure VM API &rarr; Redis &rarr; Container Apps instance</div>
+      <div class="uca-rt-row">
+        <div class="uca-rt-node uca-rt-node--blue"><span class="uca-rt-k">📱 Technician Phone</span><span class="uca-rt-s">POST reply { dispatchId, techId, accept }</span></div>
+        <div class="uca-rt-arr" style="color:var(--green)">&rarr;</div>
+        <div class="uca-rt-node uca-rt-node--blue"><span class="uca-rt-k">🅰️🅱️ Azure VM API</span><span class="uca-rt-s"><code>/dispatch/respond</code><br><code>SETNX resp:done</code> (dedupe) &middot; <code>LPUSH</code> reply</span></div>
+        <div class="uca-rt-arr" style="color:var(--green)">&rarr;</div>
+        <div class="uca-rt-node uca-rt-node--amber"><span class="uca-rt-k">🔑 Redis &middot; resp:{id}:{tech}</span><span class="uca-rt-s">LIST &middot; durable buffer &middot; <code>EXPIRE 60s</code></span></div>
+        <div class="uca-rt-arr" style="color:var(--green)">&rarr;</div>
+        <div class="uca-rt-node uca-rt-node--amber"><span class="uca-rt-k">📦 Container Apps instance <span style="color:var(--green);font-weight:700">↩ loop closes</span></span><span class="uca-rt-s"><code>BLPOP</code> wakes instantly &rarr; rank &amp; assign (RDS)</span></div>
+      </div>
+    </div>
+
+    <p style="margin:14px 0 0;font-size:12px;color:var(--muted)">Notification Hubs = push out only (fire-and-forget). Reply path is <strong>Phone &rarr; Azure VM &rarr; Redis &rarr; Container Apps</strong>. Worker's <code>BLPOP</code> timeout <em>T</em> must stay below the division lock TTL; on timeout the worker escalates to the next technician batch.</p>
+  </div>
+</section>
+
+<div class="uca-down"><svg width="22" height="26"><path d="M11 0v20M4 14l7 7 7-7" fill="none" stroke="#94a3b8" stroke-width="2"/></svg></div>
+
+<section class="uca-layer">
+  <div class="uca-layer-title">4 &middot; Azure Cache for Redis &mdash; Infrastructure Layer <span class="uca-tag uca-tag--new">New</span></div>
+  <div class="uca-redis-row">
+    <div class="uca-redis-item">
+      <span class="uca-redis-k">STREAM &middot; dispatch:stream</span>
+      <p>Tracks incoming dispatch requests per division. Durable buffer between Server A and the Container Apps workers.</p>
+    </div>
+    <div class="uca-redis-item">
+      <span class="uca-redis-k">MUTEX &middot; lock:div:*</span>
+      <p>Distributed per-division lock. Guarantees sequential, non-parallel processing &mdash; no two workers touch the same division at once.</p>
+    </div>
+    <div class="uca-redis-item" style="grid-column:1 / -1">
+      <span class="uca-redis-k">LIST &middot; resp:{dispatchId}:{techId}</span>
+      <p>Per-technician reply channel. Azure VM API <code>LPUSH</code>es the Accept/Reject; the worker <code>BLPOP</code>s it &mdash; instant wake, <strong>no polling</strong>. <code>EXPIRE 60s</code> self-cleans.</p>
+    </div>
+  </div>
+</section>
+
+<div class="uca-down"><svg width="22" height="26"><path d="M11 0v20M4 14l7 7 7-7" fill="none" stroke="#94a3b8" stroke-width="2"/></svg></div>
+
+<section class="uca-layer uca-edge">
+  <div class="uca-layer-title">⚠ Fault Tolerance &mdash; PEL Expiration &amp; Dual-Execution Shield <span class="uca-tag uca-tag--new">New</span></div>
+  <p style="margin:0 0 4px;font-size:13px;color:var(--ink)">If Task C2 crashes <em>or</em> processing exceeds the visibility timeout, its message stays unacknowledged in the Pending Entries List (PEL):</p>
+  <ol>
+    <li>Surviving worker (e.g. C1) claims the stuck message via <code>XCLAIM</code></li>
+    <li>C1 must first acquire <code>lock:div:Div_A</code> before running the flow</li>
+    <li><strong>Guardrail:</strong> if C2 was merely slow (not dead), the live lock <strong>blocks</strong> C1 &rarr; prevents dual execution. If C2 truly died, the lock expires and C1 safely takes over.</li>
+  </ol>
+  <p style="margin:8px 0 0;font-size:12.5px;color:var(--muted)">Net effect: exactly-once dispatch to technicians &mdash; no duplicate assignments, even under crashes or stalls.</p>
+</section>
+
+</div>
+<div class="uca-db-col">
+  <section class="uca-layer">
+    <div class="uca-layer-title">Shared Data Store <span class="uca-tag uca-tag--exist">Existing</span></div>
+    <div class="uca-box uca-box--exist">
+      <h4>🗄 Amazon RDS <span style="font-size:9px;font-weight:800;letter-spacing:.06em;padding:2px 7px;border-radius:999px;background:var(--primary-light);color:var(--primary-dark);margin-left:6px">AWS</span></h4>
+      <div class="role">Single SQL database (SQL Server) &middot; system of record</div>
+      <div class="uca-db-consumers">
+        <span class="uca-consumer">🅰️🅱️ Azure VM Servers <em>read / write</em></span>
+        <span class="uca-consumer">📦 Container Apps tasks <em>read / write</em></span>
+      </div>
+    </div>
+  </section>
+</div>
+</div>
+
+</div>
+</div>
+<p class="diagram-note">Use Case A architecture, adapted from <b>system-design.html &sect;4</b>: blue = existing &middot; unchanged, amber dashed = new &middot; this project, purple = toggle/config flow, green = DB read/write. <b>Amazon RDS (AWS)</b> is the sole AWS component; Server A/B, Container Apps, Redis and Notification Hubs all run on <b>Azure</b>.</p>
+<p class="uc-adds" style="margin-top:26px"><span class="chip">B</span> <b>B adds:</b> central FastAPI AI server + vector history index + summarise pipeline.</p>
+<div class="diagram-frame">
+ <svg viewBox="0 0 1240 650" width="100%" style="min-width:1000px; font-family:inherit;">
+ <defs>
+ <marker id="be-blue" markerWidth="10" markerHeight="10" refX="7" refY="3.5" orient="auto"><path d="M0,0 L7,3.5 L0,7 Z" fill="#2563eb"/></marker>
+ <marker id="be-amber" markerWidth="10" markerHeight="10" refX="7" refY="3.5" orient="auto"><path d="M0,0 L7,3.5 L0,7 Z" fill="#d97706"/></marker>
+ <marker id="be-green" markerWidth="10" markerHeight="10" refX="7" refY="3.5" orient="auto"><path d="M0,0 L7,3.5 L0,7 Z" fill="#059669"/></marker>
+ <marker id="be-green-r" markerWidth="10" markerHeight="10" refX="1" refY="3.5" orient="auto"><path d="M7,0 L0,3.5 L7,7 Z" fill="#059669"/></marker>
+ <marker id="be-purple" markerWidth="10" markerHeight="10" refX="7" refY="3.5" orient="auto"><path d="M0,0 L7,3.5 L0,7 Z" fill="#7c3aed"/></marker>
+ <marker id="be-grey" markerWidth="10" markerHeight="10" refX="7" refY="3.5" orient="auto"><path d="M0,0 L7,3.5 L0,7 Z" fill="#94a3b8"/></marker>
+ </defs>
+
+ <!-- ===== ZONE 1: EXISTING FIELDJETX PLATFORM ===== -->
+ <rect x="18" y="60" width="500" height="520" rx="16" fill="#eff4ff" stroke="#60a5fa" stroke-width="1.5" stroke-dasharray="7 5"/>
+ <text x="268" y="88" text-anchor="middle" font-size="12" font-weight="700" fill="#0f3a8e" letter-spacing="1">EXISTING FIELDJETX PLATFORM</text>
+ <text x="268" y="104" text-anchor="middle" font-size="10" fill="#64748b">unchanged</text>
+
+ <!-- ===== ZONE 2: NEW AI LAYER ===== -->
+ <rect x="560" y="60" width="480" height="520" rx="16" fill="#fffaf3" stroke="#d97706" stroke-width="1.5" stroke-dasharray="7 5"/>
+ <text x="800" y="88" text-anchor="middle" font-size="12" font-weight="700" fill="#b45309" letter-spacing="1">NEW AI SERVICE</text>
+ <text x="800" y="104" text-anchor="middle" font-size="10" fill="#b45309">containerized &middot; cloud-agnostic</text>
+
+ <!-- ===== ZONE 3: MODELS ===== -->
+ <text x="1150" y="160" text-anchor="middle" font-size="10" font-weight="800" fill="#7c3aed" letter-spacing="1">MODELS</text>
+
+ <!-- Mobile App -->
+ <rect x="40" y="130" width="160" height="110" rx="14" fill="#fff" stroke="#93c5fd" stroke-width="1.5"/>
+ <text x="120" y="177" text-anchor="middle" font-size="15" font-weight="700" fill="#0f3a8e">&#128241; Mobile App</text>
+ <text x="120" y="198" text-anchor="middle" font-size="11" fill="#64748b">FieldJetX (Flutter)</text>
+
+ <!-- arrow mobile -> .NET -->
+ <path d="M200 167 H 286" fill="none" stroke="#2563eb" stroke-width="2.5" marker-end="url(#be-blue)"/>
+ <text x="243" y="155" text-anchor="middle" font-size="11" font-weight="700" fill="#2563eb" stroke="#ffffff" stroke-width="5" paint-order="stroke">existing auth</text>
+ <circle cx="230" cy="190" r="9" fill="#1a56db"/>
+ <text x="230" y="194" text-anchor="middle" font-size="10" font-weight="800" fill="#fff">1</text>
+
+ <!-- .NET APIs -->
+ <rect x="290" y="130" width="206" height="75" rx="10" fill="#fff" stroke="#93c5fd" stroke-width="1.5"/>
+ <text x="393" y="164" text-anchor="middle" font-size="13" font-weight="700" fill="#1e293b">.NET Legacy API</text>
+ <text x="393" y="185" text-anchor="middle" font-size="10" fill="#64748b">Azure VM</text>
+
+ <rect x="290" y="235" width="206" height="90" rx="10" fill="#fff" stroke="#93c5fd" stroke-width="2"/>
+ <text x="393" y="266" text-anchor="middle" font-size="13" font-weight="700" fill="#1e293b">.NET Microservices API</text>
+ <text x="393" y="285" text-anchor="middle" font-size="10" fill="#64748b">Azure VM</text>
+ <text x="393" y="306" text-anchor="middle" font-size="10" font-weight="700" fill="#d97706">+ AI proxy route (new)</text>
+
+ <rect x="290" y="355" width="206" height="75" rx="10" fill="#fff" stroke="#93c5fd" stroke-width="1.5"/>
+ <text x="393" y="387" text-anchor="middle" font-size="13" font-weight="700" fill="#1e293b">Custom Forms API</text>
+ <text x="393" y="407" text-anchor="middle" font-size="10" fill="#64748b">Azure VM</text>
+
+ <!-- SQL Server (the client's existing database, extended with ai.* tables) -->
+ <path d="M215 468 h190 v58 a95,13 0 0 1 -190 0 z" fill="#fff" stroke="#2563eb" stroke-width="2"/>
+ <ellipse cx="310" cy="468" rx="95" ry="13" fill="#fff" stroke="#2563eb" stroke-width="2"/>
+ <text x="310" y="496" text-anchor="middle" font-size="12.5" font-weight="700" fill="#0f3a8e">SQL Server</text>
+ <text x="310" y="514" text-anchor="middle" font-size="10" font-weight="700" fill="#d97706">+ new isolated ai.* schema</text>
+ <text x="310" y="529" text-anchor="middle" font-size="9.5" font-weight="600" fill="#b45309">clear isolation of AI data</text>
+
+ <!-- all three APIs read/write the shared SQL Server (bus) -->
+ <path d="M290 300 H 250" fill="none" stroke="#2563eb" stroke-width="2"/>
+ <path d="M290 395 H 250" fill="none" stroke="#2563eb" stroke-width="2"/>
+ <path d="M290 190 H 250 V 450" fill="none" stroke="#2563eb" stroke-width="2" marker-end="url(#be-blue)"/>
+ <circle cx="250" cy="300" r="3.5" fill="#2563eb"/>
+ <circle cx="250" cy="395" r="3.5" fill="#2563eb"/>
+ <text x="238" y="335" text-anchor="middle" font-size="11" font-weight="700" fill="#2563eb" stroke="#ffffff" stroke-width="5" paint-order="stroke" transform="rotate(-90 238 335)">reads + writes</text>
+
+ <!-- arrow .NET -> FastAPI (proxy) -->
+ <path d="M496 280 H 602" fill="none" stroke="#d97706" stroke-width="2.5" marker-end="url(#be-amber)"/>
+ <text x="551" y="268" text-anchor="middle" font-size="11.5" font-weight="700" fill="#b45309" stroke="#ffffff" stroke-width="5" paint-order="stroke">server-to-server</text>
+ <circle cx="551" cy="300" r="9" fill="#1a56db"/>
+ <text x="551" y="304" text-anchor="middle" font-size="10" font-weight="800" fill="#fff">2</text>
+
+ <!-- enrichment reads: FastAPI -> Legacy / Custom Forms -->
+ <path d="M610 250 L 504 175" fill="none" stroke="#d97706" stroke-width="1.8" stroke-dasharray="6 4" marker-end="url(#be-amber)"/>
+ <text x="552" y="195" text-anchor="middle" font-size="11" font-weight="700" fill="#b45309" stroke="#ffffff" stroke-width="5" paint-order="stroke">live enrichment reads</text>
+ <circle cx="580" cy="228" r="9" fill="#1a56db"/>
+ <text x="580" y="232" text-anchor="middle" font-size="10" font-weight="800" fill="#fff">3</text>
+ <path d="M610 310 L 504 385" fill="none" stroke="#d97706" stroke-width="1.8" stroke-dasharray="6 4" marker-end="url(#be-amber)"/>
+ <text x="560" y="398" text-anchor="middle" font-size="11" font-weight="700" fill="#b45309" stroke="#ffffff" stroke-width="5" paint-order="stroke">form templates + answers</text>
+
+ <!-- Observability & Evals layer -->
+ <rect x="610" y="125" width="220" height="75" rx="12" fill="#fff" stroke="#d97706" stroke-width="1.8" stroke-dasharray="6 4"/>
+ <rect x="782" y="117" width="40" height="16" rx="8" fill="#d97706"/>
+ <text x="802" y="129" text-anchor="middle" font-size="9" font-weight="800" fill="#fff">NEW</text>
+ <text x="720" y="145" text-anchor="middle" font-size="12.5" font-weight="700" fill="#b45309">&#128202; Observability &amp; Evals</text>
+ <text x="720" y="161" text-anchor="middle" font-size="9" fill="#64748b">every LLM call logged &rarr; ai.llm_calls</text>
+ <text x="720" y="174" text-anchor="middle" font-size="9" fill="#64748b">edits &rarr; eval set &middot; edit-rate per section</text>
+ <text x="720" y="189" text-anchor="middle" font-size="9" font-weight="700" fill="#b45309">dashboard served here &middot; viewed via .NET proxy</text>
+ <path d="M720 235 V 206" fill="none" stroke="#d97706" stroke-width="1.8" stroke-dasharray="6 4" marker-end="url(#be-amber)"/>
+ <text x="728" y="224" text-anchor="start" font-size="9.5" font-weight="600" fill="#b45309" stroke="#ffffff" stroke-width="4" paint-order="stroke">calls + edits</text>
+
+ <!-- FastAPI AI Server -->
+ <rect x="610" y="235" width="220" height="90" rx="12" fill="#fff" stroke="#d97706" stroke-width="2.5"/>
+ <rect x="782" y="227" width="40" height="16" rx="8" fill="#d97706"/>
+ <text x="802" y="239" text-anchor="middle" font-size="9" font-weight="800" fill="#fff">NEW</text>
+ <text x="720" y="278" text-anchor="middle" font-size="14" font-weight="700" fill="#1e293b">&#9889; FastAPI AI Server</text>
+ <text x="720" y="300" text-anchor="middle" font-size="10" fill="#64748b">Docker container &middot; cloud-agnostic</text>
+
+ <!-- Suggestion engine (deterministic, no ML infra) -->
+ <rect x="850" y="125" width="170" height="90" rx="12" fill="#fff" stroke="#d97706" stroke-width="1.8"/>
+ <rect x="972" y="117" width="40" height="16" rx="8" fill="#d97706"/>
+ <text x="992" y="129" text-anchor="middle" font-size="9" font-weight="800" fill="#fff">NEW</text>
+ <text x="935" y="153" text-anchor="middle" font-size="12.5" font-weight="700" fill="#b45309">&#128200; Suggestion engine</text>
+ <text x="935" y="171" text-anchor="middle" font-size="9" fill="#64748b">SQL co-occurrence &middot; deterministic</text>
+ <text x="935" y="184" text-anchor="middle" font-size="9" fill="#64748b">equip type &times; problem code &rarr; parts</text>
+ <text x="935" y="200" text-anchor="middle" font-size="9" font-weight="700" fill="#b45309">baseline: hit@5 39.9% &middot; hit@10 52.1%</text>
+ <path d="M832 248 C 860 242, 885 232, 908 219" fill="none" stroke="#d97706" stroke-width="1.8" marker-end="url(#be-amber)"/>
+ <circle cx="866" cy="240" r="9" fill="#1a56db"/>
+ <text x="866" y="244" text-anchor="middle" font-size="10" font-weight="800" fill="#fff">4</text>
+
+ <!-- Vector DB (optional / future) -->
+ <rect x="850" y="430" width="160" height="90" rx="12" fill="#fbfaff" stroke="#94a3b8" stroke-width="1.8" stroke-dasharray="6 4"/>
+ <rect x="946" y="422" width="56" height="16" rx="8" fill="#94a3b8"/>
+ <text x="974" y="434" text-anchor="middle" font-size="9" font-weight="800" fill="#fff">FUTURE</text>
+ <text x="930" y="464" text-anchor="middle" font-size="12.5" font-weight="700" fill="#64748b">&#129522; Vector DB</text>
+ <text x="930" y="482" text-anchor="middle" font-size="10" fill="#64748b">optional &middot; future add-on</text>
+ <text x="930" y="498" text-anchor="middle" font-size="10" fill="#64748b">only if evals demand it</text>
+
+ <!-- Private LLM gateway (the client's own models: generation + embeddings) -->
+ <rect x="1080" y="200" width="140" height="110" rx="12" fill="#f3e8ff" stroke="#7c3aed" stroke-width="2"/>
+ <text x="1150" y="230" text-anchor="middle" font-size="12.5" font-weight="700" fill="#5b21b6">&#128737; Private LLM</text>
+ <text x="1150" y="246" text-anchor="middle" font-size="12.5" font-weight="700" fill="#5b21b6">gateway</text>
+ <text x="1150" y="266" text-anchor="middle" font-size="10" fill="#7c6aa6">qwen3-vl &middot; generation</text>
+ <text x="1150" y="280" text-anchor="middle" font-size="10" fill="#7c6aa6">nomic-embed &middot; embeddings</text>
+ <text x="1150" y="296" text-anchor="middle" font-size="10" font-weight="700" fill="#5b21b6">client-hosted &middot; 2 DGX</text>
+
+ <!-- FastAPI -> private gateway -->
+ <path d="M830 275 C 960 275, 980 255, 1076 255" fill="none" stroke="#7c3aed" stroke-width="2" marker-end="url(#be-purple)"/>
+ <text x="990" y="292" text-anchor="middle" font-size="11" font-weight="700" fill="#7c3aed" stroke="#ffffff" stroke-width="5" paint-order="stroke">data stays in client infra</text>
+ <circle cx="880" cy="272" r="9" fill="#1a56db"/>
+ <text x="880" y="276" text-anchor="middle" font-size="10" font-weight="800" fill="#fff">5</text>
+
+ <!-- FastAPI -> Vector (optional, future) -->
+ <path d="M790 325 C 800 380, 850 400, 895 426" fill="none" stroke="#94a3b8" stroke-width="1.8" stroke-dasharray="6 4" marker-end="url(#be-grey)"/>
+ <text x="880" y="392" text-anchor="middle" font-size="10.5" font-weight="700" fill="#64748b" stroke="#ffffff" stroke-width="5" paint-order="stroke">optional (future accuracy)</text>
+
+ <!-- FastAPI <-> SQL (the new layer writes into the client's existing database) -->
+ <path d="M660 325 V 480 H 411" fill="none" stroke="#059669" stroke-width="2.2" marker-end="url(#be-green)" marker-start="url(#be-green-r)"/>
+ <text x="545" y="468" text-anchor="middle" font-size="11" font-weight="700" fill="#047857" stroke="#ffffff" stroke-width="5" paint-order="stroke">persist + read</text>
+ <circle cx="600" cy="480" r="9" fill="#1a56db"/>
+ <text x="600" y="484" text-anchor="middle" font-size="10" font-weight="800" fill="#fff">6</text>
+
+ <!-- future: SQL -> Vector (only if the vector layer is ever added) -->
+ <path d="M411 510 H 846" fill="none" stroke="#94a3b8" stroke-width="1.6" stroke-dasharray="4 4" marker-end="url(#be-grey)"/>
+ <text x="628" y="528" text-anchor="middle" font-size="10.5" font-weight="700" fill="#64748b" stroke="#ffffff" stroke-width="5" paint-order="stroke">future: embed history only if the vector layer is added</text>
+
+ <!-- legend -->
+ <line x1="40" y1="628" x2="70" y2="628" stroke="#2563eb" stroke-width="2.5"/><text x="76" y="632" font-size="10" fill="#475569">exists today &middot; unchanged</text>
+ <line x1="215" y1="628" x2="245" y2="628" stroke="#d97706" stroke-width="2.5"/><text x="251" y="632" font-size="10" fill="#475569">new &middot; this project</text>
+ <line x1="350" y1="628" x2="380" y2="628" stroke="#7c3aed" stroke-width="2"/><text x="386" y="632" font-size="10" fill="#475569">LLM / embedding calls</text>
+ <line x1="560" y1="628" x2="590" y2="628" stroke="#059669" stroke-width="2.2"/><text x="596" y="632" font-size="10" fill="#475569">persist / read</text>
+ <line x1="665" y1="628" x2="695" y2="628" stroke="#94a3b8" stroke-width="1.8" stroke-dasharray="6 4"/><text x="701" y="632" font-size="10" fill="#475569">optional &middot; future</text>
+ <circle cx="800" cy="628" r="8" fill="#1a56db"/><text x="800" y="631.5" text-anchor="middle" font-size="9" font-weight="800" fill="#fff">1</text><text x="814" y="632" font-size="10" fill="#475569">steps 1&#8211;6 &middot; one summarise request, in order</text>
+ </svg>
+ </div>
+<p class="diagram-note">Job Summarisation architecture, adapted from <b>usecase-b-architecture.html &sect;6</b>: blue = existing &middot; unchanged, amber dashed = new &middot; this project, purple = LLM/embedding calls (client-hosted, off-cloud), green = persist/read. The vector history index is an optional future add-on (grey dashed), added only if evals demand it. The AI service is a portable Docker container, cloud-agnostic by design; the existing platform is restated on <b>Azure VM</b> &mdash; no AWS-specific managed service appears in this diagram.</p>
+<p class="uc-adds" style="margin-top:26px"><span class="chip">C</span> <b>C adds:</b> four-source part search + fuzzy matching + self-learning index.</p>
+<div class="diagram-frame">
+ <svg viewBox="0 0 1240 650" width="100%" style="min-width:1000px; font-family:inherit;">
+ <defs>
+ <marker id="c-be-blue" markerWidth="10" markerHeight="10" refX="7" refY="3.5" orient="auto"><path d="M0,0 L7,3.5 L0,7 Z" fill="#2563eb"/></marker>
+ <marker id="c-be-amber" markerWidth="10" markerHeight="10" refX="7" refY="3.5" orient="auto"><path d="M0,0 L7,3.5 L0,7 Z" fill="#d97706"/></marker>
+ <marker id="c-be-green" markerWidth="10" markerHeight="10" refX="7" refY="3.5" orient="auto"><path d="M0,0 L7,3.5 L0,7 Z" fill="#059669"/></marker>
+ <marker id="c-be-green-r" markerWidth="10" markerHeight="10" refX="1" refY="3.5" orient="auto"><path d="M7,0 L0,3.5 L7,7 Z" fill="#059669"/></marker>
+ <marker id="c-be-purple" markerWidth="10" markerHeight="10" refX="7" refY="3.5" orient="auto"><path d="M0,0 L7,3.5 L0,7 Z" fill="#7c3aed"/></marker>
+ </defs>
+
+ <!-- ===== ZONE 1: EXISTING FIELDJETX PLATFORM ===== -->
+ <rect x="18" y="60" width="500" height="520" rx="16" fill="#eff4ff" stroke="#60a5fa" stroke-width="1.5" stroke-dasharray="7 5"/>
+ <text x="268" y="88" text-anchor="middle" font-size="12" font-weight="700" fill="#0f3a8e" letter-spacing="1">EXISTING FIELDJETX PLATFORM</text>
+ <text x="268" y="104" text-anchor="middle" font-size="10" fill="#64748b">unchanged</text>
+
+ <!-- ===== ZONE 2: NEW AI LAYER ===== -->
+ <rect x="560" y="60" width="480" height="520" rx="16" fill="#fffaf3" stroke="#d97706" stroke-width="1.5" stroke-dasharray="7 5"/>
+ <text x="800" y="88" text-anchor="middle" font-size="12" font-weight="700" fill="#b45309" letter-spacing="1">NEW AI LAYER &middot; THIS PROJECT</text>
+ <text x="800" y="104" text-anchor="middle" font-size="10" fill="#b45309">runs in a private Azure VNet</text>
+
+ <!-- ===== ZONE 3: CUSTOMER SELF-HOSTED HARDWARE ===== -->
+ <rect x="1052" y="150" width="185" height="320" rx="16" fill="#faf5ff" stroke="#7c3aed" stroke-width="1.5" stroke-dasharray="7 5"/>
+ <text x="1144" y="176" text-anchor="middle" font-size="11" font-weight="700" fill="#5b21b6" letter-spacing="1">CUSTOMER HARDWARE</text>
+ <text x="1144" y="192" text-anchor="middle" font-size="9.5" fill="#7c6aa6">models self-hosted by the client</text>
+
+ <!-- Mobile App -->
+ <rect x="40" y="130" width="160" height="110" rx="14" fill="#fff" stroke="#93c5fd" stroke-width="1.5"/>
+ <text x="120" y="177" text-anchor="middle" font-size="15" font-weight="700" fill="#0f3a8e">&#128241; Mobile App</text>
+ <text x="120" y="198" text-anchor="middle" font-size="11" fill="#64748b">FieldJetX (Flutter)</text>
+
+ <!-- arrow mobile -> .NET -->
+ <path d="M200 167 H 286" fill="none" stroke="#2563eb" stroke-width="2.5" marker-end="url(#c-be-blue)"/>
+ <text x="243" y="155" text-anchor="middle" font-size="11" font-weight="700" fill="#2563eb" stroke="#ffffff" stroke-width="5" paint-order="stroke">opens &ldquo;Add parts&rdquo;</text>
+ <circle cx="230" cy="190" r="9" fill="#1a56db"/>
+ <text x="230" y="194" text-anchor="middle" font-size="10" font-weight="800" fill="#fff">1</text>
+
+ <!-- .NET APIs -->
+ <rect x="290" y="130" width="206" height="75" rx="10" fill="#fff" stroke="#93c5fd" stroke-width="1.5"/>
+ <text x="393" y="164" text-anchor="middle" font-size="13" font-weight="700" fill="#1e293b">.NET Legacy API</text>
+ <text x="393" y="185" text-anchor="middle" font-size="10" fill="#64748b">Azure VM</text>
+
+ <rect x="290" y="235" width="206" height="90" rx="10" fill="#fff" stroke="#93c5fd" stroke-width="2"/>
+ <text x="393" y="266" text-anchor="middle" font-size="13" font-weight="700" fill="#1e293b">.NET Microservices API</text>
+ <text x="393" y="285" text-anchor="middle" font-size="10" fill="#64748b">Azure VM</text>
+ <text x="393" y="306" text-anchor="middle" font-size="10" font-weight="700" fill="#d97706">+ AI proxy route (new)</text>
+
+
+ <!-- SQL Server (the client's existing database, extended with ai.* tables) -->
+ <path d="M215 468 h190 v58 a95,13 0 0 1 -190 0 z" fill="#fff" stroke="#2563eb" stroke-width="2"/>
+ <ellipse cx="310" cy="468" rx="95" ry="13" fill="#fff" stroke="#2563eb" stroke-width="2"/>
+ <text x="310" y="496" text-anchor="middle" font-size="12.5" font-weight="700" fill="#0f3a8e">SQL Server</text>
+ <text x="310" y="514" text-anchor="middle" font-size="10" font-weight="700" fill="#d97706">+ new ai.* schema</text>
+ <text x="310" y="529" text-anchor="middle" font-size="9.5" font-weight="600" fill="#b45309">clear isolation of AI data</text>
+
+ <!-- APIs read/write the shared SQL Server (bus) -->
+ <path d="M290 300 H 250" fill="none" stroke="#2563eb" stroke-width="2"/>
+ <path d="M290 190 H 250 V 450" fill="none" stroke="#2563eb" stroke-width="2" marker-end="url(#c-be-blue)"/>
+ <circle cx="250" cy="300" r="3.5" fill="#2563eb"/>
+ <text x="238" y="335" text-anchor="middle" font-size="11" font-weight="700" fill="#2563eb" stroke="#ffffff" stroke-width="5" paint-order="stroke" transform="rotate(-90 238 335)">reads + writes</text>
+
+ <!-- arrow .NET -> FastAPI (proxy) -->
+ <path d="M496 280 H 602" fill="none" stroke="#d97706" stroke-width="2.5" marker-end="url(#c-be-amber)"/>
+ <text x="551" y="268" text-anchor="middle" font-size="11.5" font-weight="700" fill="#b45309" stroke="#ffffff" stroke-width="5" paint-order="stroke">calls Predict / Source</text>
+ <circle cx="551" cy="300" r="9" fill="#1a56db"/>
+ <text x="551" y="304" text-anchor="middle" font-size="10" font-weight="800" fill="#fff">2</text>
+
+ <!-- enrichment reads: FastAPI -> Legacy -->
+ <path d="M610 250 L 504 175" fill="none" stroke="#d97706" stroke-width="1.8" stroke-dasharray="6 4" marker-end="url(#c-be-amber)"/>
+ <text x="552" y="195" text-anchor="middle" font-size="11" font-weight="700" fill="#b45309" stroke="#ffffff" stroke-width="5" paint-order="stroke">read dispatch reason + stock</text>
+ <circle cx="580" cy="228" r="9" fill="#1a56db"/>
+ <text x="580" y="232" text-anchor="middle" font-size="10" font-weight="800" fill="#fff">3</text>
+
+ <!-- FastAPI AI Server -->
+ <rect x="610" y="235" width="220" height="90" rx="12" fill="#fff" stroke="#d97706" stroke-width="2.5"/>
+ <rect x="782" y="227" width="40" height="16" rx="8" fill="#d97706"/>
+ <text x="802" y="239" text-anchor="middle" font-size="9" font-weight="800" fill="#fff">NEW</text>
+ <text x="720" y="278" text-anchor="middle" font-size="14" font-weight="700" fill="#1e293b">&#9889; FastAPI AI Server</text>
+ <text x="720" y="300" text-anchor="middle" font-size="10" fill="#64748b">Azure Container Apps</text>
+
+ <!-- Vector DB -->
+ <rect x="850" y="430" width="160" height="90" rx="12" fill="#fff" stroke="#d97706" stroke-width="1.8" stroke-dasharray="6 4"/>
+ <rect x="960" y="422" width="40" height="16" rx="8" fill="#d97706"/>
+ <text x="980" y="434" text-anchor="middle" font-size="9" font-weight="800" fill="#fff">NEW</text>
+ <text x="930" y="464" text-anchor="middle" font-size="12.5" font-weight="700" fill="#b45309">&#129522; Vector DB</text>
+ <text x="930" y="482" text-anchor="middle" font-size="10" fill="#64748b">Azure-hosted vector store</text>
+ <text x="930" y="498" text-anchor="middle" font-size="10" fill="#64748b">embedded site history</text>
+
+ <!-- Self-hosted models on customer hardware -->
+ <rect x="1067" y="205" width="155" height="88" rx="12" fill="#f3e8ff" stroke="#7c3aed" stroke-width="1.8"/>
+ <text x="1144" y="240" text-anchor="middle" font-size="11.5" font-weight="700" fill="#5b21b6">&#129504; Self-hosted LLM</text>
+ <text x="1144" y="258" text-anchor="middle" font-size="9" fill="#7c6aa6">ranks &amp; aggregates parts</text>
+ <text x="1144" y="272" text-anchor="middle" font-size="9" fill="#7c6aa6">client-provided model</text>
+
+ <rect x="1067" y="330" width="155" height="88" rx="12" fill="#f3e8ff" stroke="#7c3aed" stroke-width="1.8"/>
+ <text x="1144" y="365" text-anchor="middle" font-size="11.5" font-weight="700" fill="#5b21b6">&#129513; Embedding model</text>
+ <text x="1144" y="383" text-anchor="middle" font-size="9" fill="#7c6aa6">embeds the dispatch reason</text>
+ <text x="1144" y="397" text-anchor="middle" font-size="9" fill="#7c6aa6">client-provided &middot; self-hosted</text>
+
+ <!-- FastAPI -> self-hosted models on customer hardware -->
+ <path d="M830 262 H 1063" fill="none" stroke="#7c3aed" stroke-width="2" marker-end="url(#c-be-purple)"/>
+ <text x="948" y="253" text-anchor="middle" font-size="10.5" font-weight="700" fill="#7c3aed" stroke="#ffffff" stroke-width="5" paint-order="stroke">rank predicted parts</text>
+ <circle cx="880" cy="262" r="9" fill="#1a56db"/>
+ <text x="880" y="266" text-anchor="middle" font-size="10" font-weight="800" fill="#fff">5</text>
+ <path d="M830 300 L 1063 372" fill="none" stroke="#7c3aed" stroke-width="2" marker-end="url(#c-be-purple)"/>
+ <text x="946" y="356" text-anchor="middle" font-size="10.5" font-weight="700" fill="#7c3aed" stroke="#ffffff" stroke-width="5" paint-order="stroke">embed dispatch reason</text>
+
+ <!-- FastAPI -> Vector (queries) -->
+ <path d="M830 305 H 930 V 426" fill="none" stroke="#d97706" stroke-width="2" stroke-dasharray="6 4" marker-end="url(#c-be-amber)"/>
+ <text x="908" y="298" text-anchor="middle" font-size="11" font-weight="700" fill="#b45309" stroke="#ffffff" stroke-width="5" paint-order="stroke">query similar past dispatches</text>
+ <circle cx="848" cy="305" r="9" fill="#1a56db"/>
+ <text x="848" y="309" text-anchor="middle" font-size="10" font-weight="800" fill="#fff">4</text>
+
+ <!-- FastAPI <-> SQL (the new layer writes into the client's existing database) -->
+ <path d="M660 325 V 480 H 411" fill="none" stroke="#059669" stroke-width="2.2" marker-end="url(#c-be-green)" marker-start="url(#c-be-green-r)"/>
+ <text x="545" y="468" text-anchor="middle" font-size="11" font-weight="700" fill="#047857" stroke="#ffffff" stroke-width="5" paint-order="stroke">read stock &middot; persist parts</text>
+ <circle cx="600" cy="480" r="9" fill="#1a56db"/>
+ <text x="600" y="484" text-anchor="middle" font-size="10" font-weight="800" fill="#fff">6</text>
+
+ <!-- embed: SQL -> Vector -->
+ <path d="M411 510 H 846" fill="none" stroke="#059669" stroke-width="2" stroke-dasharray="4 4" marker-end="url(#c-be-green)"/>
+ <text x="628" y="528" text-anchor="middle" font-size="11" font-weight="700" fill="#047857" stroke="#ffffff" stroke-width="5" paint-order="stroke">re-embed on dispatch complete &middot; learning loop</text>
+
+ <!-- Observability layer (Azure Monitor + ADOT) -->
+ <path d="M745 325 V 538" fill="none" stroke="#d97706" stroke-width="1.6" stroke-dasharray="4 4" marker-end="url(#c-be-amber)"/>
+ <text x="745" y="432" text-anchor="middle" font-size="10" font-weight="700" fill="#b45309" stroke="#ffffff" stroke-width="5" paint-order="stroke">traces + logs</text>
+ <rect x="575" y="542" width="450" height="32" rx="10" fill="#fff7ed" stroke="#d97706" stroke-width="1.8"/>
+ <rect x="985" y="534" width="40" height="16" rx="8" fill="#d97706"/>
+ <text x="1005" y="546" text-anchor="middle" font-size="9" font-weight="800" fill="#fff">NEW</text>
+ <text x="792" y="562" text-anchor="middle" font-size="11" font-weight="700" fill="#b45309">&#128202; Azure Monitor + ADOT &middot; all traces &amp; logs recorded here</text>
+
+ <!-- legend -->
+ <line x1="40" y1="628" x2="70" y2="628" stroke="#2563eb" stroke-width="2.5"/><text x="76" y="632" font-size="10" fill="#475569">exists today &middot; unchanged</text>
+ <line x1="215" y1="628" x2="245" y2="628" stroke="#d97706" stroke-width="2.5"/><text x="251" y="632" font-size="10" fill="#475569">new &middot; this project</text>
+ <line x1="350" y1="628" x2="380" y2="628" stroke="#d97706" stroke-width="2" stroke-dasharray="6 4"/><text x="386" y="632" font-size="10" fill="#475569">async / background</text>
+ <line x1="500" y1="628" x2="530" y2="628" stroke="#7c3aed" stroke-width="2"/><text x="536" y="632" font-size="10" fill="#475569">self-hosted models</text>
+ <line x1="665" y1="628" x2="695" y2="628" stroke="#059669" stroke-width="2.2"/><text x="701" y="632" font-size="10" fill="#475569">persist / embed</text>
+ <circle cx="800" cy="628" r="8" fill="#1a56db"/><text x="800" y="631.5" text-anchor="middle" font-size="9" font-weight="800" fill="#fff">1</text><text x="814" y="632" font-size="10" fill="#475569">steps 1&#8211;6 &middot; one parts request, in order</text>
+ </svg>
+</div>
+<p class="diagram-note">Technician Parts Finder architecture, adapted from <b>usecase-C-system-design.html &sect;4</b> (its single top diagram): existing FieldJetX platform (unchanged) &middot; new AI layer in a private <b>Azure VNet</b> &middot; self-hosted models on customer hardware. Steps 1&ndash;6 trace one parts request. The original AWS-native vector store is reconciled to an <b>Azure-hosted vector store</b>; no other AWS-specific service remains in this diagram.</p>
+</section>
+

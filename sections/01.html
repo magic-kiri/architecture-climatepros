@@ -1,0 +1,79 @@
+<section id="s1">
+<h2>1. Stream 1 Overview</h2>
+
+<div class="card">
+  <p>ClimatePros runs commercial refrigeration &amp; HVAC field service: <b>~900–1,000 technicians</b>,
+  <b>46 branches</b>, <b>10,000+ sites</b>. Work orders arrive automatically. Everything after that
+  still runs on a <b>phone call and a technician's memory</b>. Three use cases, three bottlenecks,
+  one job.</p>
+  <p style="margin-top:12px"><b>Where AI sits:</b> Use Case A is a <b>deterministic algorithm — no
+  LLM</b>. It replaces a decision a dispatcher already makes by hand, so it must be explainable and
+  repeatable. Use Cases B and C use AI, and in both the <b>technician can always override it</b>.</p>
+
+  <div class="counts">
+    <div class="count"><div class="n">~900–1,000</div><div class="l">Technicians</div></div>
+    <div class="count"><div class="n">46</div><div class="l">Branches</div></div>
+    <div class="count"><div class="n">10,000+</div><div class="l">Sites</div></div>
+  </div>
+</div>
+
+<div class="uc-row">
+  <div class="uc-mini">
+    <div class="uc-mini-head">
+      <span class="chip">A</span>
+      <span class="kind algo">Algorithm · no LLM</span>
+    </div>
+    <h3>Auto-Dispatch — finding the right technician</h3>
+    <span class="where">Web portal · Dispatcher</span>
+    <p class="pain">Confirming a tech today means <b>dialling ~40 candidates one at a time</b>,
+    ~2–3 min each — the throughput ceiling for two dispatchers per branch.</p>
+    <p class="solve"><b>We solve:</b> rank techs on distance, familiarity, time-to-free and job
+    priority; push an accept/decline offer and cascade automatically. Pure rules and math —
+    no LLM — so every assignment is explainable.</p>
+  </div>
+
+  <div class="uc-mini">
+    <div class="uc-mini-head">
+      <span class="chip">B</span>
+      <span class="kind ai">AI · tech overrides</span>
+    </div>
+    <h3>Job Summarisation Copilot — changing the job status</h3>
+    <span class="where">Mobile · Technician at end of job</span>
+    <p class="pain">Every job's mandatory closeout means <b>10–15 min of forms and two free-text
+    notes</b> — done properly. In practice ~40% of notes end up ≤40 characters.</p>
+    <p class="solve"><b>We solve:</b> restructure the tech's rough words into a clean note for
+    customer and office, and suggest form values from similar past jobs. Never fabricates, never
+    blocks Save. Target: <b>10–15 min → ~15 s</b>.</p>
+  </div>
+
+  <div class="uc-mini">
+    <div class="uc-mini-head">
+      <span class="chip">C</span>
+      <span class="kind ai">AI · tech overrides</span>
+    </div>
+    <h3>Technician Parts Finder — finding the part that isn't on the truck</h3>
+    <span class="where">Mobile · Technician on-site</span>
+    <p class="pain">When the first three sources (truck, nearby techs, warehouse) come up empty,
+    the fourth is a <b>phone call to a supplier who may not answer</b> — billable hours burned, or
+    a second truck roll.</p>
+    <p class="solve"><b>We solve:</b> AI suggests the likely part from the problem and equipment;
+    one search shows where it is across all four sources. The tech decides where to pick it up —
+    no price ranking, no ordering.</p>
+  </div>
+</div>
+
+<p class="flow-note">
+  Work order in → <b>(A)</b> the right tech is offered the job on the web portal → tech arrives on
+  site → <b>(C)</b> the missing part is found on mobile without a phone call → <b>(B)</b> the
+  closeout note writes itself. Full step-by-step diagrams for all three: see
+  <a href="#s5">§5 Operational Flows</a>.
+</p>
+
+<div class="callout azure">
+  <b>Cloud placement:</b> the existing FieldJetX platform and all new infra run on <b>Azure</b>;
+  the SQL Server system of record stays on <b>AWS</b> (sole cross-cloud dependency). This restates
+  the existing-platform cloud from the per-use-case docs, which describe the existing platform as
+  running on AWS EC2.
+</div>
+</section>
+

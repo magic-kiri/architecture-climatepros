@@ -1,0 +1,333 @@
+
+ :root {
+   /* -- base palette (from unified-hld.html) -- */
+   --primary:#1a56db; --primary-light:#e8effc; --primary-dark:#0f3a8e;
+   --bg:#f8fafc; --surface:#ffffff; --border:#e2e8f0;
+   --text:#1e293b; --text-muted:#64748b;
+   --blue:#2563eb; --amber:#d97706; --amber-dark:#b45309;
+   --green:#059669; --green-dark:#047857; --purple:#7c3aed; --purple-dark:#5b21b6;
+   --red:#dc2626;
+
+   /* -- soft+line pairs (from problem-statement.html), so lifted fragments render -- */
+   --blue-soft:#eff4ff; --blue-line:#bfdbfe;
+   --amber-soft:#fff7ed; --amber-line:#fed7aa;
+   --green-soft:#ecfdf5; --green-line:#a7f3d0;
+   --red-soft:#fef2f2; --red-line:#fecaca;
+   --purple-soft:#f3e8ff; --purple-line:#e9d5ff;
+ }
+ *{margin:0;padding:0;box-sizing:border-box;}
+ body{font-family:'Segoe UI',system-ui,-apple-system,sans-serif;background:var(--bg);color:var(--text);line-height:1.6;}
+
+ /* -- layout shell -- */
+ .wrap{max-width:1220px;margin:0 auto;padding:40px 40px 80px;}
+ .hero{background:linear-gradient(135deg,var(--primary) 0%,var(--primary-dark) 100%);color:#fff;padding:34px 42px;border-radius:16px;margin-bottom:34px;}
+ .hero h1{font-size:29px;font-weight:800;margin-bottom:6px;}
+ .hero .subtitle{font-size:15.5px;opacity:.9;}
+ section{margin-bottom:44px;}
+ h2{font-size:22px;font-weight:700;color:var(--primary-dark);margin-bottom:16px;padding-bottom:9px;border-bottom:2px solid var(--primary-light);}
+
+ /* -- chip: use-case letter badge (A/B/C), from problem-statement.html -- */
+ .chip{font-size:11px;font-weight:800;letter-spacing:.06em;padding:4px 10px;border-radius:999px;background:var(--blue);color:#fff;}
+
+ /* -- card: generic content card, from system-design.html -- */
+ .card{background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:24px;margin-bottom:20px;}
+
+ /* -- inventory grid (What We Have vs What We Introduce), from unified-hld.html -- */
+ .inv{display:grid;grid-template-columns:1fr 1fr;gap:18px;}
+ @media(max-width:860px){.inv{grid-template-columns:1fr;}}
+ .inv-card{border-radius:14px;padding:20px 22px;border:1.5px solid var(--border);background:var(--surface);}
+ .inv-card.exist{border-color:var(--blue);background:#f5f9ff;}
+ .inv-card.new{border-color:var(--amber);background:#fffaf3;border-style:dashed;}
+ .inv-card h3{font-size:15px;font-weight:700;margin-bottom:4px;}
+ .inv-card.exist h3{color:var(--primary-dark);}
+ .inv-card.new h3{color:var(--amber-dark);}
+ .inv-card .cap{font-size:11px;font-weight:800;letter-spacing:1px;text-transform:uppercase;color:var(--text-muted);margin-bottom:10px;}
+ .inv-card ul{list-style:none;}
+ .inv-card li{font-size:13px;padding:7px 0;border-top:1px solid var(--border);display:flex;gap:9px;align-items:flex-start;}
+ .inv-card li:first-of-type{border-top:none;}
+ .inv-card li b{font-weight:700;}
+
+ /* -- pill: small tag badge, from unified-hld.html -- */
+ .pill{display:inline-block;font-size:10px;font-weight:800;padding:2px 8px;border-radius:999px;margin-left:auto;white-space:nowrap;}
+ .pill.aws{background:var(--primary-light);color:var(--primary-dark);}
+ .pill.ecs{background:#fff7ed;color:var(--amber-dark);}
+ .pill.office{background:#f3e8ff;color:var(--purple-dark);}
+
+ /* -- count: stat tile row, from unified-hld.html -- */
+ .counts{display:flex;gap:14px;flex-wrap:wrap;margin-top:16px;}
+ .count{flex:1;min-width:150px;background:var(--surface);border:1.5px dashed var(--amber);border-radius:12px;padding:14px 16px;}
+ .count .n{font-size:26px;font-weight:800;color:var(--amber-dark);line-height:1;}
+ .count .l{font-size:12px;color:var(--text-muted);margin-top:5px;}
+
+ /* -- diagram-frame: wrapper chrome for lifted SVG/HTML diagrams (marker class only in source docs; defined here for reuse) -- */
+ .diagram-frame{width:100%;overflow-x:auto;background:#fff;border:1px solid var(--border);border-radius:12px;padding:12px 8px;}
+
+ /* -- flow-step: numbered data/operational flow step, from system-design.html -- */
+ .flow-step{display:flex;align-items:flex-start;gap:20px;margin:20px 0;padding:20px;background:var(--surface);border:1px solid var(--border);border-radius:12px;border-left:4px solid var(--primary);}
+ .flow-num{min-width:36px;height:36px;border-radius:50%;background:var(--primary);color:#fff;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:16px;}
+ .flow-content h4{margin:0 0 6px;}
+ .flow-content p{margin:0;font-size:14px;color:var(--text-muted);}
+
+ /* -- §1 Overview: kind badge (algorithm vs AI), from problem-statement.html -- */
+ .kind{font-size:10px;font-weight:800;letter-spacing:.07em;text-transform:uppercase;padding:3px 9px;border-radius:999px;border:1px solid;}
+ .kind.algo{background:var(--green-soft);color:var(--green);border-color:var(--green-line);}
+ .kind.ai{background:var(--purple-soft);color:var(--purple);border-color:var(--purple-line);}
+
+ /* -- §1 Overview: where badge (surface · actor), from problem-statement.html -- */
+ .where{display:inline-block;font-size:11px;font-weight:650;color:var(--text-muted);padding:3px 9px;background:#f1f5f9;border:1px solid var(--border);border-radius:999px;}
+
+ /* -- §1 Overview: compact 3-up use-case row (condensed from problem-statement.html's full flow cards) -- */
+ .uc-row{display:grid;grid-template-columns:repeat(3,1fr);gap:18px;margin-top:20px;}
+ @media(max-width:900px){.uc-row{grid-template-columns:1fr;}}
+ .uc-mini{background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:18px 20px;display:flex;flex-direction:column;gap:9px;}
+ .uc-mini-head{display:flex;align-items:center;gap:8px;flex-wrap:wrap;}
+ .uc-mini h3{font-size:15px;font-weight:700;line-height:1.3;}
+ .uc-mini p{font-size:12.5px;color:var(--text-muted);line-height:1.55;}
+ .uc-mini p b{color:var(--text);font-weight:700;}
+
+ /* -- §1 Overview: connecting flow-note + Azure cloud-placement callout -- */
+ .flow-note{margin-top:18px;font-size:13.5px;color:var(--text-muted);}
+ .flow-note b{color:var(--text);}
+ .flow-note a{color:var(--primary);font-weight:650;text-decoration:none;}
+ .flow-note a:hover{text-decoration:underline;}
+ .callout{margin-top:16px;padding:14px 18px;border-radius:10px;font-size:13px;line-height:1.6;border:1px solid;}
+ .callout.azure{background:var(--primary-light);border-color:var(--primary);color:var(--text);}
+ .callout.azure b{color:var(--primary-dark);}
+
+ /* -- §2: sub-heading + diagram note, for the 2a/2b diagram blocks -- */
+ h3{font-size:16.5px;font-weight:700;color:var(--text);margin:26px 0 12px;}
+ h3:first-child{margin-top:0;}
+ .diagram-note{margin-top:10px;font-size:12.5px;color:var(--text-muted);}
+ .diagram-note b{color:var(--text);font-weight:700;}
+ .uc-adds{font-size:13.5px;color:var(--text-muted);margin:0 0 10px;display:flex;align-items:center;gap:9px;}
+ .uc-adds b{color:var(--text);font-weight:700;}
+
+ /* -- §2b: Use Case A architecture (HTML/CSS diagram, adapted from system-design.html §4 / frag-architecture.html), --
+    namespaced under .uca-diagram so its class names never leak onto/collide with the rest of this document -- */
+ .uca-diagram{--ink:var(--text);--muted:var(--text-muted);--line:var(--border);--card:var(--surface);--vio:var(--purple);--vio-soft:var(--purple-soft);--shadow:0 1px 2px rgba(15,23,42,.06),0 8px 24px rgba(15,23,42,.06);font-family:inherit;color:var(--ink);min-width:880px;}
+ .uca-diagram .uca-legend{display:flex;gap:20px;flex-wrap:wrap;margin:0 0 22px;padding:14px 18px;background:var(--card);border:1px solid var(--line);border-radius:12px;box-shadow:var(--shadow);}
+ .uca-diagram .uca-legend-item{display:flex;align-items:center;gap:9px;font-size:13px;font-weight:600;color:var(--ink);}
+ .uca-diagram .uca-swatch{width:26px;height:16px;border-radius:4px;display:inline-block;}
+ .uca-diagram .uca-swatch--exist{background:var(--blue-soft);border:1.5px solid var(--blue);}
+ .uca-diagram .uca-swatch--new{background:var(--amber-soft);border:1.5px dashed var(--amber);}
+ .uca-diagram .uca-legend-note{color:var(--muted);font-weight:500;font-size:12px;}
+
+ .uca-diagram .uca-stage{display:flex;gap:50px;align-items:flex-start;}
+ @media(max-width:980px){.uca-diagram .uca-stage{flex-direction:column;gap:22px;}}
+ .uca-diagram .uca-main-col{flex:1;min-width:0;}
+ .uca-diagram .uca-db-col{width:250px;flex:none;}
+ .uca-diagram .uca-db-col .uca-layer{width:100%;margin-bottom:0;}
+ @media(max-width:980px){.uca-diagram .uca-db-col{width:auto;}}
+
+ .uca-diagram .uca-layer{background:var(--card);border-radius:16px;box-shadow:var(--shadow);padding:22px;margin-bottom:20px;position:relative;border:1px solid var(--line);}
+ .uca-diagram .uca-layer-title{display:flex;align-items:center;gap:10px;font-size:13px;font-weight:700;letter-spacing:.03em;text-transform:uppercase;color:var(--muted);margin-bottom:16px;}
+ .uca-diagram .uca-tag{font-size:10px;font-weight:700;letter-spacing:.06em;padding:3px 8px;border-radius:999px;text-transform:uppercase;}
+ .uca-diagram .uca-tag--exist{background:var(--blue-soft);color:var(--blue);border:1px solid var(--blue-line);}
+ .uca-diagram .uca-tag--new{background:var(--amber-soft);color:var(--amber);border:1px solid var(--amber-line);}
+
+ .uca-diagram .uca-box{border-radius:12px;padding:16px 18px;position:relative;transition:transform .18s ease,box-shadow .18s ease;}
+ .uca-diagram .uca-box:hover{transform:translateY(-3px);}
+ .uca-diagram .uca-box--exist{background:var(--blue-soft);border:1.5px solid var(--blue);}
+ .uca-diagram .uca-box--exist:hover{box-shadow:0 14px 30px rgba(37,99,235,.18);}
+ .uca-diagram .uca-box--new{background:var(--amber-soft);border:1.5px dashed var(--amber);}
+ .uca-diagram .uca-box--new:hover{box-shadow:0 14px 30px rgba(217,119,6,.2);}
+ .uca-diagram .uca-box h4{margin:0 0 4px;font-size:15px;font-weight:700;display:flex;align-items:center;gap:8px;}
+ .uca-diagram .uca-box .role{font-size:12px;color:var(--muted);font-weight:600;margin-bottom:8px;}
+ .uca-diagram .uca-box ul{margin:6px 0 0;padding-left:16px;}
+ .uca-diagram .uca-box li{font-size:12.5px;color:var(--ink);margin:3px 0;}
+ .uca-diagram .uca-badge{position:absolute;top:12px;right:12px;font-size:9px;font-weight:700;letter-spacing:.06em;padding:2px 7px;border-radius:999px;text-transform:uppercase;}
+ .uca-diagram .uca-badge--exist{background:var(--blue);color:#fff;}
+ .uca-diagram .uca-badge--new{background:var(--amber);color:#fff;}
+
+ .uca-diagram .uca-grid2{display:grid;grid-template-columns:1fr 1fr;gap:18px;}
+ .uca-diagram .uca-grid3{display:grid;grid-template-columns:repeat(3,1fr);gap:16px;}
+ @media(max-width:760px){.uca-diagram .uca-grid2,.uca-diagram .uca-grid3{grid-template-columns:1fr;}}
+
+ .uca-diagram .uca-ec2{border:2px solid var(--blue);border-radius:16px;padding:18px;background:linear-gradient(180deg,#f8fbff,#ffffff);}
+ .uca-diagram .uca-ec2-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;}
+ .uca-diagram .uca-ec2-name{font-weight:700;font-size:14px;color:var(--blue);display:flex;align-items:center;gap:8px;}
+
+ .uca-diagram .uca-arrow-row{display:flex;gap:18px;justify-content:center;margin:2px 0 18px;text-align:center;}
+ .uca-diagram .uca-arrow-col{flex:1;color:var(--muted);font-size:11px;font-weight:700;}
+ .uca-diagram .uca-arrow-col svg{display:block;margin:0 auto 2px;opacity:.75;}
+ .uca-diagram .uca-arrow-col--blue{color:var(--blue);}
+ .uca-diagram .uca-arrow-col--vio{color:var(--vio);}
+
+ .uca-diagram .uca-down{display:flex;justify-content:center;margin:6px 0;}
+ .uca-diagram .uca-down svg{opacity:.6;}
+
+ .uca-diagram .uca-fargate .uca-box--new{background:#fff;border-color:var(--amber);}
+ .uca-diagram .uca-task{background:#fff;border:1.5px solid var(--line);border-radius:12px;padding:14px;position:relative;}
+ .uca-diagram .uca-task h5{margin:0 0 10px;font-size:13px;font-weight:700;display:flex;align-items:center;gap:7px;}
+ .uca-diagram .uca-task ol{margin:0;padding-left:18px;}
+ .uca-diagram .uca-task li{font-size:12px;margin:5px 0;color:var(--ink);}
+ .uca-diagram .uca-pill{display:inline-block;font-size:10px;font-weight:700;padding:2px 7px;border-radius:6px;margin-left:4px;}
+ .uca-diagram .uca-pill--fail{background:var(--red-soft);color:var(--red);}
+ .uca-diagram .uca-pill--ok{background:var(--green-soft);color:var(--green);}
+ .uca-diagram .uca-dot{width:9px;height:9px;border-radius:50%;display:inline-block;}
+ .uca-diagram .uca-dot--on{background:var(--green);}
+ .uca-diagram .uca-dot--off{background:var(--red);}
+
+ .uca-diagram .uca-scale-row{display:flex;gap:14px;flex-wrap:wrap;margin-top:4px;}
+ .uca-diagram .uca-scale-chip{flex:1;min-width:240px;display:flex;align-items:center;gap:12px;background:#fff;border:1px solid var(--line);border-radius:10px;padding:12px 16px;}
+ .uca-diagram .uca-scale-chip .uca-dot{flex:none;}
+ .uca-diagram .uca-sc-txt{display:flex;flex-direction:column;gap:2px;}
+ .uca-diagram .uca-sc-txt strong{font-size:13px;font-weight:700;color:var(--ink);}
+ .uca-diagram .uca-sc-txt strong em{font-style:italic;}
+ .uca-diagram .uca-sc-txt>span{font-size:12px;color:var(--muted);font-weight:500;}
+
+ .uca-diagram .uca-redis-row{display:grid;grid-template-columns:1fr 1fr;gap:16px;}
+ @media(max-width:760px){.uca-diagram .uca-redis-row{grid-template-columns:1fr;}}
+ .uca-diagram .uca-redis-item{background:#fff;border:1px dashed var(--amber);border-radius:10px;padding:14px;}
+ .uca-diagram .uca-redis-k{font-family:ui-monospace,Menlo,Consolas,monospace;font-size:12px;color:var(--amber);font-weight:700;}
+ .uca-diagram .uca-redis-item p{margin:6px 0 0;font-size:12.5px;color:var(--ink);}
+
+ .uca-diagram .uca-db-consumers{display:flex;flex-direction:column;gap:8px;margin-top:12px;}
+ .uca-diagram .uca-consumer{display:flex;align-items:center;gap:6px;background:#fff;border:1px solid var(--blue-line);border-radius:8px;padding:7px 11px;font-size:12px;font-weight:700;color:var(--ink);}
+ .uca-diagram .uca-consumer em{font-style:normal;font-weight:500;color:var(--muted);font-size:11.5px;}
+
+ .uca-diagram .uca-edge{background:var(--red-soft);border:1px solid #fecaca;}
+ .uca-diagram .uca-edge .uca-layer-title{color:var(--red);}
+ .uca-diagram .uca-edge ol{margin:6px 0 0;padding-left:18px;}
+ .uca-diagram .uca-edge li{font-size:13px;margin:6px 0;color:var(--ink);}
+
+ .uca-diagram code{font-family:ui-monospace,Menlo,Consolas,monospace;background:#eef2f7;padding:1px 6px;border-radius:5px;font-size:.88em;color:#334155;}
+ .uca-diagram .uca-conn{text-align:center;color:var(--muted);font-size:12px;font-weight:600;margin:0 0 6px;}
+
+ .uca-diagram .uca-branch{display:grid;grid-template-columns:1fr 1fr;gap:18px;margin:2px 0 20px;align-items:start;}
+ @media(max-width:760px){.uca-diagram .uca-branch{grid-template-columns:1fr;gap:26px;}}
+ .uca-diagram .uca-branch-path{display:flex;flex-direction:column;align-items:center;text-align:center;}
+ .uca-diagram .uca-branch-svg{line-height:0;}
+ .uca-diagram .uca-branch-label{margin-top:2px;font-size:12.5px;}
+ .uca-diagram .uca-branch-label strong{display:block;font-weight:700;}
+ .uca-diagram .uca-branch-label span{display:block;color:var(--muted);font-size:11.5px;margin-top:2px;}
+ .uca-diagram .uca-branch-label--b strong{color:var(--amber);}
+
+ .uca-diagram .uca-rt-block{margin-top:16px;padding-top:16px;border-top:1.5px dashed var(--amber-line);}
+ .uca-diagram .uca-rt-lane{border-radius:12px;padding:12px 14px;}
+ .uca-diagram .uca-rt-lane--out{background:var(--amber-soft);border:1px solid var(--amber-line);}
+ .uca-diagram .uca-rt-lane--in{background:var(--green-soft);border:1px solid #a7f3d0;margin-top:12px;}
+ .uca-diagram .uca-rt-lane-h{display:flex;align-items:center;gap:9px;font-size:12px;font-weight:700;color:var(--ink);margin-bottom:11px;}
+ .uca-diagram .uca-rt-badge{flex:none;font-size:10px;font-weight:800;letter-spacing:.05em;text-transform:uppercase;padding:3px 10px;border-radius:999px;color:#fff;}
+ .uca-diagram .uca-rt-badge--out{background:var(--amber);}
+ .uca-diagram .uca-rt-badge--in{background:var(--green);}
+ .uca-diagram .uca-rt-row{display:flex;align-items:stretch;gap:8px;flex-wrap:nowrap;}
+ @media(max-width:760px){.uca-diagram .uca-rt-row{flex-direction:column;}}
+ .uca-diagram .uca-rt-node{flex:1 1 0;min-width:0;border-radius:10px;padding:10px 12px;background:#fff;display:flex;flex-direction:column;gap:4px;position:relative;}
+ .uca-diagram .uca-rt-node--amber{border:1.5px dashed var(--amber);}
+ .uca-diagram .uca-rt-node--blue{border:1.5px solid var(--blue);}
+ .uca-diagram .uca-rt-k{font-size:12px;font-weight:700;color:var(--ink);line-height:1.25;}
+ .uca-diagram .uca-rt-s{font-size:10.5px;color:var(--muted);font-weight:500;line-height:1.35;word-break:break-word;}
+ .uca-diagram .uca-rt-arr{align-self:center;font-size:16px;font-weight:800;color:var(--amber);flex:none;}
+ .uca-diagram .uca-rt-turn{text-align:center;font-size:12px;font-weight:700;color:var(--green);margin:12px 0;}
+
+ /* -- §2b: Use Case B / C SVGs reuse .diagram-frame; marker ids inside C's <defs> are prefixed c- to avoid -- */
+ /* -- colliding with identically-named marker ids inside B's <defs> (both svgs share the same source template) -- */
+
+ /* -- §3: unified technology stack table -- */
+ .stack-wrap{width:100%;overflow-x:auto;}
+ .stack-table{width:100%;min-width:760px;border-collapse:separate;border-spacing:0;font-size:13px;background:var(--surface);border:1px solid var(--border);border-radius:12px;overflow:hidden;}
+ .stack-table th,.stack-table td{padding:14px 16px;text-align:left;vertical-align:top;border-bottom:1px solid var(--border);}
+ .stack-table thead th{background:var(--primary-light);color:var(--primary-dark);font-size:12.5px;font-weight:700;white-space:nowrap;}
+ .stack-table thead th .chip{margin-right:7px;}
+ .stack-table tbody tr:last-child td{border-bottom:none;}
+ .stack-table tbody tr:nth-child(even){background:#fafbfd;}
+ .stack-table .layer-name{display:flex;align-items:center;gap:8px;flex-wrap:wrap;font-weight:700;color:var(--text);}
+ .stack-table td.unified{background:#f8fafc;}
+ .stack-table td.na{color:var(--text-muted);font-style:italic;text-align:center;}
+ .stack-table .role{display:block;margin-top:4px;font-size:11.5px;font-weight:500;color:var(--text-muted);font-style:normal;}
+ .stack-table .tag{display:inline-block;font-size:9.5px;font-weight:700;letter-spacing:.04em;text-transform:uppercase;padding:2px 7px;border-radius:999px;margin-left:6px;white-space:nowrap;}
+ .stack-table .tag.exist{background:var(--blue-soft);color:var(--blue);border:1px solid var(--blue-line);}
+ .stack-table .tag.new{background:var(--amber-soft);color:var(--amber-dark);border:1px solid var(--amber-line);}
+ .stack-table .tag.future{background:#f1f5f9;color:var(--text-muted);border:1px solid var(--border);}
+ .stack-table .tag.onprem{background:var(--purple-soft);color:var(--purple-dark);border:1px solid var(--purple-line);}
+ .stack-table tr.db-row td{background:var(--blue-soft);}
+ .pill.shared{background:var(--green-soft);color:var(--green-dark);}
+ .pill.only-a{background:var(--amber-soft);color:var(--amber-dark);}
+ .pill.only-bc{background:var(--purple-soft);color:var(--purple-dark);}
+
+ /* -- §5 Operational Flows: shared chain/card component (.opsflow-*), namespaced so its generic-sounding --
+    class names (card/trigger/node/step/decision/end/loop) never collide with the rest of the document.     --
+    Reused across A's assignment loop, B's three-flow flywheel, and C's four-source find/allocate chain.    -- */
+ .opsflow-cards{display:grid;grid-template-columns:repeat(3,1fr);gap:20px;margin:20px 0;}
+ @media(max-width:960px){.opsflow-cards{grid-template-columns:1fr;}}
+ .opsflow-cards.opsflow-solo{grid-template-columns:1fr;max-width:580px;margin:20px auto;}
+ .opsflow-card{background:var(--surface);border:1px solid var(--border);border-radius:14px;padding:20px 20px 24px;box-shadow:0 1px 2px rgba(15,23,42,.05);}
+ .opsflow-card-head{display:flex;align-items:center;gap:9px;font-size:15px;font-weight:700;margin-bottom:10px;}
+ .opsflow-trigger{display:inline-block;font-size:10.5px;font-weight:800;letter-spacing:.04em;text-transform:uppercase;padding:3px 10px;border-radius:999px;margin-bottom:14px;}
+ .opsflow-trigger.blue{background:var(--blue-soft);color:var(--primary-dark);}
+ .opsflow-trigger.amber{background:var(--amber-soft);color:var(--amber-dark);}
+ .opsflow-trigger.green{background:var(--green-soft);color:var(--green-dark);}
+ .opsflow-trigger.violet{background:var(--purple-soft);color:var(--purple-dark);}
+
+ .opsflow-chain{display:flex;flex-direction:column;gap:0;}
+ .opsflow-node{border:1.5px solid var(--border);border-radius:12px;padding:12px 14px;background:#fff;position:relative;}
+ .opsflow-node.blue{border-color:var(--blue);}
+ .opsflow-node.amber{border-color:var(--amber);}
+ .opsflow-node.green{border-color:var(--green);}
+ .opsflow-node.red{border-color:var(--red);}
+ .opsflow-node.violet{border-color:var(--purple);}
+ .opsflow-node .opsflow-body{display:flex;align-items:flex-start;gap:9px;}
+ .opsflow-step{display:inline-flex;align-items:center;justify-content:center;width:22px;height:22px;border-radius:50%;font-size:12px;font-weight:700;color:#fff;flex:none;background:var(--text-muted);}
+ .opsflow-step.icon{background:transparent!important;font-size:17px;}
+ .opsflow-node.blue .opsflow-step{background:var(--blue);}
+ .opsflow-node.amber .opsflow-step{background:var(--amber);}
+ .opsflow-node.green .opsflow-step{background:var(--green);}
+ .opsflow-node.red .opsflow-step{background:var(--red);}
+ .opsflow-node.violet .opsflow-step{background:var(--purple);}
+ .opsflow-txt{font-size:13.5px;font-weight:600;color:var(--text);}
+ .opsflow-txt small{display:block;font-weight:500;color:var(--text-muted);font-size:12px;margin-top:3px;}
+ .opsflow-conn{display:flex;justify-content:center;height:24px;}
+ .opsflow-conn svg{opacity:.7;}
+ .opsflow-tag{display:inline-block;font-size:10px;font-weight:700;padding:2px 7px;border-radius:999px;margin-left:7px;vertical-align:middle;white-space:nowrap;}
+ .opsflow-tag.amber{background:var(--amber-soft);color:var(--amber-dark);}
+ .opsflow-tag.blue{background:var(--blue-soft);color:var(--primary-dark);}
+
+ .opsflow-decision{align-self:center;width:104px;height:104px;display:flex;align-items:center;justify-content:center;text-align:center;transform:rotate(45deg);border:1.5px solid var(--blue);background:var(--blue-soft);border-radius:12px;margin:18px auto;}
+ .opsflow-decision.violet{border-color:var(--purple);background:var(--purple-soft);}
+ .opsflow-decision-inner{transform:rotate(-45deg);font-size:11px;line-height:1.35;font-weight:700;color:var(--primary-dark);padding:0 6px;}
+ .opsflow-decision.violet .opsflow-decision-inner{color:var(--purple-dark);}
+ .opsflow-branch-arms{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin:4px 0 2px;text-align:center;}
+ .opsflow-arm{font-size:10.5px;font-weight:800;letter-spacing:.04em;}
+ .opsflow-arm.no{color:var(--text-muted);}
+ .opsflow-arm.yes{color:var(--green);}
+ .opsflow-branches{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-top:4px;}
+ .opsflow-end{border-radius:999px;padding:10px 13px;text-align:center;font-size:12px;font-weight:700;border:1.5px dashed var(--border);color:var(--text-muted);background:#fff;}
+ .opsflow-end.go{border-style:solid;border-color:var(--green);color:var(--green-dark);background:var(--green-soft);}
+ .opsflow-end.move{border-style:solid;border-color:var(--amber);color:var(--amber-dark);background:var(--amber-soft);}
+ .opsflow-end.amber{border-style:solid;border-color:var(--amber);color:var(--amber-dark);background:var(--amber-soft);}
+
+ .opsflow-loop{position:relative;padding-left:40px;margin-top:18px;}
+ .opsflow-loop::before{content:"";position:absolute;left:10px;top:14px;bottom:66px;width:20px;border:2.5px solid var(--amber);border-right:none;border-radius:12px 0 0 12px;}
+ .opsflow-loop::after{content:"";position:absolute;left:28px;top:8px;width:0;height:0;border:6px solid transparent;border-left-color:var(--amber);}
+ .opsflow-loop-tag{position:absolute;left:2px;top:-4px;white-space:nowrap;font-size:9.5px;font-weight:800;color:var(--amber-dark);letter-spacing:.02em;}
+
+ .callout.amber{background:var(--amber-soft);border-color:var(--amber-line);color:var(--text);}
+ .callout.amber b{color:var(--amber-dark);}
+ .callout.warn{background:var(--red-soft);border-color:var(--red-line);color:var(--text);}
+ .callout.warn b{color:var(--red);}
+
+ /* -- §6 Core Logic: lifted formulas/tables/code from A's ranking algorithm, B's summarise --
+    pipeline + retrieval baseline, and C's matching + sourcing algorithm. Namespaced cl-* so --
+    these generic-sounding names (table/pre/badge/pill) never collide with earlier sections --
+    or with classes future tasks (§7 Data, §8 API Reference) may introduce.                  -- */
+ .cl-table-wrap{width:100%;overflow-x:auto;margin:14px 0;border:1px solid var(--border);border-radius:12px;}
+ .cl-table{width:100%;border-collapse:collapse;font-size:13.5px;background:var(--surface);}
+ .cl-table th,.cl-table td{text-align:left;padding:11px 14px;border-bottom:1px solid var(--border);vertical-align:top;}
+ .cl-table thead th{background:#f8fafc;font-weight:700;font-size:12px;text-transform:uppercase;letter-spacing:.04em;color:var(--text-muted);white-space:nowrap;}
+ .cl-table tbody tr:last-child td{border-bottom:none;}
+ .cl-table tbody tr:nth-child(even){background:#fafbfd;}
+
+ .cl-pre{background:#0f172a;color:#e2e8f0;padding:16px 18px;border-radius:10px;overflow-x:auto;font-family:ui-monospace,Menlo,Consolas,monospace;font-size:12.5px;line-height:1.65;margin:12px 0;}
+ .cl-pre code{background:none;padding:0;color:inherit;font-size:inherit;}
+ .cl-pre .cl-c{color:#94a3b8;}
+ .cl-pre .cl-k{color:#7dd3fc;}
+
+ .cl-badge{display:inline-block;font-size:11px;font-weight:700;padding:3px 10px;border-radius:999px;white-space:nowrap;}
+ .cl-badge.red{background:#fee2e2;color:#dc2626;}
+ .cl-badge.amber{background:#fef3c7;color:#d97706;}
+ .cl-badge.purple{background:#ede9fe;color:#7c3aed;}
+
+ .cl-pill{display:inline-block;font-family:ui-monospace,Menlo,Consolas,monospace;font-size:11px;font-weight:600;padding:2px 9px;border-radius:6px;background:#f1f5f9;color:var(--text-muted);border:1px solid var(--border);white-space:nowrap;}
+ .cl-pill.free{background:var(--green-soft);color:var(--green-dark);border-color:var(--green-line);}
+ .cl-pill.paid{background:var(--amber-soft);color:var(--amber-dark);border-color:var(--amber-line);}

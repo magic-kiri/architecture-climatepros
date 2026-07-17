@@ -1,0 +1,248 @@
+<section id="s6">
+<h2>6. Core Logic (per use case)</h2>
+<p>The algorithms and pipelines behind the flows in &sect;5, lifted at full fidelity &mdash; every
+formula, weight, table and worked example intact, not condensed: how A ranks a shortlist of
+technicians, how B turns wizard answers into a 12-section ticket (plus the deterministic retrieval
+and measured baseline it stands on), and how C predicts parts by retrieval and sources them across
+three tiers.</p>
+
+<h3><span class="chip">A</span> Auto-Dispatch &mdash; Ranking Algorithm</h3>
+<p>This is the detail behind step&nbsp;3 (<em>&ldquo;Rank the technicians&rdquo;</em>) of the
+assignment loop in &sect;5. It turns each candidate's availability, distance, and visit history into
+a single ordered shortlist. One formula covers every case &mdash; its behavior is tuned by a single
+weight <code>w</code> chosen from the job's dispatch type. Adapted from <b>system-design.html &sect;8
+Ranking Algorithm</b>.</p>
+
+<div class="card">
+<h4>Inputs</h4>
+<ul style="padding-left:22px;margin:0;">
+<li><code>free<sub>i</sub></code> &mdash; minutes until technician <code>i</code> is available (time left on current job)</li>
+<li><code>dist<sub>i</sub></code> &mdash; miles from technician <code>i</code> to the jobsite</li>
+<li><code>visits<sub>i</sub></code> &mdash; prior visits by technician <code>i</code> to this customer (familiarity)</li>
+<li><code>AVG_SPEED</code> &mdash; average truck speed in mph, a <strong>configurable constant</strong></li>
+<li><code>dispatchType</code> &mdash; Emergency &middot; High Priority &middot; Medium Priority</li>
+</ul>
+</div>
+
+<div style="text-align:center;color:var(--text-muted);font-size:20px;margin:6px 0;">&darr;</div>
+
+<div class="card">
+<h4>Step A &mdash; unify availability + distance into one ETA</h4>
+<p>Distance can't be compared to wait-time directly. Convert distance to travel time using the
+average truck speed, then add the wait, so every technician collapses to <strong>one number</strong>:
+minutes-until-on-site. Lower is better.</p>
+<pre class="cl-pre"><code>travel_i = (dist_i / AVG_SPEED) * 60      # miles -> minutes
+eta_i    = free_i + travel_i              # total minutes until tech is on site</code></pre>
+</div>
+
+<div style="text-align:center;color:var(--text-muted);font-size:20px;margin:6px 0;">&darr;</div>
+
+<div class="card">
+<h4>Step B &mdash; weighted score</h4>
+<p>Blend ETA and visit count into one score. Both must be on a 0&ndash;1 scale where higher is
+better, so min-max normalize each across <em>this</em> candidate set, then weight by <code>w</code>
+(the speed share). A pure ranking is just an endpoint: <code>w=1</code> sorts by ETA only,
+<code>w=0</code> by visits only &mdash; no separate sort needed.</p>
+<pre class="cl-pre"><code>speed_score_i = (eta_max - eta_i)      / (eta_max - eta_min)      # lowest eta  -> 1.0
+fam_score_i   = (visits_i - visits_min)/ (visits_max - visits_min) # most visits -> 1.0
+
+score_i = w * speed_score_i + (1 - w) * fam_score_i               # w = speed weight
+# sort score_i descending -> rank 1 = offer target</code></pre>
+<p style="font-size:13px;color:var(--text-muted);margin-bottom:0;">Edge cases: a single candidate is
+rank&nbsp;1 by default; if all ETAs tie the speed term is flat and familiarity breaks the tie (and
+vice-versa).</p>
+</div>
+
+<div style="text-align:center;color:var(--text-muted);font-size:20px;margin:6px 0;">&darr;</div>
+
+<div class="card">
+<h4>Step C &mdash; pick <code>w</code> from the dispatch type</h4>
+<p>Emergency and Medium are just the two ends (<code>w=1</code>, <code>w=0</code>) of the same
+combined formula &mdash; so <strong>one code path serves all three</strong>.</p>
+<div class="cl-table-wrap"><table class="cl-table">
+<thead><tr><th>Dispatch Type</th><th>Strategy</th><th><code>w</code> (speed)</th><th>Result</th></tr></thead>
+<tbody>
+<tr><td><span class="cl-badge red">Emergency</span></td><td>Speed-Based (locked)</td><td><code>1.0</code></td><td>Pure ETA; familiarity ignored &mdash; lowest combined time wins</td></tr>
+<tr><td><span class="cl-badge amber">High Priority</span></td><td>Combined</td><td><code>0.2</code> <span style="color:var(--text-muted)">(Speed 20 / Fam 80)</span></td><td>Weighted blend; weight configurable per strategy</td></tr>
+<tr><td><span class="cl-badge purple">Medium Priority</span></td><td>Familiarity-Based</td><td><code>0.0</code></td><td>Pure visit count &mdash; most familiar tech wins</td></tr>
+</tbody>
+</table></div>
+</div>
+
+<div class="callout azure"><b>One formula, three behaviors:</b> the dispatch type only sets
+<code>w</code>. Emergency (<code>w=1</code>) reduces to pure speed, Medium (<code>w=0</code>) to
+pure familiarity, High blends them &mdash; no separate ranking code per type. The resulting ordered
+shortlist feeds directly into step&nbsp;4 (offer to the top-ranked technician) in &sect;5.</div>
+
+<div class="callout warn"><b>Future factor &mdash; skill gate:</b> when technician skill data is
+available (<code>1 &le; skill<sub>i</sub> &le; 5</code>) and a job carries a minimum required skill,
+it enters as a <strong>hard gate, not a score term</strong>. Filter it in step&nbsp;1 when building
+the candidate list &mdash; <em>keep technician <code>i</code> only if
+<code>skill<sub>i</sub> &ge; job.minSkill</code></em> &mdash; so under-skilled technicians never
+reach ranking. The speed/familiarity scoring is untouched; only the candidate set shrinks.</div>
+
+<h3 style="margin-top:38px"><span class="chip">B</span> Job Summarisation &mdash; Summarise Pipeline &amp; Retrieval</h3>
+<p>The 12-section ticket followed end to end, plus the retrieval mechanics and measured baseline it
+stands on. Adapted from <b>usecase-b-architecture.html &sect;10 The Summarise Pipeline</b> and
+<b>&sect;12 Retrieval, Suggestions &amp; the Measured Baseline</b>.</p>
+
+<h4>The Summarise Pipeline</h4>
+<p>One request followed end to end: what happens between the technician reaching the Review step and
+the 12-section ticket appearing.</p>
+<div class="flow-step"><div class="flow-num">1</div><div class="flow-content"><h4>Mobile app compiles the payload</h4><p>The wizard answers (reason, parts, time, notes, completed forms, dropdowns decoded to labels) are packed client-side with zero extra API calls, then sent as <code>POST /api/v1/summarise</code> with the app's existing auth token.</p></div></div>
+<div class="flow-step"><div class="flow-num">2</div><div class="flow-content"><h4>.NET proxy validates &amp; forwards</h4><p>The Microservices API validates the OAuth2/Entra token, strips user credentials, adds the internal API key, and forwards server-to-server to the private FastAPI service with an extended timeout.</p></div></div>
+<div class="flow-step"><div class="flow-num">3</div><div class="flow-content"><h4>Parallel enrichment (fail-soft)</h4><p>Three reads fire simultaneously against the existing APIs: dispatch details (<code>GetAssignedDispatchesDetails</code>), per-equipment fields (<code>GetDispatchEquipmentFieldData</code>), and customer procedures (<code>GetDispatchProcedures</code>, always fetched live, never cached). If any fetch fails, the pipeline continues without it.</p></div></div>
+<div class="flow-step"><div class="flow-num">4</div><div class="flow-content"><h4>Prompt construction</h4><p>A versioned ticket standard (<code>ticket_standard.md</code>) forms the system instruction; the user prompt assembles dispatch context, equipment specs, completed forms, wizard answers, and procedures. Token profile &asymp; 2,080 in / 1,050 out per dispatch.</p></div></div>
+<div class="flow-step"><div class="flow-num">5</div><div class="flow-content"><h4>LLM call to the client's own model</h4><p>The pipeline calls qwen3-vl on the client's private gateway (measured ~6&ndash;7s per call, 30&ndash;35 tok/s; data never leaves client infrastructure). The provider abstraction in <code>llm_client.py</code> stays, so a different model can be swapped in by config later, but no external provider is wired up. Returns the raw ticket + procedure checks as JSON.</p></div></div>
+<div class="flow-step"><div class="flow-num">6</div><div class="flow-content"><h4>Parse, guarantee, post-process</h4><p>The response is parsed and normalised against the canonical 12-section list: absent sections get an explicit MISSING placeholder, so the app always receives exactly 12 sections in standard order. Deterministic Python overrides then apply wizard-type rules (e.g. Sign-Off rebuilt from the last time entry; Refrigerant Tracking set N/A when no refrigerant was used).</p></div></div>
+<div class="flow-step"><div class="flow-num">7</div><div class="flow-content"><h4>Review, fix gaps, submit</h4><p>The technician sees the ticket with per-section status badges and the procedure checklist; critical gaps must be fixed inline before submit. Submission then flows through the existing <code>mobile-post</code> write-back unchanged, and the accepted summary is persisted to <code>ai.summaries</code>.</p></div></div>
+
+<h4>How retrieval works</h4>
+<p>Everything the copilot retrieves is <strong>deterministic SQL over the client's real dispatch
+history</strong>: explainable, zero new infrastructure, and already measured against a full year of
+staging data (252,615 dispatches). This is what replaced the earlier vector-index plan after the
+2026-07-07 architecture call.</p>
+<div class="cl-table-wrap"><table class="cl-table">
+<thead><tr><th>Need</th><th>Mechanism</th></tr></thead>
+<tbody>
+<tr><td><strong>Same-site history</strong> (briefing)</td><td>Keyed SQL query: past visit digests for the same customer and site, most recent first.</td></tr>
+<tr><td><strong>Similar past issues</strong> (briefing)</td><td>Deterministic lookup: 2&ndash;3 recent dispatches with the same equipment type and problem code are pulled and handed to the LLM as context. No embeddings, no similarity index.</td></tr>
+<tr><td><strong>Part suggestions</strong></td><td>SQL co-occurrence: a frequency table keyed on (equipment manufacturer type &times; problem code) &rarr; most-used parts, with fallback to equipment type alone, then global top parts. One SQL aggregation, fully explainable.</td></tr>
+<tr><td><strong>Compliance procedures</strong></td><td>Always fetched live from the source system, never cached or embedded: they are compliance-critical and change.</td></tr>
+</tbody>
+</table></div>
+
+<h4>The measured baseline (backtested on staging, 2026-07-08)</h4>
+<p>The co-occurrence method was trained on 11 months of real dispatches and tested on the final month
+(4,151 dispatches with installed parts, 3,100 distinct parts in play). &ldquo;Hit&rdquo; means at
+least one actually-installed part appeared in the top-k suggestion list:</p>
+<div class="cl-table-wrap"><table class="cl-table">
+<thead><tr><th>Suggestions shown (k)</th><th>Hit rate</th></tr></thead>
+<tbody>
+<tr><td>Top 1</td><td>18.6%</td></tr>
+<tr><td>Top 3</td><td>31.8%</td></tr>
+<tr><td>Top 5</td><td><strong>39.9%</strong></td></tr>
+<tr><td>Top 10</td><td><strong>52.1%</strong></td></tr>
+</tbody>
+</table></div>
+<div class="callout azure"><b>Why this matters:</b> with 3,100 possible parts, a zero-ML lookup
+already puts a right part in a 5-item list 40% of the time. This is the baseline any classical-ML
+model, embedding index, or LLM-heavy approach must <em>beat</em> to justify its added cost and
+complexity, exactly the &ldquo;capture the baseline, commit to no accuracy numbers&rdquo; framing
+agreed on the call.</div>
+
+<h4>Label-quality reality (what the EDA must account for)</h4>
+<p>An audit of the last 12 months of staging data showed the structured outcome codes are far weaker
+than they look: root-cause and failure codes have been dead since 2021, the problem code's top value
+is OTHER at 38%, and the summary code is SERVICE for 88% of filled rows. The genuine predictive
+signal lives in the <strong>free-text complaint (<code>DispatchReason</code>, 230k+ distinct values)
+and technician notes</strong>, plus equipment identity. Any classical-ML phase therefore must include
+text feature engineering; training on code columns alone will underperform the baseline above.</p>
+
+<h4>The vector index: optional, criteria-gated</h4>
+<div class="cl-table-wrap"><table class="cl-table">
+<thead><tr><th>Question</th><th>Answer</th></tr></thead>
+<tbody>
+<tr><td>Is it part of this architecture?</td><td><strong>No.</strong> Decided 2026-07-07: it added infrastructure cost and operational surface without validated benefit.</td></tr>
+<tr><td>When would we add it?</td><td>Only if evals show deterministic retrieval misses relevant history that semantic search over the free-text fields would find, and the gain beats the baseline by enough to pay for the pipeline.</td></tr>
+<tr><td>How would it slot in?</td><td>Behind the existing retrieval abstraction: the briefing builder swaps its SQL lookup for a filtered similarity query; nothing else in the architecture changes. Embeddings can run on the private gateway's nomic-embed model, keeping data in client infrastructure.</td></tr>
+</tbody>
+</table></div>
+
+<h3 style="margin-top:38px"><span class="chip">C</span> Parts Finder &mdash; Matching &amp; Sourcing Logic</h3>
+<p>Prediction is retrieval-augmented: find the most similar past dispatches, then rank the parts
+those dispatches used, weighting <strong>closeness over raw frequency</strong> so one near-identical
+job outranks several loosely-similar ones. Once parts are identified, the Source API works out where
+to get them from. Adapted from <b>usecase-C-system-design.html &sect;7 RAG Prediction &amp;
+Ranking</b> and <b>&sect;8 Sourcing Algorithm</b>.</p>
+
+<h4>Pipeline</h4>
+<ol>
+<li><strong>Asymmetric embedding.</strong> Historical reasons are embedded at index time with a
+<em>document</em> task type; the live dispatch reason is embedded per request with a <em>query</em>
+task type. Both run on the <strong>self-hosted embedding model</strong> on customer hardware &mdash;
+dispatch text never goes to an external AI provider.</li>
+<li><strong>Retrieve.</strong> Search the <strong>Azure-hosted vector store</strong> for the top
+<code>K = 15</code> nearest neighbors, returning cosine distances and each neighbor's
+<code>partsUsed</code>.</li>
+<li><strong>Rank &amp; aggregate.</strong> The <strong>self-hosted LLM</strong> ranks &amp;
+aggregates the retrieved parts: convert distance to similarity, gate on a threshold, and accumulate
+a cubed-similarity score per part.</li>
+<li><strong>Confidence &amp; select.</strong> Normalize scores, clamp to a confidence band, return
+the top parts, and pre-select the confident ones.</li>
+</ol>
+
+<h4>Scoring (exact)</h4>
+<pre class="cl-pre"><code>sim            = 1 &minus; cosine_distance
+<span class="cl-k">if</span> sim &gt; 0.55:                      <span class="cl-c"># SIM_THRESHOLD — neighbor contributes</span>
+    <span class="cl-k">for</span> part <span class="cl-k">in</span> neighbor.partsUsed:
+        score[part]     += sim ** 3      <span class="cl-c"># closeness &gt; frequency</span>
+        timesUsed[part] += 1
+
+confidence(part) = clamp( round( score[part] / max_score &times; 95 ), 20, 95 )
+
+return top 6 parts by score              <span class="cl-c"># each pre-selected if confidence &ge; 60</span></code></pre>
+
+<div class="cl-table-wrap"><table class="cl-table">
+<thead><tr><th>Constant</th><th>Value</th><th>Effect</th></tr></thead>
+<tbody>
+<tr><td><code>TOP_K</code></td><td>15</td><td>Neighbors retrieved per query.</td></tr>
+<tr><td><code>SIM_THRESHOLD</code></td><td>0.55</td><td>A neighbor contributes only if <code>sim &gt; 0.55</code>; weaker matches are ignored.</td></tr>
+<tr><td>Weight</td><td><code>sim&sup3;</code></td><td>Cubed similarity &mdash; sharply favors very close matches.</td></tr>
+<tr><td>Confidence band</td><td>[20, 95]</td><td>Normalized to the top score &times; 95, then clamped.</td></tr>
+<tr><td>Output size</td><td>Top 6</td><td>Highest-scoring parts returned to the technician.</td></tr>
+<tr><td><code>CONFIDENCE_THRESHOLD</code></td><td>60</td><td>Parts with confidence &ge; 60 are <strong>pre-selected</strong> in the UI; the rest are shown unchecked.</td></tr>
+</tbody>
+</table></div>
+<p>The response also reports <code>basedOn</code> &mdash; the number of neighbors above threshold
+&mdash; so the client can convey how much history a prediction rests on.</p>
+
+<h4>Indexing &amp; the self-learning loop</h4>
+<ul>
+<li><strong>Idempotent upsert</strong> keyed by <code>dispatchNo</code>: only dispatches not already
+indexed are embedded, so re-runs and restarts are cheap.</li>
+<li><strong>Rate-limit-aware batching</strong>: embeddings are computed in batches with pacing and
+retry-with-backoff on throttling.</li>
+<li><strong>Feedback loop</strong>: when a dispatch is marked complete in SQL Server, its reason and
+used parts are embedded and upserted &mdash; the very next similar job benefits (the dashed
+learning-loop arrow in the architecture diagram in &sect;2).</li>
+</ul>
+
+<h4>Source tiers</h4>
+<div class="cl-table-wrap"><table class="cl-table">
+<thead><tr><th>Tier</th><th>What it is</th><th>Distance</th><th>Price</th></tr></thead>
+<tbody>
+<tr><td><span class="cl-pill">truck</span></td><td>The technician's own van inventory.</td><td>0 mi</td><td><span class="cl-pill free">free</span></td></tr>
+<tr><td><span class="cl-pill">warehouse</span></td><td>Other Climate Pros warehouses &mdash; including <em>other technicians' vans</em> &mdash; plus the branch warehouse.</td><td>by distance, nearest first</td><td><span class="cl-pill free">free</span></td></tr>
+<tr><td><span class="cl-pill">vendor</span></td><td>The nearest United Refrigeration branch &mdash; the outside parts supplier (CP API Gateway).</td><td>from gateway</td><td><span class="cl-pill paid">priced</span></td></tr>
+</tbody>
+</table></div>
+<div class="callout amber"><b>A van is a warehouse.</b> Per operations, there is no separate
+&ldquo;nearby technician&rdquo; tier &mdash; another tech's van is modeled as a warehouse (labeled
+with the person's name, a warehouse code, and a street address). This keeps the model simple and
+reflects how stock actually moves in the field.</div>
+
+<h4>Ordering &amp; allocation</h4>
+<ul>
+<li><strong>Sort:</strong> truck first (0 mi), then all other sources by <strong>ascending
+distance</strong> &mdash; closest picked first.</li>
+<li><strong>Pricing:</strong> own stock (truck + warehouse) has no price; only the United vendor tier
+carries a dollar cost, applied from <code>InventorySupplierXREF.currentcost</code>.</li>
+<li><strong>Split large needs:</strong> per-source quantities are limited, so a large requested
+quantity is spread across sources. The client allocates greedily down the sorted list &mdash; each
+source takes <code>min(remaining_need, available)</code> until the need is met.</li>
+</ul>
+<pre class="cl-pre"><code><span class="cl-c"># greedy allocation across the sorted sources</span>
+remaining = qtyNeeded
+<span class="cl-k">for</span> src <span class="cl-k">in</span> sources:            <span class="cl-c"># truck first, then nearest → furthest</span>
+    take        = min(remaining, src.available)
+    src.taken   = take
+    remaining  -= take
+    <span class="cl-k">if</span> remaining == 0: <span class="cl-k">break</span></code></pre>
+<div class="callout warn"><b>Vendor lookup fails &rarr; drop the tier, not the request.</b> If the
+vendor lookup fails, the vendor tier is <strong>dropped</strong> rather than failing the whole
+request &mdash; the technician still sees all own-stock options. See &sect;11 Onboarding &amp; Fault
+Tolerance.</div>
+
+</section>
+

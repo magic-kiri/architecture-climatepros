@@ -12,7 +12,8 @@
 
 ## Global Constraints
 
-- Output file: `stream1-unified-architecture.html` at repo root. Single file, self-contained, all CSS inline in one `<style>` block. No external assets (repo convention — must open standalone).
+- Output file: `stream1-unified-architecture.html` at repo root. Single file, self-contained, all CSS inline. No external assets (repo convention — must open standalone).
+- **BUILD MODEL (from Task 9 onward):** the output HTML is **generated** by `python3 scripts/build.py` from fragment files in `sections/` (`_head.html` + `_style.css` + `_body-open.html` + `01.html`…`12.html`, concatenated in order). **Never hand-edit `stream1-unified-architecture.html`** — edit the matching `sections/NN.html` fragment, then run `python3 scripts/build.py`, then verify on the built file. Section `#sN` lives in `sections/NN.html` (e.g. `#s7` → `sections/07.html`). Put section-specific CSS in a `<style>` block at the top of that fragment (browsers accept in-body `<style>`); keep `_style.css` for shared/base rules only. Each fragment is exactly its `<section id="sN">…</section>` block.
 - Source docs `system-design.html`, `usecase-b-architecture.html`, `usecase-C-system-design.html`, `unified-hld.html`, `problem-statement.html` are READ-ONLY. Never modify them.
 - **Cloud transform (apply to every lifted fragment — text, diagram labels, inventory, cost):**
   - AWS EC2 → **Azure VM**; ECS Fargate / ECS Tasks → **Azure Container Apps**; Redis Stream/ElastiCache → **Azure Cache for Redis**; Amazon SNS → **Azure Notification Hubs**; CloudWatch → **Azure Monitor**; S3 Vectors / "Vector DB" → **Azure-hosted vector store**.
