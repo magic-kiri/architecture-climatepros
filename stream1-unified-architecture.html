@@ -1108,7 +1108,73 @@ deliberate exception, staying on AWS as Stream 1's sole cross-cloud dependency.<
 
 <section id="s4">
 <h2>4. Infrastructure</h2>
-<!-- filled in Task 6 -->
+
+<p>What Stream 1 already has vs. what it introduces &mdash; the same &sect;3 layers,
+regrouped by existing-platform vs. new-build and cloud-transformed to Azure. One deliberate exception
+stays on AWS: see the callout below.</p>
+
+<div class="inv">
+
+ <div class="inv-card exist">
+  <div class="cap">Existing &middot; reused as-is</div>
+  <h3>&#128241; FieldJetX Platform</h3>
+  <ul>
+   <li><b>Mobile App</b> — FieldJetX (Flutter) &middot; technician-facing (B, C)</li>
+   <li><b>FieldJetX Web App</b> — admin / dispatcher console (A)</li>
+   <li><b>Azure VM</b> — one host running both .NET services <span class="pill ecs">Azure</span></li>
+   <li><b>.NET Legacy API</b> — existing service on the Azure VM <span class="pill ecs">Azure</span></li>
+   <li><b>.NET Microservices API</b> — existing service on the Azure VM; gains new routes for A/B/C <span class="pill ecs">Azure</span></li>
+   <li><b>AWS SQL Server</b> — system of record <span class="pill aws">AWS</span></li>
+  </ul>
+ </div>
+
+ <div class="inv-card new">
+  <div class="cap">New &middot; introduced by this project</div>
+  <h3>&#9889; Auto-Dispatch tier + central AI server</h3>
+  <ul>
+   <li><b>Azure Cache for Redis</b> — durable dispatch queue for Auto-Dispatch (A) <span class="pill ecs">Azure</span></li>
+   <li><b>Azure Container Apps — Auto-Dispatch workers</b> — scale 0&ndash;1 on toggle; consume queued dispatches, read/write SQL Server <span class="pill ecs">Azure</span></li>
+   <li><b>Azure Container Apps — AI Server (FastAPI)</b> — central AI service for B &amp; C; only component that reaches the models <span class="pill ecs">Azure</span></li>
+   <li><b>Azure-hosted vector store</b> — embedded dispatch-parts history index (C) &middot; optional future similar-incident index (B) <span class="pill ecs">Azure</span></li>
+   <li><b>Azure Notification Hubs</b> — outbound push to technician phones (APNs / FCM); worker &rarr; Notification Hubs &rarr; Mobile App <span class="pill ecs">Azure</span></li>
+   <li><b>.NET additions</b> — AI-proxy route (B, C) + Container Apps scale-monitor route (A) on the existing Microservices API <span class="pill ecs">Azure</span></li>
+   <li><b>LiteLLM Gateway + self-hosted LLM + embedding</b> — private model infra, client hardware <span class="pill office">on-prem</span></li>
+   <li><b>Google Gemini</b> — managed fallback only, not primary <span class="pill office">external</span></li>
+   <li><b>Observability &amp; Tracing</b> — OpenTelemetry traces + logs into Azure Monitor <span class="pill ecs">Azure</span></li>
+  </ul>
+ </div>
+
+</div>
+
+<div class="counts">
+ <div class="count"><div class="n">2</div><div class="l">new compute servers<br>Container Apps workers (0&ndash;1) + Container Apps AI server</div></div>
+ <div class="count"><div class="n">2</div><div class="l">new data stores<br>Azure Cache for Redis + Azure-hosted vector store</div></div>
+ <div class="count"><div class="n">3</div><div class="l">off-cloud model entities<br>LiteLLM + self-hosted LLM + embedding</div></div>
+ <div class="count"><div class="n">1</div><div class="l">external backup<br>Google Gemini (fallback only)</div></div>
+</div>
+
+<div class="callout azure">
+  <b>Cross-cloud dependency:</b> the Azure VM (.NET API host) and both new Azure Container Apps
+  tiers &mdash; Auto-Dispatch workers and the FastAPI AI server &mdash; all read and write the same
+  <b>AWS SQL Server</b> database. Until that database itself migrates, every one of those calls
+  crosses a cloud boundary:
+  <ul style="margin:10px 0 0 20px;padding:0;">
+    <li style="margin:6px 0"><b>Network path:</b> target state is a site-to-site VPN or VNet-to-VPC
+    private peering between the Azure subscription and the AWS VPC; until that's provisioned, the
+    fallback is a public SQL Server endpoint locked down by IP allow-listing and TLS 1.2+.</li>
+    <li style="margin:6px 0"><b>Added latency:</b> every dispatch read/write (A) and every
+    <code>ai.*</code> read/write (B, C) pays inter-cloud round-trip time on top of same-region
+    latency &mdash; this has to be budgeted into the P95 targets in &sect;9 Observability &amp; Evals,
+    especially for the Auto-Dispatch worker loop's per-request SQL calls.</li>
+    <li style="margin:6px 0"><b>Cost:</b> AWS bills egress on data leaving the VPC toward Azure on
+    every query; that cross-cloud data-transfer line scales with dispatch/summary/parts-lookup
+    volume and belongs in &sect;10 Cost Projection alongside compute.</li>
+    <li style="margin:6px 0"><b>Single seam:</b> this database is the <i>only</i> place Stream 1
+    still touches AWS &mdash; everything else in this section is Azure or on-prem. If the link goes
+    down, all three use cases fall back to their existing manual path (phone-dispatch, forms without
+    AI assist, no parts search) rather than failing silently.</li>
+  </ul>
+</div>
 </section>
 
 <section id="s5">
