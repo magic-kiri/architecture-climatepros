@@ -48,7 +48,7 @@ Tolerance.</p>
 <ul>
 <li><b>Azure Cache for Redis</b> cluster up, and <b>create the consumer group</b>
 (<code>XGROUP CREATE dispatch:stream &hellip;</code>) &mdash; workers cannot read the stream until it
-exists (&sect;6 Redis Data Structures).</li>
+exists (&sect;7 Data &amp; Schema &middot; Azure Cache for Redis structures).</li>
 <li><b>Azure Container Apps</b> ready: worker image pushed to the registry, container app definition
 (1&nbsp;vCPU&nbsp;/&nbsp;2&nbsp;GB), scale 0&#8596;N policy.</li>
 <li><b>Azure Notification Hubs</b> registrations created &mdash; one APNs (Apple <code>.p8</code> key),
@@ -141,7 +141,7 @@ already provides (e.g. redeploy the previous image/revision).</li>
 <div class="s11-phase red card">
 <h4>How a crashed or slow worker is handled</h4>
 <p>A dispatch request is handed to one worker to process. The system tracks that the request is
-"handed out but not yet finished" (&sect;6 Redis Data Structures). When the worker finishes, it marks
+"handed out but not yet finished" (&sect;7 Data &amp; Schema &middot; Azure Cache for Redis structures). When the worker finishes, it marks
 the request done and the request clears. The goal: never lose a request if a worker dies, and never
 process the same request twice.</p>
 <ol>
