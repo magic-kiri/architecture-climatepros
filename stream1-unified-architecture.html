@@ -251,6 +251,67 @@
  .pill.shared{background:var(--green-soft);color:var(--green-dark);}
  .pill.only-a{background:var(--amber-soft);color:var(--amber-dark);}
  .pill.only-bc{background:var(--purple-soft);color:var(--purple-dark);}
+
+ /* -- §5 Operational Flows: shared chain/card component (.opsflow-*), namespaced so its generic-sounding --
+    class names (card/trigger/node/step/decision/end/loop) never collide with the rest of the document.     --
+    Reused across A's assignment loop, B's three-flow flywheel, and C's four-source find/allocate chain.    -- */
+ .opsflow-cards{display:grid;grid-template-columns:repeat(3,1fr);gap:20px;margin:20px 0;}
+ @media(max-width:960px){.opsflow-cards{grid-template-columns:1fr;}}
+ .opsflow-cards.opsflow-solo{grid-template-columns:1fr;max-width:580px;margin:20px auto;}
+ .opsflow-card{background:var(--surface);border:1px solid var(--border);border-radius:14px;padding:20px 20px 24px;box-shadow:0 1px 2px rgba(15,23,42,.05);}
+ .opsflow-card-head{display:flex;align-items:center;gap:9px;font-size:15px;font-weight:700;margin-bottom:10px;}
+ .opsflow-trigger{display:inline-block;font-size:10.5px;font-weight:800;letter-spacing:.04em;text-transform:uppercase;padding:3px 10px;border-radius:999px;margin-bottom:14px;}
+ .opsflow-trigger.blue{background:var(--blue-soft);color:var(--primary-dark);}
+ .opsflow-trigger.amber{background:var(--amber-soft);color:var(--amber-dark);}
+ .opsflow-trigger.green{background:var(--green-soft);color:var(--green-dark);}
+ .opsflow-trigger.violet{background:var(--purple-soft);color:var(--purple-dark);}
+
+ .opsflow-chain{display:flex;flex-direction:column;gap:0;}
+ .opsflow-node{border:1.5px solid var(--border);border-radius:12px;padding:12px 14px;background:#fff;position:relative;}
+ .opsflow-node.blue{border-color:var(--blue);}
+ .opsflow-node.amber{border-color:var(--amber);}
+ .opsflow-node.green{border-color:var(--green);}
+ .opsflow-node.red{border-color:var(--red);}
+ .opsflow-node.violet{border-color:var(--purple);}
+ .opsflow-node .opsflow-body{display:flex;align-items:flex-start;gap:9px;}
+ .opsflow-step{display:inline-flex;align-items:center;justify-content:center;width:22px;height:22px;border-radius:50%;font-size:12px;font-weight:700;color:#fff;flex:none;background:var(--text-muted);}
+ .opsflow-step.icon{background:transparent!important;font-size:17px;}
+ .opsflow-node.blue .opsflow-step{background:var(--blue);}
+ .opsflow-node.amber .opsflow-step{background:var(--amber);}
+ .opsflow-node.green .opsflow-step{background:var(--green);}
+ .opsflow-node.red .opsflow-step{background:var(--red);}
+ .opsflow-node.violet .opsflow-step{background:var(--purple);}
+ .opsflow-txt{font-size:13.5px;font-weight:600;color:var(--text);}
+ .opsflow-txt small{display:block;font-weight:500;color:var(--text-muted);font-size:12px;margin-top:3px;}
+ .opsflow-conn{display:flex;justify-content:center;height:24px;}
+ .opsflow-conn svg{opacity:.7;}
+ .opsflow-tag{display:inline-block;font-size:10px;font-weight:700;padding:2px 7px;border-radius:999px;margin-left:7px;vertical-align:middle;white-space:nowrap;}
+ .opsflow-tag.amber{background:var(--amber-soft);color:var(--amber-dark);}
+ .opsflow-tag.blue{background:var(--blue-soft);color:var(--primary-dark);}
+
+ .opsflow-decision{align-self:center;width:104px;height:104px;display:flex;align-items:center;justify-content:center;text-align:center;transform:rotate(45deg);border:1.5px solid var(--blue);background:var(--blue-soft);border-radius:12px;margin:18px auto;}
+ .opsflow-decision.violet{border-color:var(--purple);background:var(--purple-soft);}
+ .opsflow-decision-inner{transform:rotate(-45deg);font-size:11px;line-height:1.35;font-weight:700;color:var(--primary-dark);padding:0 6px;}
+ .opsflow-decision.violet .opsflow-decision-inner{color:var(--purple-dark);}
+ .opsflow-branch-arms{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin:4px 0 2px;text-align:center;}
+ .opsflow-arm{font-size:10.5px;font-weight:800;letter-spacing:.04em;}
+ .opsflow-arm.no{color:var(--text-muted);}
+ .opsflow-arm.yes{color:var(--green);}
+ .opsflow-branches{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-top:4px;}
+ .opsflow-end{border-radius:999px;padding:10px 13px;text-align:center;font-size:12px;font-weight:700;border:1.5px dashed var(--border);color:var(--text-muted);background:#fff;}
+ .opsflow-end.go{border-style:solid;border-color:var(--green);color:var(--green-dark);background:var(--green-soft);}
+ .opsflow-end.move{border-style:solid;border-color:var(--amber);color:var(--amber-dark);background:var(--amber-soft);}
+ .opsflow-end.amber{border-style:solid;border-color:var(--amber);color:var(--amber-dark);background:var(--amber-soft);}
+
+ .opsflow-loop{position:relative;padding-left:40px;margin-top:18px;}
+ .opsflow-loop::before{content:"";position:absolute;left:10px;top:14px;bottom:66px;width:20px;border:2.5px solid var(--amber);border-right:none;border-radius:12px 0 0 12px;}
+ .opsflow-loop::after{content:"";position:absolute;left:28px;top:8px;width:0;height:0;border:6px solid transparent;border-left-color:var(--amber);}
+ .opsflow-loop-tag{position:absolute;left:2px;top:-4px;white-space:nowrap;font-size:9.5px;font-weight:800;color:var(--amber-dark);letter-spacing:.02em;}
+
+ .callout.amber{background:var(--amber-soft);border-color:var(--amber-line);color:var(--text);}
+ .callout.amber b{color:var(--amber-dark);}
+ .callout.warn{background:var(--red-soft);border-color:var(--red-line);color:var(--text);}
+ .callout.warn b{color:var(--red);}
 </style>
 </head>
 <body>
@@ -1179,7 +1240,419 @@ stays on AWS: see the callout below.</p>
 
 <section id="s5">
 <h2>5. Operational Flows</h2>
-<!-- filled in Task 7 -->
+<p>The request/response mechanics for each use case, trigger to outcome. A is a closed-loop dispatch
+cascade with a hard timeout and human escalation; B is a technician-facing UX flow, shown both before
+and after the copilot, plus the background flywheel that feeds each visit's data into the next; C is
+the ordered, multi-source parts search that backs the mobile app's "source &amp; allocate" step.
+Companion to &sect;2 Architecture and &sect;3 Technology Stack &mdash; component-level detail (Redis
+Streams, division locks, Container Apps task walkthroughs) lives there; this section is the process
+view.</p>
+
+<h3><span class="chip">A</span> Auto-Dispatch &mdash; Assignment Loop</h3>
+<p>One dispatch, start to finish: a new job only enters the queue for divisions with auto-dispatch
+turned on, then works down a ranked shortlist until a technician accepts or the shortlist runs out.
+Adapted from <b>system-design.html &sect;7 Operational Flows</b> and <b>&sect;8 Ranking Algorithm</b>;
+the admin Enable/Disable toggle is covered by the scale ON/OFF walkthrough in &sect;2.</p>
+
+<div class="opsflow-cards opsflow-solo">
+<div class="opsflow-card">
+<div class="opsflow-card-head">&#128260; New Dispatch &rarr; Assignment</div>
+<span class="opsflow-trigger blue">Trigger &middot; dispatch created</span>
+<div class="opsflow-chain">
+
+<div class="opsflow-node blue"><div class="opsflow-body"><span class="opsflow-step">1</span><span class="opsflow-txt">New dispatch appears<small>request hits Server A on the Azure VM</small></span></div></div>
+<div class="opsflow-conn"><svg width="18" height="24"><path d="M9 0v16M3 12l6 6 6-6" fill="none" stroke="#2563eb" stroke-width="2"/></svg></div>
+
+<div class="opsflow-decision"><div class="opsflow-decision-inner">Division has<br>auto-dispatch<br>enabled?</div></div>
+<div class="opsflow-branch-arms">
+  <div class="opsflow-arm no">NO</div>
+  <div class="opsflow-arm yes">YES</div>
+</div>
+<div class="opsflow-branches">
+  <div class="opsflow-end">Do nothing<br><small style="font-weight:500">manual dispatch flow, unchanged</small></div>
+  <div class="opsflow-end go">Push dispatch id<br>&rarr; Redis Stream</div>
+</div>
+
+<div class="opsflow-conn"><svg width="18" height="24"><path d="M9 0v16M3 12l6 6 6-6" fill="none" stroke="#d97706" stroke-width="2"/></svg></div>
+<div class="opsflow-node amber"><div class="opsflow-body"><span class="opsflow-step icon">&#128230;</span><span class="opsflow-txt">Azure Container Apps pool picks up the dispatch<small>a task consumes it from the stream (<code>XREADGROUP</code>) after winning the per-division lock &mdash; see &sect;2 for the multi-task walkthrough</small></span></div></div>
+<div class="opsflow-conn"><svg width="18" height="24"><path d="M9 0v16M3 12l6 6 6-6" fill="none" stroke="#7c3aed" stroke-width="2"/></svg></div>
+
+<div class="opsflow-node violet"><div class="opsflow-body"><span class="opsflow-step" style="background:var(--purple)">1</span><span class="opsflow-txt">Get nearby technicians<small>build the candidate list + each tech's distance from the jobsite</small></span></div></div>
+<div class="opsflow-conn"><svg width="18" height="24"><path d="M9 0v16M3 12l6 6 6-6" fill="none" stroke="#7c3aed" stroke-width="2"/></svg></div>
+
+<div class="opsflow-node violet"><div class="opsflow-body"><span class="opsflow-step" style="background:var(--purple)">2</span><span class="opsflow-txt">Ask each technician for availability<span class="opsflow-tag amber">parallel</span><span class="opsflow-tag blue">~1 min window</span><small>fan out to every candidate at once; collect &ldquo;when can you be there&rdquo; replies within the window</small></span></div></div>
+<div class="opsflow-conn"><svg width="18" height="24"><path d="M9 0v16M3 12l6 6 6-6" fill="none" stroke="#7c3aed" stroke-width="2"/></svg></div>
+
+<div class="opsflow-node violet"><div class="opsflow-body"><span class="opsflow-step" style="background:var(--purple)">3</span><span class="opsflow-txt">Rank the technicians<small>score by dispatch priority, ETA and familiarity &rarr; one ordered shortlist</small></span></div></div>
+<div class="opsflow-conn"><svg width="18" height="24"><path d="M9 0v16M3 12l6 6 6-6" fill="none" stroke="#7c3aed" stroke-width="2"/></svg></div>
+
+<div class="opsflow-loop">
+<span class="opsflow-loop-tag">&#8635; retry</span>
+<div class="opsflow-node violet"><div class="opsflow-body"><span class="opsflow-step" style="background:var(--purple)">4</span><span class="opsflow-txt">Offer to the top-ranked technician<span class="opsflow-tag blue">30s to respond</span><small>push the offer to the current #1 on the shortlist via Azure Notification Hubs</small></span></div></div>
+<div class="opsflow-conn"><svg width="18" height="24"><path d="M9 0v16M3 12l6 6 6-6" fill="none" stroke="#7c3aed" stroke-width="2"/></svg></div>
+<div class="opsflow-decision violet"><div class="opsflow-decision-inner">Accepts<br>within 30s?</div></div>
+<div class="opsflow-branch-arms">
+  <div class="opsflow-arm" style="color:var(--amber-dark)">NO / TIMEOUT</div>
+  <div class="opsflow-arm yes">YES</div>
+</div>
+<div class="opsflow-branches">
+  <div class="opsflow-end move">Move to next ranked tech<br><small style="font-weight:500">&#8635; loop back to step 4</small></div>
+  <div class="opsflow-end go">Assigned &#10003;<br><small style="font-weight:500">exit the loop</small></div>
+</div>
+</div>
+
+<div class="opsflow-conn"><svg width="18" height="24"><path d="M9 0v16M3 12l6 6 6-6" fill="none" stroke="#dc2626" stroke-width="2"/></svg></div>
+<div class="opsflow-node red"><div class="opsflow-body"><span class="opsflow-step" style="background:var(--red)">5</span><span class="opsflow-txt">Shortlist exhausted &mdash; no technician accepted<small>hand the request to a human dispatcher for manual assignment</small></span></div></div>
+
+</div>
+</div>
+</div>
+
+<div class="callout azure"><b>Timeout rule:</b> the worker's reply-wait timeout has to stay below the
+division lock's TTL. On timeout the worker escalates to the next technician on the shortlist; the
+division lock is never lost mid-flight.</div>
+
+<h4>Notification Hubs round-trip</h4>
+<p style="font-size:13.5px;color:var(--text-muted);margin:0 0 4px">The mechanics behind step&nbsp;4's
+push &mdash; fire-and-forget out, a different path back in. Component-level diagram: &sect;2 &middot;
+Use Case A &middot; step&nbsp;3.</p>
+<div class="flow-step"><div class="flow-num">1</div><div class="flow-content"><h4>Worker publishes the offer</h4><p>The winning Container Apps worker calls Azure Notification Hubs Send with the technician's device installation id and the offer payload <code>{dispatchId, techId, job}</code>.</p></div></div>
+<div class="flow-step"><div class="flow-num">2</div><div class="flow-content"><h4>Push is delivered</h4><p>Notification Hubs fans the message out through APNs (iOS) or FCM (Android) straight to the technician's phone.</p></div></div>
+<div class="flow-step"><div class="flow-num">3</div><div class="flow-content"><h4>Technician responds</h4><p>Tapping Accept/Reject in the FieldJetX app POSTs the reply to the Azure VM API, which de-dupes with <code>SETNX resp:done</code> and <code>LPUSH</code>es it onto a per-technician Redis reply list.</p></div></div>
+<div class="flow-step"><div class="flow-num">4</div><div class="flow-content"><h4>Worker wakes instantly</h4><p>The same worker that sent the offer is already blocked on <code>BLPOP</code> for that key &mdash; no polling, no delay.</p></div></div>
+<div class="flow-step"><div class="flow-num">5</div><div class="flow-content"><h4>Rank &amp; assign</h4><p>On Accept the worker writes the assignment to SQL Server, releases the division lock, and <code>XACK</code>s the stream message &mdash; closing the loop.</p></div></div>
+
+<h3 style="margin-top:38px"><span class="chip">B</span> Job Summarisation &mdash; Technician Flow</h3>
+<p>The same close-out visit, shown twice: the manual process technicians use today, and the same steps
+with the copilot layered on top &mdash; plus the background flywheel that turns every clean ticket into
+better history for the next technician. Adapted from <b>usecase-b-architecture.html &sect;4</b>,
+<b>&sect;5</b> and <b>&sect;7</b>.</p>
+
+<h4>Today &middot; without AI</h4>
+<p style="font-size:13.5px;color:var(--text-muted);margin:0 0 10px">How a service visit works in the
+mobile app today. It works end to end, but leaves value on the table at three points: technicians
+arrive without the site's history, every record is typed by hand, and quality issues surface only
+after the technician has left. <span style="color:#dc2626;font-weight:600">Red marks where those costs
+arise.</span></p>
+<div class="diagram-frame">
+<svg viewBox="0 0 1075 400" width="100%" style="min-width:950px; font-family:inherit;">
+<defs>
+<marker id="cf-b" markerWidth="9" markerHeight="9" refX="6" refY="3" orient="auto"><path d="M0,0 L6,3 L0,6 Z" fill="#2563eb"/></marker>
+<marker id="cf-r" markerWidth="9" markerHeight="9" refX="6" refY="3" orient="auto"><path d="M0,0 L6,3 L0,6 Z" fill="#dc2626"/></marker>
+</defs>
+
+<text x="26" y="160" text-anchor="middle" font-size="11" font-weight="800" fill="#94a3b8" letter-spacing="2" transform="rotate(-90 26 160)">TECH &middot; IN THE APP</text>
+<text x="26" y="330" text-anchor="middle" font-size="11" font-weight="800" fill="#dc2626" letter-spacing="2" transform="rotate(-90 26 330)">PAIN TODAY</text>
+
+<!-- S1 -->
+<rect x="46" y="90" width="132" height="122" rx="12" fill="#eff4ff" stroke="#2563eb" stroke-width="1.8"/>
+<text x="112" y="120" text-anchor="middle" font-size="12" font-weight="700" fill="#0f3a8e">&#128242; Dispatch</text>
+<text x="112" y="136" text-anchor="middle" font-size="12" font-weight="700" fill="#0f3a8e">assigned</text>
+<text x="112" y="158" text-anchor="middle" font-size="9.5" fill="#64748b">push notification</text>
+<text x="112" y="172" text-anchor="middle" font-size="9.5" fill="#64748b">address &middot; reason &middot; priority</text>
+<!-- S2 -->
+<rect x="196" y="90" width="132" height="122" rx="12" fill="#eff4ff" stroke="#2563eb" stroke-width="1.8"/>
+<text x="262" y="120" text-anchor="middle" font-size="12" font-weight="700" fill="#0f3a8e">&#128196; Opens dispatch</text>
+<text x="262" y="146" text-anchor="middle" font-size="9.5" fill="#64748b">history exists in the app &middot;</text>
+<text x="262" y="160" text-anchor="middle" font-size="9.5" fill="#64748b">the tech goes through it</text>
+<text x="262" y="174" text-anchor="middle" font-size="9.5" fill="#64748b">manually, one by one</text>
+<!-- S3 -->
+<rect x="346" y="90" width="132" height="122" rx="12" fill="#eff4ff" stroke="#2563eb" stroke-width="1.8"/>
+<text x="412" y="126" text-anchor="middle" font-size="12" font-weight="700" fill="#0f3a8e">&#128295; On-site repair</text>
+<text x="412" y="159" text-anchor="middle" font-size="9.5" fill="#64748b">diagnose from scratch &middot;</text>
+<text x="412" y="173" text-anchor="middle" font-size="9.5" fill="#64748b">maybe call the office</text>
+<!-- S4 -->
+<rect x="496" y="90" width="132" height="122" rx="12" fill="#eff4ff" stroke="#2563eb" stroke-width="1.8"/>
+<text x="562" y="120" text-anchor="middle" font-size="12" font-weight="700" fill="#0f3a8e">&#128221; Close-job</text>
+<text x="562" y="136" text-anchor="middle" font-size="12" font-weight="700" fill="#0f3a8e">wizard</text>
+<text x="562" y="152" text-anchor="middle" font-size="9.5" fill="#64748b">reason &middot; parts &middot; forms &middot;</text>
+<text x="562" y="166" text-anchor="middle" font-size="9.5" fill="#64748b">time &middot; notes &middot;</text>
+<text x="562" y="180" text-anchor="middle" font-size="9.5" fill="#64748b">all typed by hand &middot;</text>
+<text x="562" y="194" text-anchor="middle" font-size="9.5" fill="#64748b">time consuming</text>
+<!-- S5 -->
+<rect x="646" y="90" width="132" height="122" rx="12" fill="#eff4ff" stroke="#2563eb" stroke-width="1.8"/>
+<text x="712" y="126" text-anchor="middle" font-size="12" font-weight="700" fill="#0f3a8e">&#128064; Review page</text>
+<text x="712" y="152" text-anchor="middle" font-size="9.5" fill="#64748b">a plain recap of what</text>
+<text x="712" y="166" text-anchor="middle" font-size="9.5" fill="#64748b">was entered &middot; nothing</text>
+<text x="712" y="180" text-anchor="middle" font-size="9.5" fill="#64748b">checks quality or gaps</text>
+<!-- S6 -->
+<rect x="796" y="90" width="112" height="122" rx="12" fill="#ecfdf5" stroke="#059669" stroke-width="2"/>
+<text x="852" y="126" text-anchor="middle" font-size="12" font-weight="700" fill="#047857">&#9989; Submit</text>
+<text x="852" y="152" text-anchor="middle" font-size="9.5" fill="#64748b">mobile-post &middot;</text>
+<text x="852" y="166" text-anchor="middle" font-size="9.5" fill="#64748b">whatever was typed</text>
+<text x="852" y="180" text-anchor="middle" font-size="9.5" fill="#64748b">is now the record</text>
+<!-- S7 (pain outcome) -->
+<rect x="928" y="90" width="130" height="122" rx="12" fill="#fef2f2" stroke="#dc2626" stroke-width="2"/>
+<text x="993" y="120" text-anchor="middle" font-size="12" font-weight="700" fill="#b91c1c">&#128222; Days later</text>
+<text x="993" y="146" text-anchor="middle" font-size="9.5" fill="#64748b">office review finds missing</text>
+<text x="993" y="160" text-anchor="middle" font-size="9.5" fill="#64748b">refrigerant data / photos &middot;</text>
+<text x="993" y="174" text-anchor="middle" font-size="9.5" fill="#64748b">call the tech &middot; maybe</text>
+<text x="993" y="188" text-anchor="middle" font-size="9.5" fill="#64748b">a return visit</text>
+
+<!-- arrows -->
+<path d="M178 151 H 192" stroke="#94a3b8" stroke-width="2" marker-end="url(#cf-b)"/>
+<path d="M328 151 H 342" stroke="#94a3b8" stroke-width="2" marker-end="url(#cf-b)"/>
+<path d="M478 151 H 492" stroke="#94a3b8" stroke-width="2" marker-end="url(#cf-b)"/>
+<path d="M628 151 H 642" stroke="#94a3b8" stroke-width="2" marker-end="url(#cf-b)"/>
+<path d="M778 151 H 792" stroke="#94a3b8" stroke-width="2" marker-end="url(#cf-b)"/>
+<path d="M910 151 H 924" stroke="#dc2626" stroke-width="2" marker-end="url(#cf-r)"/>
+
+<!-- pain strip -->
+<rect x="120" y="280" width="220" height="86" rx="12" fill="#fef2f2" stroke="#dc2626" stroke-width="1.5" stroke-dasharray="6 4"/>
+<text x="230" y="306" text-anchor="middle" font-size="10.5" font-weight="700" fill="#b91c1c">Goes in cold</text>
+<text x="230" y="326" text-anchor="middle" font-size="9" fill="#7f1d1d">9 previous visits' knowledge sits in the DB &middot;</text>
+<text x="230" y="340" text-anchor="middle" font-size="9" fill="#7f1d1d">time consuming and manual to review on site</text>
+<path d="M230 276 V 220" stroke="#dc2626" stroke-width="1.4" stroke-dasharray="4 4" marker-end="url(#cf-r)"/>
+
+<rect x="452" y="280" width="220" height="86" rx="12" fill="#fef2f2" stroke="#dc2626" stroke-width="1.5" stroke-dasharray="6 4"/>
+<text x="562" y="306" text-anchor="middle" font-size="10.5" font-weight="700" fill="#b91c1c">Quality = whoever is typing</text>
+<text x="562" y="326" text-anchor="middle" font-size="9" fill="#7f1d1d">"Fixed unit." and a perfect write-up</text>
+<text x="562" y="340" text-anchor="middle" font-size="9" fill="#7f1d1d">are both accepted the same way</text>
+<path d="M562 276 V 220" stroke="#dc2626" stroke-width="1.4" stroke-dasharray="4 4" marker-end="url(#cf-r)"/>
+
+<rect x="700" y="280" width="200" height="86" rx="12" fill="#fef2f2" stroke="#dc2626" stroke-width="1.5" stroke-dasharray="6 4"/>
+<text x="800" y="306" text-anchor="middle" font-size="10.5" font-weight="700" fill="#b91c1c">No validation before submit</text>
+<text x="800" y="326" text-anchor="middle" font-size="9" fill="#7f1d1d">missing required fields and unmet</text>
+<text x="800" y="340" text-anchor="middle" font-size="9" fill="#7f1d1d">site procedures sail straight through</text>
+<path d="M800 276 V 220" stroke="#dc2626" stroke-width="1.4" stroke-dasharray="4 4" marker-end="url(#cf-r)"/>
+
+<rect x="920" y="280" width="140" height="86" rx="12" fill="#fef2f2" stroke="#dc2626" stroke-width="1.5" stroke-dasharray="6 4"/>
+<text x="990" y="306" text-anchor="middle" font-size="10.5" font-weight="700" fill="#b91c1c">Found when it's</text>
+<text x="990" y="320" text-anchor="middle" font-size="10.5" font-weight="700" fill="#b91c1c">expensive</text>
+<text x="990" y="340" text-anchor="middle" font-size="9" fill="#7f1d1d">call-backs &middot; return visits</text>
+<path d="M990 276 V 220" stroke="#dc2626" stroke-width="1.4" stroke-dasharray="4 4" marker-end="url(#cf-r)"/>
+</svg>
+</div>
+
+<h4>With the AI Copilot</h4>
+<p style="font-size:13.5px;color:var(--text-muted);margin:0 0 10px">The same visit with the copilot in
+place. The technician's journey doesn't change; the AI works alongside it &mdash; preparing a briefing
+before arrival, drafting the paperwork, and checking the ticket before submit.
+<span style="color:#2563eb;font-weight:600">Blue = technician action</span> &middot;
+<span style="color:#d97706;font-weight:600">amber = AI-assisted step</span>.</p>
+<div class="diagram-frame">
+<svg viewBox="0 0 1075 600" width="100%" style="min-width:950px; font-family:inherit;">
+<defs>
+<marker id="uf-b" markerWidth="9" markerHeight="9" refX="6" refY="3" orient="auto"><path d="M0,0 L6,3 L0,6 Z" fill="#2563eb"/></marker>
+<marker id="uf-a" markerWidth="9" markerHeight="9" refX="6" refY="3" orient="auto"><path d="M0,0 L6,3 L0,6 Z" fill="#d97706"/></marker>
+<marker id="uf-a-r" markerWidth="9" markerHeight="9" refX="1" refY="3" orient="auto"><path d="M6,0 L0,3 L6,6 Z" fill="#d97706"/></marker>
+</defs>
+
+<text x="26" y="170" text-anchor="middle" font-size="11" font-weight="800" fill="#94a3b8" letter-spacing="2" transform="rotate(-90 26 170)">TECH &middot; IN THE APP</text>
+<text x="26" y="465" text-anchor="middle" font-size="11" font-weight="800" fill="#d97706" letter-spacing="2" transform="rotate(-90 26 465)">AI &middot; BEHIND THE SCENES</text>
+
+<!-- gap re-analyse loop -->
+<path d="M857 92 C 857 52, 707 52, 707 92" fill="none" stroke="#d97706" stroke-width="1.8" stroke-dasharray="5 4" marker-end="url(#uf-a)"/>
+<text x="782" y="48" text-anchor="middle" font-size="10" font-weight="600" fill="#b45309">&#8635; re-analyse until clean</text>
+
+<!-- ============ TOP LANE (tech) ============ -->
+<!-- S1 -->
+<rect x="46" y="100" width="132" height="122" rx="12" fill="#eff4ff" stroke="#2563eb" stroke-width="1.8"/>
+<text x="112" y="130" text-anchor="middle" font-size="12" font-weight="700" fill="#0f3a8e">&#128242; Dispatch</text>
+<text x="112" y="146" text-anchor="middle" font-size="12" font-weight="700" fill="#0f3a8e">assigned</text>
+<text x="112" y="168" text-anchor="middle" font-size="9.5" fill="#64748b">push notification</text>
+<text x="112" y="182" text-anchor="middle" font-size="9.5" fill="#64748b">briefing already being</text>
+<text x="112" y="194" text-anchor="middle" font-size="9.5" fill="#64748b">prepared in background</text>
+<!-- S2 (AI) -->
+<rect x="196" y="100" width="132" height="122" rx="12" fill="#fff7ed" stroke="#d97706" stroke-width="2"/>
+<text x="262" y="130" text-anchor="middle" font-size="12" font-weight="700" fill="#b45309">&#129517; Site Briefing</text>
+<text x="262" y="146" text-anchor="middle" font-size="12" font-weight="700" fill="#b45309">(Copilot)</text>
+<text x="262" y="168" text-anchor="middle" font-size="9.5" fill="#64748b">"past techs found a coil</text>
+<text x="262" y="180" text-anchor="middle" font-size="9.5" fill="#64748b">leak &middot; 3 top-ups recurred &middot;</text>
+<text x="262" y="192" text-anchor="middle" font-size="9.5" fill="#64748b">try leak-test first"</text>
+<!-- S3 -->
+<rect x="346" y="100" width="132" height="122" rx="12" fill="#eff4ff" stroke="#2563eb" stroke-width="1.8"/>
+<text x="412" y="136" text-anchor="middle" font-size="12" font-weight="700" fill="#0f3a8e">&#128295; On-site repair</text>
+<text x="412" y="162" text-anchor="middle" font-size="9.5" fill="#64748b">check-in &middot; diagnose</text>
+<text x="412" y="176" text-anchor="middle" font-size="9.5" fill="#64748b">&middot; do the work &middot;</text>
+<text x="412" y="190" text-anchor="middle" font-size="9.5" fill="#64748b">informed by the briefing</text>
+<!-- S4 (AI-assisted) -->
+<rect x="496" y="100" width="132" height="122" rx="12" fill="#fff7ed" stroke="#d97706" stroke-width="2"/>
+<text x="562" y="130" text-anchor="middle" font-size="12" font-weight="700" fill="#b45309">&#128221; Close-job</text>
+<text x="562" y="146" text-anchor="middle" font-size="12" font-weight="700" fill="#b45309">wizard</text>
+<text x="562" y="168" text-anchor="middle" font-size="9.5" fill="#64748b">reason &middot; parts &middot; forms &middot;</text>
+<text x="562" y="180" text-anchor="middle" font-size="9.5" fill="#64748b">time &middot; notes</text>
+<text x="562" y="194" text-anchor="middle" font-size="9.5" font-weight="700" fill="#d97706">&#10024; known values prefilled</text>
+<!-- S5 (AI) -->
+<rect x="646" y="100" width="132" height="122" rx="12" fill="#fff7ed" stroke="#d97706" stroke-width="2"/>
+<text x="712" y="130" text-anchor="middle" font-size="12" font-weight="700" fill="#b45309">&#129302; Review page</text>
+<text x="712" y="146" text-anchor="middle" font-size="12" font-weight="700" fill="#b45309">AI ticket</text>
+<text x="712" y="168" text-anchor="middle" font-size="9.5" fill="#64748b">12-section summary &middot;</text>
+<text x="712" y="180" text-anchor="middle" font-size="9.5" fill="#64748b">procedure checklist &middot;</text>
+<text x="712" y="192" text-anchor="middle" font-size="9.5" fill="#64748b">proceed guard</text>
+<!-- S6 (AI) -->
+<rect x="796" y="100" width="132" height="122" rx="12" fill="#fff7ed" stroke="#d97706" stroke-width="2"/>
+<text x="862" y="136" text-anchor="middle" font-size="12" font-weight="700" fill="#b45309">&#128681; Fix gaps</text>
+<text x="862" y="162" text-anchor="middle" font-size="9.5" fill="#64748b">"refrigerant amount</text>
+<text x="862" y="174" text-anchor="middle" font-size="9.5" fill="#64748b">missing" &middot; inline fields &middot;</text>
+<text x="862" y="188" text-anchor="middle" font-size="9.5" fill="#64748b">critical gaps block submit</text>
+<!-- S7 -->
+<rect x="946" y="100" width="112" height="122" rx="12" fill="#ecfdf5" stroke="#059669" stroke-width="2"/>
+<text x="1002" y="136" text-anchor="middle" font-size="12" font-weight="700" fill="#047857">&#9989; Submit</text>
+<text x="1002" y="162" text-anchor="middle" font-size="9.5" fill="#64748b">mobile-post &middot;</text>
+<text x="1002" y="176" text-anchor="middle" font-size="9.5" fill="#64748b">clean ticket reaches</text>
+<text x="1002" y="190" text-anchor="middle" font-size="9.5" fill="#64748b">office instantly</text>
+
+<!-- top lane arrows -->
+<path d="M178 161 H 192" stroke="#94a3b8" stroke-width="2" marker-end="url(#uf-b)"/>
+<path d="M328 161 H 342" stroke="#94a3b8" stroke-width="2" marker-end="url(#uf-b)"/>
+<path d="M478 161 H 492" stroke="#94a3b8" stroke-width="2" marker-end="url(#uf-b)"/>
+<path d="M628 161 H 642" stroke="#94a3b8" stroke-width="2" marker-end="url(#uf-b)"/>
+<path d="M778 161 H 792" stroke="#94a3b8" stroke-width="2" marker-end="url(#uf-b)"/>
+<path d="M928 161 H 942" stroke="#94a3b8" stroke-width="2" marker-end="url(#uf-b)"/>
+
+<!-- ============ BOTTOM LANE (AI) ============ -->
+<rect x="60" y="400" width="268" height="130" rx="12" fill="#fff" stroke="#d97706" stroke-width="1.8" stroke-dasharray="6 4"/>
+<text x="194" y="428" text-anchor="middle" font-size="12" font-weight="700" fill="#b45309">&#129517; Briefing builder (Layer 4)</text>
+<text x="194" y="450" text-anchor="middle" font-size="9.5" fill="#64748b">SQL: this site's past visit digests</text>
+<text x="194" y="464" text-anchor="middle" font-size="9.5" fill="#64748b">SQL: 2&ndash;3 similar past issues (deterministic)</text>
+<text x="194" y="478" text-anchor="middle" font-size="9.5" fill="#64748b">procedures fetched live</text>
+<text x="194" y="496" text-anchor="middle" font-size="9.5" font-weight="600" fill="#b45309">LLM &rarr; briefing card &middot; cached, instant open</text>
+
+<rect x="466" y="400" width="162" height="130" rx="12" fill="#fff" stroke="#d97706" stroke-width="1.8"/>
+<text x="547" y="428" text-anchor="middle" font-size="12" font-weight="700" fill="#b45309">&#10024; Prefill + Summarisation</text>
+<text x="547" y="448" text-anchor="middle" font-size="9.5" fill="#64748b">dispatch + equipment data fill</text>
+<text x="547" y="462" text-anchor="middle" font-size="9.5" fill="#64748b">known fields &middot; tech only types</text>
+<text x="547" y="476" text-anchor="middle" font-size="9.5" fill="#64748b">what's new &middot; summary drafted</text>
+<text x="547" y="490" text-anchor="middle" font-size="9.5" fill="#64748b">from the wizard answers</text>
+
+<rect x="646" y="400" width="200" height="130" rx="12" fill="#fff" stroke="#d97706" stroke-width="1.8"/>
+<text x="746" y="428" text-anchor="middle" font-size="12" font-weight="700" fill="#b45309">&#129302; Analyse pipeline</text>
+<text x="746" y="450" text-anchor="middle" font-size="9.5" fill="#64748b">enrich (FjxApi) &rarr; summarise &rarr;</text>
+<text x="746" y="464" text-anchor="middle" font-size="9.5" fill="#64748b">procedure checks (&le;10) &rarr;</text>
+<text x="746" y="478" text-anchor="middle" font-size="9.5" fill="#64748b">gap findings &rarr; remediation fields</text>
+
+<rect x="884" y="400" width="174" height="130" rx="12" fill="#fff" stroke="#059669" stroke-width="1.8"/>
+<text x="971" y="428" text-anchor="middle" font-size="12" font-weight="700" fill="#047857">&#128190; Persist + learn</text>
+<text x="971" y="450" text-anchor="middle" font-size="9.5" fill="#64748b">ai.* tables: summary, calls,</text>
+<text x="971" y="464" text-anchor="middle" font-size="9.5" fill="#64748b">edits &rarr; eval dataset &middot;</text>
+<text x="971" y="478" text-anchor="middle" font-size="9.5" fill="#64748b">this visit becomes history</text>
+<text x="971" y="492" text-anchor="middle" font-size="9.5" fill="#64748b">for the next briefing</text>
+
+<!-- connectors -->
+<path d="M112 222 V 396" stroke="#d97706" stroke-width="1.6" stroke-dasharray="5 4" marker-end="url(#uf-a)"/>
+<text x="100" y="310" text-anchor="middle" font-size="9.5" font-weight="600" fill="#b45309" transform="rotate(-90 100 310)">assignment event</text>
+<path d="M262 396 V 226" stroke="#d97706" stroke-width="1.6" stroke-dasharray="5 4" marker-end="url(#uf-a)"/>
+<text x="250" y="310" text-anchor="middle" font-size="9.5" font-weight="600" fill="#b45309" transform="rotate(-90 250 310)">briefing shown</text>
+<path d="M547 396 V 226" stroke="#d97706" stroke-width="1.6" stroke-dasharray="5 4" marker-end="url(#uf-a)"/>
+<text x="535" y="310" text-anchor="middle" font-size="9.5" font-weight="600" fill="#b45309" transform="rotate(-90 535 310)">prefill + draft summary</text>
+<path d="M712 226 V 396" stroke="#d97706" stroke-width="1.6" stroke-dasharray="5 4" marker-start="url(#uf-a-r)" marker-end="url(#uf-a)"/>
+<text x="700" y="310" text-anchor="middle" font-size="9.5" font-weight="600" fill="#b45309" transform="rotate(-90 700 310)">answers &#8645; ticket + gaps</text>
+<path d="M1002 222 V 396" stroke="#059669" stroke-width="1.6" stroke-dasharray="5 4" marker-end="url(#uf-a)"/>
+<text x="990" y="310" text-anchor="middle" font-size="9.5" font-weight="600" fill="#047857" transform="rotate(-90 990 310)">accepted summary</text>
+
+<!-- flywheel note -->
+<path d="M884 500 C 500 585, 240 570, 194 534" fill="none" stroke="#94a3b8" stroke-width="1.4" stroke-dasharray="4 4" marker-end="url(#uf-a)"/>
+<text x="540" y="575" text-anchor="middle" font-size="10" font-weight="600" fill="#64748b">the flywheel: every clean ticket becomes better history for the next tech's briefing</text>
+</svg>
+</div>
+
+<h4>Operational flow &mdash; the flywheel</h4>
+<p style="font-size:13.5px;color:var(--text-muted);margin:0 0 10px">Three flows drive the copilot day
+to day: building the site briefing at assignment time, the summarise-and-review loop when the
+technician closes the job, and the persist-and-learn path after submit.</p>
+
+<div class="opsflow-cards">
+
+<div class="opsflow-card">
+<div class="opsflow-card-head">&#129517; Site Briefing</div>
+<span class="opsflow-trigger amber">Trigger &middot; dispatch assigned</span>
+<div class="opsflow-chain">
+<div class="opsflow-node amber"><div class="opsflow-body"><span class="opsflow-step">1</span><span class="opsflow-txt">Assignment event received<small>Use Case A (or manual dispatch) assigns the job; the briefing builder starts in the background</small></span></div></div>
+<div class="opsflow-conn"><svg width="18" height="24"><path d="M9 0v16M3 12l6 6 6-6" fill="none" stroke="#d97706" stroke-width="2"/></svg></div>
+<div class="opsflow-node amber"><div class="opsflow-body"><span class="opsflow-step">2</span><span class="opsflow-txt">Gather this site's history<small>keyed SQL query over past visit digests: same customer, same site</small></span></div></div>
+<div class="opsflow-conn"><svg width="18" height="24"><path d="M9 0v16M3 12l6 6 6-6" fill="none" stroke="#d97706" stroke-width="2"/></svg></div>
+<div class="opsflow-node amber"><div class="opsflow-body"><span class="opsflow-step">3</span><span class="opsflow-txt">Find 2&ndash;3 similar past issues<small>deterministic SQL retrieval (same equipment type + problem code, most recent first); customer procedures fetched live, never cached</small></span></div></div>
+<div class="opsflow-conn"><svg width="18" height="24"><path d="M9 0v16M3 12l6 6 6-6" fill="none" stroke="#d97706" stroke-width="2"/></svg></div>
+<div class="opsflow-node amber"><div class="opsflow-body"><span class="opsflow-step">4</span><span class="opsflow-txt">LLM writes the briefing card<small>&ldquo;past techs found X &middot; issue recurred &middot; try Y first&rdquo; &middot; cached in <code>ai.*</code></small></span></div></div>
+<div class="opsflow-conn"><svg width="18" height="24"><path d="M9 0v16M3 12l6 6 6-6" fill="none" stroke="#d97706" stroke-width="2"/></svg></div>
+<div class="opsflow-end amber">&#9889; Opens instantly when the tech taps the dispatch</div>
+</div>
+</div>
+
+<div class="opsflow-card">
+<div class="opsflow-card-head">&#128221; Summarise &amp; Review</div>
+<span class="opsflow-trigger blue">Trigger &middot; tech reaches Review step</span>
+<div class="opsflow-chain">
+<div class="opsflow-node blue"><div class="opsflow-body"><span class="opsflow-step">1</span><span class="opsflow-txt">App compiles the wizard payload<small>zero extra API calls &middot; <code>POST /api/v1/summarise</code> through the .NET proxy</small></span></div></div>
+<div class="opsflow-conn"><svg width="18" height="24"><path d="M9 0v16M3 12l6 6 6-6" fill="none" stroke="#2563eb" stroke-width="2"/></svg></div>
+<div class="opsflow-node blue"><div class="opsflow-body"><span class="opsflow-step">2</span><span class="opsflow-txt">Enrich, prompt, generate<small>parallel fail-soft reads &rarr; versioned ticket standard &rarr; the LLM drafts the 12-section ticket + procedure checks</small></span></div></div>
+<div class="opsflow-conn"><svg width="18" height="24"><path d="M9 0v16M3 12l6 6 6-6" fill="none" stroke="#2563eb" stroke-width="2"/></svg></div>
+<div class="opsflow-decision"><div class="opsflow-decision-inner">Critical gaps<br>found?</div></div>
+<div class="opsflow-branch-arms">
+  <div class="opsflow-arm" style="color:var(--amber-dark)">YES</div>
+  <div class="opsflow-arm yes">NO</div>
+</div>
+<div class="opsflow-branches">
+  <div class="opsflow-end move">Fix inline<br><small style="font-weight:500">&#8635; re-analyse until clean</small></div>
+  <div class="opsflow-end go">Ticket clean<br><small style="font-weight:500">Submit enabled</small></div>
+</div>
+</div>
+</div>
+
+<div class="opsflow-card">
+<div class="opsflow-card-head">&#128190; Persist &amp; Learn</div>
+<span class="opsflow-trigger green">Trigger &middot; tech taps Submit</span>
+<div class="opsflow-chain">
+<div class="opsflow-node green"><div class="opsflow-body"><span class="opsflow-step">1</span><span class="opsflow-txt">Job write-back, unchanged<small>dispatch &middot; parts &middot; time &middot; notes flow through the existing <code>mobile-post</code> path</small></span></div></div>
+<div class="opsflow-conn"><svg width="18" height="24"><path d="M9 0v16M3 12l6 6 6-6" fill="none" stroke="#059669" stroke-width="2"/></svg></div>
+<div class="opsflow-node green"><div class="opsflow-body"><span class="opsflow-step">2</span><span class="opsflow-txt">AI output persisted<small>accepted summary &rarr; <code>ai.summaries</code>; every call already logged in <code>ai.llm_calls</code></small></span></div></div>
+<div class="opsflow-conn"><svg width="18" height="24"><path d="M9 0v16M3 12l6 6 6-6" fill="none" stroke="#059669" stroke-width="2"/></svg></div>
+<div class="opsflow-node green"><div class="opsflow-body"><span class="opsflow-step">3</span><span class="opsflow-txt">History refreshed<small>the closed dispatch immediately extends the SQL history and co-occurrence counts the next briefing and suggestions read; no scheduler, no pipeline</small></span></div></div>
+<div class="opsflow-conn"><svg width="18" height="24"><path d="M9 0v16M3 12l6 6 6-6" fill="none" stroke="#059669" stroke-width="2"/></svg></div>
+<div class="opsflow-node green"><div class="opsflow-body"><span class="opsflow-step">4</span><span class="opsflow-txt">Corrections become ground truth<small>any edits land in <code>ai.summary_edits</code> and feed the eval set</small></span></div></div>
+<div class="opsflow-conn"><svg width="18" height="24"><path d="M9 0v16M3 12l6 6 6-6" fill="none" stroke="#059669" stroke-width="2"/></svg></div>
+<div class="opsflow-end go">&#128260; This visit becomes the next tech's briefing</div>
+</div>
+</div>
+
+</div>
+
+<div class="callout amber"><b>The flywheel:</b> the three flows chain into a loop &mdash; what Persist
+&amp; Learn stores is exactly what Site Briefing retrieves for the next assignment, so every clean
+ticket makes the next technician's briefing better.</div>
+
+<h3 style="margin-top:38px"><span class="chip">C</span> Parts Finder &mdash; Find &amp; Allocate</h3>
+<p>For every requested part, the Source API returns every place it can be gathered &mdash; ordered so
+the technician takes the free stock first and only pays for the vendor tier when nothing else has it.
+This is the operational flow behind the mobile app's &ldquo;source &amp; allocate&rdquo; step
+(&sect;2 &middot; Use Case C already traces the Predict/RAG path that runs before it, steps 1&ndash;6).
+Adapted from <b>usecase-C-system-design.html &sect;8 Sourcing Algorithm</b>.</p>
+
+<div class="opsflow-cards opsflow-solo">
+<div class="opsflow-card">
+<div class="opsflow-card-head">&#128295; Four-Source Find &rarr; Allocate</div>
+<span class="opsflow-trigger blue">Trigger &middot; technician requests a part</span>
+<div class="opsflow-chain">
+
+<div class="opsflow-node blue"><div class="opsflow-body"><span class="opsflow-step" style="background:var(--blue)">1</span><span class="opsflow-txt">My truck<small>the technician's own van inventory &middot; 0&nbsp;mi &middot; free</small></span></div></div>
+<div class="opsflow-conn"><svg width="18" height="24"><path d="M9 0v16M3 12l6 6 6-6" fill="none" stroke="#2563eb" stroke-width="2"/></svg></div>
+
+<div class="opsflow-node blue"><div class="opsflow-body"><span class="opsflow-step" style="background:var(--blue)">2</span><span class="opsflow-txt">Nearby technicians' trucks<small>another tech's van, modeled as a warehouse (name + warehouse code + address) &middot; free &middot; ranked by distance</small></span></div></div>
+<div class="opsflow-conn"><svg width="18" height="24"><path d="M9 0v16M3 12l6 6 6-6" fill="none" stroke="#2563eb" stroke-width="2"/></svg></div>
+
+<div class="opsflow-node blue"><div class="opsflow-body"><span class="opsflow-step" style="background:var(--blue)">3</span><span class="opsflow-txt">Branch warehouse<small>other ClimatePros warehouses &middot; free &middot; nearest first</small></span></div></div>
+<div class="opsflow-conn"><svg width="18" height="24"><path d="M9 0v16M3 12l6 6 6-6" fill="none" stroke="#d97706" stroke-width="2"/></svg></div>
+
+<div class="opsflow-node amber"><div class="opsflow-body"><span class="opsflow-step">4</span><span class="opsflow-txt">Third-party supplier<small>nearest United Refrigeration branch via the CP API Gateway &middot; priced from <code>InventorySupplierXREF.currentcost</code></small></span></div></div>
+<div class="opsflow-conn"><svg width="18" height="24"><path d="M9 0v16M3 12l6 6 6-6" fill="none" stroke="#7c3aed" stroke-width="2"/></svg></div>
+
+<div class="opsflow-node violet"><div class="opsflow-body"><span class="opsflow-step" style="background:var(--purple)">&#10003;</span><span class="opsflow-txt">Greedy allocate across the sorted list<small>truck first, then ascending distance; each source takes <code>min(remaining_need, available)</code> until the requested quantity is met</small></span></div></div>
+
+</div>
+</div>
+</div>
+
+<div class="callout amber"><b>A van is a warehouse.</b> Per operations, there is no separate
+&ldquo;nearby technician&rdquo; tier &mdash; another tech's van is modeled as a warehouse, which keeps
+the sourcing model to three underlying data tiers (truck / warehouse / vendor) while the
+technician-facing flow above still reads as four distinct sources.</div>
+
+<div class="callout warn"><b>Vendor lookup fails &rarr; drop the tier, not the request.</b> If the
+United Refrigeration lookup fails, the vendor tier is dropped rather than failing the whole request
+&mdash; the technician still sees every own-stock option (truck + warehouse). See &sect;11 Onboarding
+&amp; Fault Tolerance.</div>
+
 </section>
 
 <section id="s6">
