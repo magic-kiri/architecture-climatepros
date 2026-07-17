@@ -1,6 +1,160 @@
+<style>
+/* -- §12 Non-goals & PII: namespaced s12-* additions --
+   s12-ng: three-up non-goal card row (A/B/C), a colored-left-border cousin of §11's .s11-phase —
+   reused here instead of duplicated since the shape (chip header + border color + bullet list) is
+   identical; kept namespaced rather than folded into _style.css because no earlier section needed
+   exactly this 3-column layout at once (§1's .uc-row is the closest cousin but is a summary card,
+   not a bordered non-goal list).
+   s12-pii-list: the PII inventory itself is a bulleted list in its source (usecase-C-system-design.html
+   §13), not a table — kept as a list here to lift it verbatim rather than force it into a table shape.
+   .callout.good reuses the existing --green tokens (matches source's .callout.good, which used a
+   --green-fill var this shared sheet doesn't define) so no new custom property is introduced. -- */
+.s12-ng{display:grid;grid-template-columns:repeat(3,1fr);gap:16px;margin:14px 0 20px;}
+@media(max-width:900px){.s12-ng{grid-template-columns:1fr;}}
+.s12-ng-card{background:var(--surface);border:1px solid var(--border);border-left:4px solid var(--border);border-radius:10px;padding:16px 18px;}
+.s12-ng-card.a{border-left-color:var(--blue);}
+.s12-ng-card.b{border-left-color:var(--purple);}
+.s12-ng-card.c{border-left-color:var(--amber);}
+.s12-ng-card h4{font-size:14px;font-weight:700;margin:0 0 10px;display:flex;align-items:center;gap:8px;}
+.s12-ng-card ul{padding-left:19px;margin:0;}
+.s12-ng-card li{font-size:13px;line-height:1.6;margin:7px 0;}
+.s12-ng-card li:first-child{margin-top:0;}
+.s12-ng-card li:last-child{margin-bottom:0;}
+.s12-pii-list{padding-left:21px;margin:10px 0;}
+.s12-pii-list li{font-size:13.5px;line-height:1.65;margin:9px 0;}
+.s12-src{font-size:12.5px;color:var(--text-muted);margin:-4px 0 14px;}
+.callout.good{background:var(--green-soft);border-color:var(--green-line);color:var(--text);}
+.callout.good b{color:var(--green-dark);}
+</style>
 <section id="s12">
 <h2>12. Non-goals &amp; PII</h2>
-<!-- filled in Task 14 -->
+<p>Two boundaries, drawn once for all three use cases instead of three times: what each use case
+deliberately does <b>not</b> do (&sect;2 Problem &amp; Goals in each source design draws this line
+explicitly, not as an omission), and what personal data this project touches. C&rsquo;s source design
+carries the only dedicated PII inventory of the three &mdash; lifted at full fidelity below &mdash; and
+A&rsquo;s one new piece of personal data (the device push token) was already catalogued in full where it
+is introduced, &sect;11 Onboarding &amp; Fault Tolerance.</p>
+
+<h3>Non-goals</h3>
+<p class="s12-src">Consolidated from problem-statement.html and each per-use-case design&rsquo;s own
+&ldquo;Non-goals&rdquo; callout/section.</p>
+<div class="s12-ng">
+<div class="s12-ng-card a">
+<h4><span class="chip">A</span> Auto-Dispatch</h4>
+<ul>
+<li><b>Not route optimization</b> &mdash; closest-available-responder, like a 911 dispatch. It ranks who
+answers next, not the most efficient multi-stop route.</li>
+<li>The existing manual dispatch flow is <b>untouched</b> &mdash; a division with the toggle OFF behaves
+exactly as today.</li>
+<li><b>No UI change</b> beyond the toggle and its configuration (task count <code>N</code>).</li>
+<li><b>No change to the SQL Server system-of-record schema</b> beyond dispatch status fields.</li>
+</ul>
+</div>
+<div class="s12-ng-card b">
+<h4><span class="chip">B</span> Job Summarisation</h4>
+<ul>
+<li><b>Never fabricates.</b> The ticket is generated from what is actually available &mdash; a missing
+block degrades to a <code>MISSING</code> placeholder, never an invented one (&sect;6 Core Logic,
+&sect;8 API Reference).</li>
+<li><b>Never blocks Save.</b> Every failure mode &mdash; malformed output, gateway outage, saturation
+&mdash; degrades to the manual recap; submission is never gated on the AI tier (&sect;11 Fault
+Tolerance).</li>
+<li><b>Completeness over prose.</b> The headline isn&rsquo;t prettier writing &mdash; that&rsquo;s table
+stakes &mdash; it&rsquo;s cross-checking the note against parts, time and photos actually logged and
+surfacing what&rsquo;s missing.</li>
+</ul>
+</div>
+<div class="s12-ng-card c">
+<h4><span class="chip">C</span> Parts Finder</h4>
+<ul>
+<li><b>No price ranking, no ordering.</b> The tech decides where to pick a part up &mdash; the system
+shows the part, the place and the distance, and stops there.</li>
+<li><b>One supplier for the POC</b> (United, via the existing CP API Gateway); more suppliers is future
+work, not this scope.</li>
+<li><b>Not replacing technician judgment</b> &mdash; predictions are suggestions the tech can add, swap
+or ignore, never auto-committed.</li>
+<li><b>No automatic purchasing or PO creation</b> from the vendor, and <b>no warehouse/inventory
+management</b> &mdash; stock levels stay owned by the system of record.</li>
+</ul>
+</div>
+</div>
+
+<h3>PII inventory &amp; data handling</h3>
+
+<h4 style="font-size:14.5px;font-weight:700;margin:0 0 10px;"><span class="chip">C</span> PII inventory
+&amp; security controls</h4>
+<p class="s12-src">Lifted verbatim from <b>usecase-C-system-design.html &sect;13 Security &amp;
+PII</b> &mdash; the only dedicated PII inventory across the three source designs. AWS-specific terms are
+reconciled to their Azure equivalents per &sect;3/&sect;4 (private <b>Azure VNet</b> in place of AWS VPC,
+<b>Azure Key Vault</b> in place of AWS Secrets Manager/SSM Parameter Store); <b>AWS SQL Server</b> and the
+self-hosted embedding/LLM layer are unchanged.</p>
+<div class="cl-table-wrap"><table class="cl-table">
+<thead><tr><th>Area</th><th>Control</th></tr></thead>
+<tbody>
+<tr><td>Client &rarr; service auth</td><td>Bearer token from the FJX&nbsp;2.2 session, validated at the
+.NET Microservices API before the AI proxy route forwards the call; CORS restricted to the mobile
+client.</td></tr>
+<tr><td>Network isolation</td><td>The AI layer runs in a <b>private Azure VNet</b> &mdash; the FastAPI AI
+Server is not internet-reachable; only the .NET proxy route (and the VNet paths to SQL Server, the vector
+store, and the customer-hosted models) can reach it.</td></tr>
+<tr><td>Model hosting</td><td>Embedding and LLM inference run on <b>client-provided, self-hosted models on
+customer hardware</b> &mdash; dispatch text and parts history are never sent to a third-party AI
+provider.</td></tr>
+<tr><td>Supplier gateway</td><td>United calls carry the <code>Ocp-Apim-Subscription-Key</code> header; the
+key is held <b>server-side only</b> and never reaches the mobile client (&sect;8 API Reference &middot;
+Contract notes).</td></tr>
+<tr><td>Secrets management</td><td>All credentials (gateway key, DB, model endpoints) resolved from a
+secret store &mdash; <b>Azure Key Vault</b> &mdash; with rotation. No secrets in source or images.</td></tr>
+<tr><td>Data store access</td><td>Least-privilege SQL Server account: read-scoped on inventory and dispatch
+tables, write access confined to the new <code>ai.*</code> schema; network-restricted to the service
+subnet.</td></tr>
+<tr><td>Transport</td><td>TLS on all hops (client, proxy, gateway, model endpoints, internal service
+calls).</td></tr>
+</tbody>
+</table></div>
+
+<ul class="s12-pii-list">
+<li><b>Dispatch &amp; customer detail</b> (name, address, phone) &mdash; served to the authenticated
+technician only; excluded from log bodies (&sect;9 Observability &amp; Evals).</li>
+<li><b>Van / warehouse locations</b> &mdash; used transiently for distance ordering; not persisted beyond
+short-lived caching.</li>
+<li><b>The vector store holds no direct customer PII</b> &mdash; only dispatch reason text and used part
+numbers &mdash; reducing the sensitivity of the derived index (&sect;7 Data &amp; Schema).</li>
+</ul>
+<div class="callout good"><b>&#128274; Derived and rebuildable:</b> because the vector store is derived from
+SQL Server rather than an independent source of truth, it can be re-seeded at any time &mdash; supporting
+deletion and data-retention requests handled at the SQL Server layer.</div>
+
+<h4 style="font-size:14.5px;font-weight:700;margin:26px 0 10px;"><span class="chip">A</span> Device push
+token &mdash; see &sect;11</h4>
+<p>Auto-Dispatch&rsquo;s one new piece of personal data &mdash; the push token and its Notification Hubs
+<code>deviceInstallationId</code> (<code>techId &rarr; deviceInstallationId</code>) &mdash; is catalogued in
+full where it is introduced: encrypted at rest, access-limited to the dispatch backend, retained only while
+the device is active. See the <b>Device token / installation id = PII</b> callout in &sect;11 Onboarding
+&amp; Fault Tolerance &middot; Phase&nbsp;2. Technician location itself is not newly stored by this
+project &mdash; distance/ETA reads the platform&rsquo;s existing location system, unchanged and out of
+scope here.</p>
+
+<h4 style="font-size:14.5px;font-weight:700;margin:26px 0 10px;"><span class="chip">B</span> <span
+class="chip">C</span> The history B and C learn from</h4>
+<p>ClimatePros has <b>10&ndash;12 years</b> of operational data &mdash; <b>200,000+ jobs in the last six
+months alone</b>, and <b>16.3 million</b> note records across the full span. It is messy by the client&rsquo;s
+own admission: <b>~40% of notes are &le;40 characters</b>, and the single most common note in the database
+is literally <b>&ldquo;checked history.&rdquo;</b> That is the problem B and C are solving, so it is also
+the data both inherit &mdash; B&rsquo;s eval set (&sect;9) and C&rsquo;s retrieval index (&sect;6, &sect;7)
+are both built on it.</p>
+<div class="counts">
+<div class="count"><div class="n">10&ndash;12 yrs</div><div class="l">operational history</div></div>
+<div class="count"><div class="n">200,000+</div><div class="l">jobs, last 6 months</div></div>
+<div class="count"><div class="n">16.3M</div><div class="l">note records, full span</div></div>
+<div class="count"><div class="n">~40%</div><div class="l">notes &le;40 chars</div></div>
+</div>
+<div class="callout warn"><b>Not trained on the raw dump.</b> The corpus is <b>de-duplicated down to
+unique cases first</b>, and <b>personally identifiable information is stripped before anything reaches a
+model</b> &mdash; whether that model is B&rsquo;s summarisation/copilot pipeline or C&rsquo;s embedding
+index. This is a data-preparation step upstream of both &sect;6 Core Logic pipelines, not a per-request
+runtime control like the table above.</div>
+
 </section>
 
 </div>
