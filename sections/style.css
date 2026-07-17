@@ -331,3 +331,16 @@
  .cl-pill{display:inline-block;font-family:ui-monospace,Menlo,Consolas,monospace;font-size:11px;font-weight:600;padding:2px 9px;border-radius:6px;background:#f1f5f9;color:var(--text-muted);border:1px solid var(--border);white-space:nowrap;}
  .cl-pill.free{background:var(--green-soft);color:var(--green-dark);border-color:var(--green-line);}
  .cl-pill.paid{background:var(--amber-soft);color:var(--amber-dark);border-color:var(--amber-line);}
+
+ /* ---- navigation sidebar ---- */
+ .sidebar{position:fixed;top:0;left:0;width:280px;height:100vh;overflow-y:auto;background:var(--surface);border-right:1px solid var(--border);padding:26px 20px 40px;z-index:50;}
+ .sidebar .nav-brand{font-size:17px;font-weight:800;color:var(--primary-dark);line-height:1.25;}
+ .sidebar .nav-sub{font-size:10.5px;font-weight:700;letter-spacing:.07em;text-transform:uppercase;color:var(--text-muted);margin-top:8px;padding-bottom:16px;border-bottom:1px solid var(--border);}
+ .sidebar .nav-group{font-size:10.5px;font-weight:800;letter-spacing:.09em;text-transform:uppercase;color:var(--text-muted);margin:18px 0 6px;}
+ .sidebar a{display:block;font-size:13.5px;color:var(--text);text-decoration:none;padding:6px 10px;border-radius:7px;border-left:2px solid transparent;line-height:1.35;transition:background .12s;}
+ .sidebar a:hover{background:var(--primary-light);}
+ .sidebar a.active{background:var(--primary-light);color:var(--primary-dark);font-weight:650;border-left-color:var(--primary);}
+ .sidebar a .n{color:var(--text-muted);font-weight:700;margin-right:7px;font-size:12px;}
+ section[id]{scroll-margin-top:20px;}
+ @media(min-width:1000px){ body{padding-left:280px;} }
+ @media(max-width:999px){ .sidebar{display:none;} }

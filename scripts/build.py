@@ -15,6 +15,7 @@ SEC = ROOT / "sections"
 OUT = ROOT / "stream1-unified-architecture.html"
 
 style = (SEC / "style.css").read_text(encoding="utf-8")
+nav = (SEC / "_nav.html").read_text(encoding="utf-8")
 hero = (SEC / "_hero.html").read_text(encoding="utf-8")
 sections = [f.read_text(encoding="utf-8") for f in sorted(SEC.glob("[0-9][0-9].html"))]
 
@@ -23,7 +24,8 @@ html = (
     "<meta charset=\"UTF-8\">\n"
     "<meta name=\"viewport\" content=\"width=device-width, initial-scale=1.0\">\n"
     "<title>ClimatePros · Stream 1 — Unified Architecture</title>\n"
-    "<style>\n" + style + "</style>\n</head>\n<body>\n<div class=\"wrap\">\n"
+    "<style>\n" + style + "</style>\n</head>\n<body>\n"
+    + nav + "<div class=\"wrap\">\n"
     + hero + "\n" + "\n".join(sections) + "\n</div>\n</body>\n</html>\n"
 )
 OUT.write_text(html, encoding="utf-8")

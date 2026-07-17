@@ -338,9 +338,68 @@
  .cl-pill{display:inline-block;font-family:ui-monospace,Menlo,Consolas,monospace;font-size:11px;font-weight:600;padding:2px 9px;border-radius:6px;background:#f1f5f9;color:var(--text-muted);border:1px solid var(--border);white-space:nowrap;}
  .cl-pill.free{background:var(--green-soft);color:var(--green-dark);border-color:var(--green-line);}
  .cl-pill.paid{background:var(--amber-soft);color:var(--amber-dark);border-color:var(--amber-line);}
+
+ /* ---- navigation sidebar ---- */
+ .sidebar{position:fixed;top:0;left:0;width:280px;height:100vh;overflow-y:auto;background:var(--surface);border-right:1px solid var(--border);padding:26px 20px 40px;z-index:50;}
+ .sidebar .nav-brand{font-size:17px;font-weight:800;color:var(--primary-dark);line-height:1.25;}
+ .sidebar .nav-sub{font-size:10.5px;font-weight:700;letter-spacing:.07em;text-transform:uppercase;color:var(--text-muted);margin-top:8px;padding-bottom:16px;border-bottom:1px solid var(--border);}
+ .sidebar .nav-group{font-size:10.5px;font-weight:800;letter-spacing:.09em;text-transform:uppercase;color:var(--text-muted);margin:18px 0 6px;}
+ .sidebar a{display:block;font-size:13.5px;color:var(--text);text-decoration:none;padding:6px 10px;border-radius:7px;border-left:2px solid transparent;line-height:1.35;transition:background .12s;}
+ .sidebar a:hover{background:var(--primary-light);}
+ .sidebar a.active{background:var(--primary-light);color:var(--primary-dark);font-weight:650;border-left-color:var(--primary);}
+ .sidebar a .n{color:var(--text-muted);font-weight:700;margin-right:7px;font-size:12px;}
+ section[id]{scroll-margin-top:20px;}
+ @media(min-width:1000px){ body{padding-left:280px;} }
+ @media(max-width:999px){ .sidebar{display:none;} }
 </style>
 </head>
 <body>
+<nav class="sidebar">
+  <div class="nav-brand">ClimatePros · Stream 1</div>
+  <div class="nav-sub">Unified Architecture · A · B · C</div>
+
+  <div class="nav-group">Orientation</div>
+  <a href="#s1"><span class="n">1</span>Stream 1 Overview</a>
+
+  <div class="nav-group">Architecture</div>
+  <a href="#s2"><span class="n">2</span>High-Level Architecture</a>
+  <a href="#s3"><span class="n">3</span>Technology Stack</a>
+  <a href="#s4"><span class="n">4</span>Infrastructure</a>
+
+  <div class="nav-group">Design · per use case</div>
+  <a href="#s5"><span class="n">5</span>Operational Flows</a>
+  <a href="#s6"><span class="n">6</span>Core Logic</a>
+  <a href="#s7"><span class="n">7</span>Data &amp; Schema</a>
+  <a href="#s8"><span class="n">8</span>API Reference</a>
+
+  <div class="nav-group">Applied AI &amp; Delivery</div>
+  <a href="#s9"><span class="n">9</span>Observability &amp; Evals</a>
+  <a href="#s10"><span class="n">10</span>Cost Projection</a>
+  <a href="#s11"><span class="n">11</span>Onboarding &amp; Fault Tolerance</a>
+  <a href="#s12"><span class="n">12</span>Non-goals &amp; PII</a>
+</nav>
+<script>
+function initStream1Nav(){
+  var links = [].slice.call(document.querySelectorAll('.sidebar a'));
+  var map = {}; links.forEach(function(a){ map[a.getAttribute('href').slice(1)] = a; });
+  var secs = [].slice.call(document.querySelectorAll('section[id^="s"]'));
+  function update(){
+    var cur = null;
+    for (var i = 0; i < secs.length; i++){
+      if (secs[i].getBoundingClientRect().top <= 100) cur = secs[i];
+    }
+    if (!cur) cur = secs[0];
+    links.forEach(function(a){ a.classList.remove('active'); });
+    if (cur && map[cur.id]) map[cur.id].classList.add('active');
+  }
+  window.addEventListener('scroll', update, {passive:true});
+  window.addEventListener('resize', update, {passive:true});
+  window.addEventListener('hashchange', update);
+  update();
+}
+if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', initStream1Nav);
+else initStream1Nav();
+</script>
 <div class="wrap">
 <div class="hero">
   <h1>ClimatePros · Stream 1 — Unified Architecture</h1>

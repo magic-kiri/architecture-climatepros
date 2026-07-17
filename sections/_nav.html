@@ -1,0 +1,46 @@
+<nav class="sidebar">
+  <div class="nav-brand">ClimatePros · Stream 1</div>
+  <div class="nav-sub">Unified Architecture · A · B · C</div>
+
+  <div class="nav-group">Orientation</div>
+  <a href="#s1"><span class="n">1</span>Stream 1 Overview</a>
+
+  <div class="nav-group">Architecture</div>
+  <a href="#s2"><span class="n">2</span>High-Level Architecture</a>
+  <a href="#s3"><span class="n">3</span>Technology Stack</a>
+  <a href="#s4"><span class="n">4</span>Infrastructure</a>
+
+  <div class="nav-group">Design · per use case</div>
+  <a href="#s5"><span class="n">5</span>Operational Flows</a>
+  <a href="#s6"><span class="n">6</span>Core Logic</a>
+  <a href="#s7"><span class="n">7</span>Data &amp; Schema</a>
+  <a href="#s8"><span class="n">8</span>API Reference</a>
+
+  <div class="nav-group">Applied AI &amp; Delivery</div>
+  <a href="#s9"><span class="n">9</span>Observability &amp; Evals</a>
+  <a href="#s10"><span class="n">10</span>Cost Projection</a>
+  <a href="#s11"><span class="n">11</span>Onboarding &amp; Fault Tolerance</a>
+  <a href="#s12"><span class="n">12</span>Non-goals &amp; PII</a>
+</nav>
+<script>
+function initStream1Nav(){
+  var links = [].slice.call(document.querySelectorAll('.sidebar a'));
+  var map = {}; links.forEach(function(a){ map[a.getAttribute('href').slice(1)] = a; });
+  var secs = [].slice.call(document.querySelectorAll('section[id^="s"]'));
+  function update(){
+    var cur = null;
+    for (var i = 0; i < secs.length; i++){
+      if (secs[i].getBoundingClientRect().top <= 100) cur = secs[i];
+    }
+    if (!cur) cur = secs[0];
+    links.forEach(function(a){ a.classList.remove('active'); });
+    if (cur && map[cur.id]) map[cur.id].classList.add('active');
+  }
+  window.addEventListener('scroll', update, {passive:true});
+  window.addEventListener('resize', update, {passive:true});
+  window.addEventListener('hashchange', update);
+  update();
+}
+if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', initStream1Nav);
+else initStream1Nav();
+</script>
