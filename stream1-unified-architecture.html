@@ -2060,11 +2060,207 @@ metadata  = { partsUsed: [ {partNo, qty}, ... ] }</code></pre>
 &mdash; the relational database remains the system of record.</div>
 
 </section>
+<style>
+/* -- §8 API Reference: namespaced s8-* additions --
+   s8-method-*: HTTP verb badges used across all three endpoint tables/headers (GET blue / POST green /
+   PUT+PATCH amber). Local to this section — system-design.html and usecase-b-architecture.html each
+   define their own same-named badge-* classes with clashing meanings (e.g. badge-ws = STREAM in one
+   doc, GET in another), so nothing from either is reused; this defines one consistent mapping instead,
+   themed off the shared CSS vars already declared in _style.css.
+   s8-str: JSON string-literal green for the C sample payloads, pairing with the shared .cl-pre/.cl-c
+   (comment) and .cl-k (key) classes that already exist in _style.css but were unused until this section. -- */
+.s8-method{display:inline-block;font-family:ui-monospace,Consolas,monospace;font-size:11px;font-weight:800;padding:3px 10px;border-radius:6px;white-space:nowrap;}
+.s8-method.get{background:var(--blue-soft);color:var(--blue);}
+.s8-method.post{background:var(--green-soft);color:var(--green-dark);}
+.s8-method.put,.s8-method.patch{background:var(--amber-soft);color:var(--amber-dark);}
+.cl-pre .s8-str{color:#86efac;}
+</style>
 <section id="s8">
 <h2>8. API Reference</h2>
-<!-- filled in Task 10 -->
-</section>
+<p>The full HTTP surface across all three use cases, lifted at full fidelity from each source design
+&mdash; every endpoint, parameter, and response shape kept intact. Only the caller-facing compute
+labels are updated to match this document's Azure-first infrastructure (&sect;2&ndash;&sect;4) and the
+service renames already established there. Nothing in the request/response bodies themselves
+changes.</p>
 
+<h3><span class="chip">A</span> Auto-Dispatch &mdash; API Reference</h3>
+<p>New endpoints introduced for Auto-Dispatch. Two callers: the <strong>admin dashboard</strong>
+(control plane &mdash; toggle &amp; config) and the <strong>technician mobile app</strong> (data plane
+&mdash; push registration &amp; replies). All existing endpoints (dispatch ingestion, dispatch status,
+technician location) are unchanged and out of scope here. Adapted from <b>system-design.html &sect;9
+API Reference</b>.</p>
+<div class="cl-table-wrap"><table class="cl-table">
+<thead><tr><th>Method</th><th>Path</th><th>Caller</th><th>Purpose</th></tr></thead>
+<tbody>
+<tr><td><span class="s8-method post">POST</span></td><td><code>/divisions/{id}/toggle</code></td><td>Dashboard &rarr; Azure VM</td><td>Turn auto-dispatch ON/OFF for one division. Body <code>{ enabled: bool }</code>. On <em>enable</em>: pull pending requests into the stream and scale the Container Apps pool up; on <em>disable</em>: drain and scale to zero (idle = $0).</td></tr>
+<tr><td><span class="s8-method put">PUT</span></td><td><code>/divisions/{id}/config</code></td><td>Dashboard &rarr; Azure VM</td><td>Update per-division ranking weights &mdash; distance, familiarity, priority, availability window. Body <code>{ weights: {...} }</code>. Applied to the next assignment loop; no restart needed.</td></tr>
+<tr><td><span class="s8-method get">GET</span></td><td><code>/divisions/{id}/config</code></td><td>Dashboard &rarr; Azure VM</td><td>Read current toggle state + weights so the admin UI can render the switch position and weight sliders. Paired read for the two writes above.</td></tr>
+<tr><td><span class="s8-method post">POST</span></td><td><code>/devices/register</code></td><td>Mobile &rarr; Azure VM</td><td>Register/refresh a device push token. Body <code>{ techId, platform: ios|android, token }</code>. Azure VM registers the device with Notification Hubs and stores <code>techId &rarr; deviceInstallationId</code>. Re-posted whenever the OS rotates the token, so pushes never silently die.</td></tr>
+<tr><td><span class="s8-method post">POST</span></td><td><code>/technicians/{id}/availability</code></td><td>Mobile &rarr; Azure VM</td><td>Technician reports <em>when</em> they will be free. Body <code>{ availableAt }</code>. <strong>Not tied to any dispatch</strong> &mdash; it updates the technician's general availability state, which the ranking loop reads for whichever request is being processed.</td></tr>
+<tr><td><span class="s8-method post">POST</span></td><td><code>/dispatches/{id}/respond</code></td><td>Mobile &rarr; Azure VM</td><td>Technician accepts/rejects a <em>specific</em> offer. Body <code>{ accept: bool }</code>. Deduped via <code>SETNX</code>, then <code>LPUSH</code>ed to <code>resp:{dispatchId}:{techId}</code>; the worker's <code>BLPOP</code> wakes instantly.</td></tr>
+</tbody>
+</table></div>
+
+<div class="card">
+<h4>Authentication</h4>
+<p>No new auth mechanism is introduced. Every endpoint sits behind the platform's <strong>existing
+auth middleware</strong>, by caller:</p>
+<ul style="padding-left:22px;margin:0;">
+<li><strong>Control plane</strong> (<code>POST /divisions/{id}/toggle</code>, <code>PUT
+/divisions/{id}/config</code>, <code>GET /divisions/{id}/config</code>) &mdash; behind the
+<strong>admin Dashboard</strong> auth, identical to the existing Dashboard endpoints. Only
+authenticated admins can toggle or reconfigure a division.</li>
+<li><strong>Data plane</strong> (<code>POST /devices/register</code>, <code>POST
+/technicians/{id}/availability</code>, <code>POST /dispatches/{id}/respond</code>) &mdash; behind the
+<strong>technician mobile-app</strong> auth, identical to the existing technician endpoints. The
+authenticated technician identity must match the <code>techId</code>/technician in the path or
+body.</li>
+</ul>
+</div>
+
+<div class="card">
+<h4>Error contract</h4>
+<p>All endpoints return the platform's standard error envelope so a client can handle failures
+uniformly:</p>
+<pre class="cl-pre"><code>{ "code": "string",        <span class="cl-c">// stable machine code, e.g. DIVISION_NOT_FOUND</span>
+  "message": "string",     <span class="cl-c">// human-readable</span>
+  "requestId": "string" }  <span class="cl-c">// correlation id for tracing</span></code></pre>
+<p>Global status codes apply across all endpoints:</p>
+<ul style="padding-left:22px;margin:0;">
+<li><code>400</code> &mdash; malformed body / invalid field (e.g. weight out of range, unknown
+<code>platform</code>).</li>
+<li><code>401</code> &mdash; missing/invalid credentials &middot; <code>403</code> &mdash;
+authenticated but not permitted (e.g. non-admin hitting a control-plane route, technician acting for
+another <code>techId</code>).</li>
+<li><code>404</code> &mdash; division / dispatch / technician not found.</li>
+<li><code>409</code> &mdash; duplicate reply on <code>/dispatches/{id}/respond</code> (the
+<code>SETNX</code> dedupe already rejected it); the first reply stands.</li>
+<li><code>500</code> &mdash; unexpected server error (correlate via <code>requestId</code>).</li>
+</ul>
+</div>
+
+<div class="card">
+<h4>Two response types &mdash; two separate endpoints</h4>
+<p>The technician's two replies live at different paths because they have different scope:</p>
+<ul style="padding-left:22px;margin:0;">
+<li><strong>Availability</strong> &mdash; <code>POST /technicians/{id}/availability</code>.
+Tech-scoped, <strong>no <code>dispatchId</code></strong>. A general "I'm free at &hellip;" answer to
+the availability poll during the ~1&nbsp;min ranking window; updates the technician's availability
+record that ranking reads.</li>
+<li><strong>Decision</strong> &mdash; <code>POST /dispatches/{id}/respond</code>. Dispatch-scoped.
+Accept/reject one specific offer; drives the offer loop, and a reject (or timeout) moves to the next
+ranked technician. This is the reply the worker is blocked on (<code>BLPOP</code>).</li>
+</ul>
+</div>
+
+<h3 style="margin-top:38px"><span class="chip">B</span> Job Summarisation &mdash; API Reference</h3>
+<p>The API surface is plain REST with Pydantic models (the earlier prototype's GraphQL layer is
+refactored away). The service is reachable only through the .NET proxy; there is no public endpoint.
+Adapted from <b>usecase-b-architecture.html &sect;11 API Reference</b>.</p>
+<div class="cl-table-wrap"><table class="cl-table">
+<thead><tr><th>Method</th><th>Route</th><th>Purpose</th><th>Typical latency</th></tr></thead>
+<tbody>
+<tr><td><span class="s8-method post">POST</span></td><td><code>/api/v1/summarise</code></td><td>Wizard payload &rarr; 12-section ticket + procedure check results</td><td>~6&ndash;7s (LLM-bound)</td></tr>
+<tr><td><span class="s8-method post">POST</span></td><td><code>/api/v1/analyse</code></td><td>Ticket &rarr; gap findings + inline remediation fields; re-run until clean</td><td>~6&ndash;7s</td></tr>
+<tr><td><span class="s8-method get">GET</span></td><td><code>/api/v1/suggestions</code></td><td>Dispatch context (equipment type + problem code) &rarr; top-k part suggestions from the co-occurrence tables; deterministic, no LLM call</td><td>&lt;200ms</td></tr>
+<tr><td><span class="s8-method get">GET</span></td><td><code>/admin/dashboard</code></td><td>Observability dashboard: edit-rate per section, latency, cost, parse failures, read from <code>ai.*</code>. Served by the same FastAPI container; no separate web app.</td><td>&lt;500ms</td></tr>
+<tr><td><span class="s8-method get">GET</span></td><td><code>/health</code></td><td>Liveness probe for the Container Apps health check</td><td>&lt;50ms</td></tr>
+</tbody>
+</table></div>
+<div class="callout azure"><b>Auth model:</b> no client talks to these routes directly. The .NET proxy
+is the only caller, authenticated by an internal API key plus network trust (private Azure VNet,
+security rules). The dashboard follows the same rule: it is exposed through a .NET-proxied route with
+an admin-role check on the existing Entra token. This keeps a single user-auth system and zero new
+login surfaces.</div>
+
+<h3 style="margin-top:38px"><span class="chip">C</span> Technician Parts Finder &mdash; API
+Reference</h3>
+<p>The FastAPI AI Server exposes a deliberately small HTTP surface, reached by FJX&nbsp;2.2 through the
+.NET Microservices API's <strong>AI proxy route</strong> &mdash; the mobile app never calls the AI
+layer directly, and the proxy forwards exactly the two control endpoints (<code>/parts/predict</code>,
+<code>/parts/source</code>). Adapted from <b>usecase-C-system-design.html &sect;9 API Reference</b>.</p>
+<div class="cl-table-wrap"><table class="cl-table">
+<thead><tr><th>Endpoint</th><th>Purpose</th></tr></thead>
+<tbody>
+<tr><td><span class="s8-method get">GET</span> <code>/health</code></td><td>Liveness / deploy probe (load-balancer + Container Apps health checks; not proxied to clients).</td></tr>
+<tr><td><span class="s8-method post">POST</span> <code>/parts/predict</code></td><td>RAG-predicted parts for a dispatch &mdash; via the AI proxy route.</td></tr>
+<tr><td><span class="s8-method post">POST</span> <code>/parts/source</code></td><td>All sources per part &mdash; via the AI proxy route.</td></tr>
+</tbody>
+</table></div>
+<div class="callout azure"><b>Scope:</b> everything else the flow touches stays where it already
+lives: <strong>dispatch list/detail and the manual-add inventory tabs / catalog search are served by
+the existing .NET APIs, unchanged</strong>. The AI server does not serve or duplicate them &mdash; it
+<em>reads</em> the dispatch reason and stock context from the Legacy API, and calls the United CP
+Gateway server-side for the supplier tier.</div>
+
+<h4 style="margin-top:26px"><span class="s8-method post">POST</span> <code>/parts/predict</code></h4>
+<pre class="cl-pre"><code><span class="cl-c">// request</span>
+{ <span class="cl-k">"dispatchId"</span>: <span class="s8-str">"..."</span> }
+
+<span class="cl-c">// response &rarr; PredictedPart[]</span>
+[ {
+  <span class="cl-k">"inventoryId"</span>: <span class="s8-str">"C066"</span>,
+  <span class="cl-k">"name"</span>:        <span class="s8-str">"Condenser Fan Motor 1/4 HP"</span>,
+  <span class="cl-k">"partNumber"</span>:  <span class="s8-str">"C066"</span>,
+  <span class="cl-k">"confidence"</span>:  88,          <span class="cl-c">// 20&ndash;95</span>
+  <span class="cl-k">"selected"</span>:    true,        <span class="cl-c">// pre-selected when confidence &ge; 60</span>
+  <span class="cl-k">"timesUsed"</span>:   3
+} ]</code></pre>
+<p>Returns <code>503</code> when the prediction subsystem (embedding model / vector store) is
+unavailable &mdash; the client falls back to manual add. <code>502</code> on an upstream failure during
+prediction.</p>
+
+<h4 style="margin-top:26px"><span class="s8-method post">POST</span> <code>/parts/source</code></h4>
+<pre class="cl-pre"><code><span class="cl-c">// request</span>
+{ <span class="cl-k">"inventoryIds"</span>: [<span class="s8-str">"C066"</span>, <span class="s8-str">"24708"</span>], <span class="cl-k">"dispatchId"</span>: <span class="s8-str">"..."</span>, <span class="cl-k">"priority"</span>: <span class="s8-str">"Normal"</span> }
+
+<span class="cl-c">// response &rarr; SourcedPart[]</span>
+[ {
+  <span class="cl-k">"inventoryId"</span>: <span class="s8-str">"C066"</span>,
+  <span class="cl-k">"name"</span>:        <span class="s8-str">"Condenser Fan Motor 1/4 HP"</span>,
+  <span class="cl-k">"partNumber"</span>:  <span class="s8-str">"C066"</span>,
+  <span class="cl-k">"qtyNeeded"</span>:   1,
+  <span class="cl-k">"sources"</span>: [ {
+    <span class="cl-k">"tier"</span>:        <span class="s8-str">"truck"</span>,      <span class="cl-c">// truck | warehouse | vendor</span>
+    <span class="cl-k">"label"</span>:       <span class="s8-str">"Your Truck — IL01 WH V1885"</span>,
+    <span class="cl-k">"detail"</span>:      <span class="s8-str">"Bin C2"</span>,
+    <span class="cl-k">"distanceMi"</span>:  0.0,
+    <span class="cl-k">"qtyAvailable"</span>: 2,
+    <span class="cl-k">"price"</span>:       null        <span class="cl-c">// null for own stock; $ for vendor</span>
+  } ]
+} ]</code></pre>
+
+<h4 style="margin-top:26px">Supplier integration &mdash; United CP Gateway (server-side,
+outbound)</h4>
+<p>For the vendor tier of <code>/parts/source</code>, the AI server calls the ClimatePros API Gateway
+for United Refrigeration <strong>from the backend</strong> &mdash; the contract below is the gateway's
+own shape, so the integration is a drop-in and the subscription key never leaves the server:</p>
+<pre class="cl-pre"><code><span class="cl-c">// request</span>
+{ <span class="cl-k">"item"</span>: <span class="s8-str">"C066"</span>, <span class="cl-k">"coordinates"</span>: { <span class="cl-k">"latitude"</span>: 21.30, <span class="cl-k">"longitude"</span>: -157.85 },
+  <span class="cl-k">"qty"</span>: 1, <span class="cl-k">"miles"</span>: 50, <span class="cl-k">"branchesIn"</span>: [], <span class="cl-k">"limit"</span>: 1 }
+
+<span class="cl-c">// response</span>
+{ <span class="cl-k">"code"</span>: 100, <span class="cl-k">"success"</span>: true, <span class="cl-k">"response"</span>: <span class="s8-str">"OK"</span>, <span class="cl-k">"errors"</span>: [],
+  <span class="cl-k">"inventory"</span>: [ { <span class="cl-k">"branchNo"</span>, <span class="cl-k">"address1"</span>, <span class="cl-k">"city"</span>, <span class="cl-k">"state"</span>, <span class="cl-k">"zipcd"</span>,
+                  <span class="cl-k">"phone"</span>, <span class="cl-k">"miles"</span>, <span class="cl-k">"workingHours"</span>, <span class="cl-k">"item"</span>, <span class="cl-k">"qtyAvail"</span> } ] }</code></pre>
+
+<h4 style="margin-top:26px">Contract notes</h4>
+<div class="cl-table-wrap"><table class="cl-table">
+<thead><tr><th>Concern</th><th>Behavior</th></tr></thead>
+<tbody>
+<tr><td>Auth</td><td>Bearer token from the FJX&nbsp;2.2 session, validated at the .NET Microservices
+API before the AI proxy route forwards the call; the AI server is reachable only from inside the
+VNet. Supplier gateway calls use a subscription key held server-side (see &sect;12 Non-goals &amp;
+PII).</td></tr>
+<tr><td>Errors</td><td><code>400</code> validation &middot; <code>404</code> dispatch not found
+&middot; <code>502</code> upstream failure &middot; <code>503</code> prediction unavailable.</td></tr>
+<tr><td>CORS</td><td>Restricted to the FJX&nbsp;2.2 mobile origin / native client in production.</td></tr>
+<tr><td>Idempotency</td><td>Predict and source are read-only and side-effect free; safe to
+retry.</td></tr>
+</tbody>
+</table></div>
+
+</section>
 <section id="s9">
 <h2>9. Observability &amp; Evals</h2>
 <!-- filled in Task 11 -->
