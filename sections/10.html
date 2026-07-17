@@ -1,5 +1,131 @@
+<style>
+/* -- §10 Cost Projection: namespaced s10-* additions --
+   s10-note: small muted footnote line under a table (source-attribution / asterisk explainer),
+   the same role as system-design.html's inline *-footnote paragraph under its cost table but
+   given a real class since this section repeats the pattern three times.
+   s10-shared: thin badge marking a line item whose cost is shared across B and C rather than
+   billed twice — local to this section, reuses --green-* tokens already in the palette (matches
+   .pill.shared's color in §3) instead of inventing a new token. -- */
+.s10-note{margin:8px 0 0;font-size:12.5px;color:var(--text-muted);}
+.s10-note b{color:var(--text);}
+.s10-shared{display:inline-block;font-size:10px;font-weight:800;letter-spacing:.04em;text-transform:uppercase;padding:2px 8px;border-radius:999px;margin-left:7px;background:var(--green-soft);color:var(--green-dark);vertical-align:middle;white-space:nowrap;}
+.s10-table tfoot td{font-weight:700;background:#f8fafc;}
+</style>
 <section id="s10">
 <h2>10. Cost Projection</h2>
-<!-- filled in Task 12 -->
+<p>Every dollar figure below is <strong>lifted as-is from its source design's AWS cost projection</strong>
+&mdash; only the service <em>names</em> are relabeled to their &sect;3 Technology Stack Azure equivalents
+(Fargate&nbsp;&rarr;&nbsp;Azure Container Apps, ElastiCache&nbsp;&rarr;&nbsp;Azure Cache for Redis,
+SNS&nbsp;&rarr;&nbsp;Azure Notification Hubs, CloudWatch&nbsp;&rarr;&nbsp;Azure Monitor, EC2&nbsp;&rarr;&nbsp;Azure
+VM). No new Azure prices are estimated here: Container Apps' consumption pricing, Azure Cache for Redis
+tiers, and Notification Hubs' push pricing all differ from their AWS counterparts' rate cards, and none of
+the three source designs were re-priced against Azure. Treat every figure as <strong>directional, pending a
+real Azure re-pricing pass</strong> before this becomes a budget commitment.</p>
+
+<div class="callout amber"><b>Pending Azure re-pricing:</b> the numbers in this section are the original AWS
+estimates from <b>system-design.html &sect;13</b> (A) and <b>usecase-C-system-design.html &sect;15</b> (C),
+carried over unchanged. Treat them as a same-order-of-magnitude placeholder, not a quote &mdash; get actual
+Azure Container Apps / Azure Cache for Redis / Notification Hubs / Azure Monitor rates before this section is
+used for a real budget.</div>
+
+<h3><span class="chip">A</span> Auto-Dispatch</h3>
+<p>Only the Container Apps worker pool is a variable cost &mdash; it is the whole point of scale-to-zero.
+Everything else is fixed or effectively free. Adapted from <b>system-design.html &sect;13 Cost
+Projection</b>; source rates were <code>us-east-1</code> AWS Fargate/ElastiCache/SNS list prices &mdash;
+<strong>verify against actual Azure rates at build time</strong>.</p>
+
+<div class="card">
+<h4>Azure Container Apps cost formula <span style="font-weight:500;color:var(--text-muted);font-size:13px;">&mdash; carried from the source Fargate formula</span></h4>
+<p style="margin-bottom:10px;">Task = 1 vCPU / 2&nbsp;GB &rarr; <code>$0.04937</code> per task-hour (source AWS Fargate rate)</p>
+<pre class="cl-pre"><code>monthly_cost = N x H x 30 x (1 x $0.04048  +  2 x $0.004445)
+             = N x H x 30 x $0.04937
+
+N = number of Container Apps tasks (2 assumed; each handles 20 dispatches concurrently)
+H = hours the division is ON per day</code></pre>
+</div>
+
+<div class="card">
+<h4>Azure Cache for Redis + Notification Hubs cost <span style="font-weight:500;color:var(--text-muted);font-size:13px;">&mdash; fixed &amp; near-zero</span></h4>
+<pre class="cl-pre"><code>azure_cache = $0.032/hr x 730 hr/mo  =  ~$23.36/mo   (t4g.small-equivalent tier, always on)
+
+notification_hubs = $0.50 per 1,000,000 pushes   (first 1M/mo free &mdash; source SNS rate)
+            e.g. 500 dispatches/day x 5 techs x 30 = 75,000 pushes/mo  ->  $0 (within free tier)
+            FCM (Android) = $0        APNs (iOS) = $0</code></pre>
+</div>
+
+<div class="cl-table-wrap"><table class="cl-table s10-table">
+<thead><tr><th>Scenario</th><th>N tasks</th><th>Hours ON/day</th><th>Container Apps/mo</th><th>Azure Cache/mo</th><th>Notification Hubs/push</th><th>Total/mo*</th></tr></thead>
+<tbody>
+<tr><td>Light / 2h day</td><td>2</td><td>2</td><td>~$5.92</td><td>~$23</td><td>~$0</td><td><strong>~$29</strong></td></tr>
+<tr><td>8h-ON daily</td><td>2</td><td>8</td><td>~$23.70</td><td>~$23</td><td>~$0</td><td><strong>~$47</strong></td></tr>
+<tr><td>24&times;7 always-on</td><td>2</td><td>24</td><td>~$71.09</td><td>~$23</td><td>~$0</td><td><strong>~$94</strong></td></tr>
+</tbody>
+</table></div>
+<p class="s10-note">*Figures are the source AWS estimates carried over unrepriced (see callout above); excludes
+the existing Azure VM app host + AWS SQL Server (sunk &mdash; unchanged by this project, itemized separately
+below). Azure Cache row uses the source's <code>cache.t4g.small</code>-equivalent fixed rate,
+~$0.032/hr.</p>
+
+<div class="callout azure"><b>Scale-to-zero payoff:</b> a disabled division drops its Container Apps line to
+$0 &mdash; the 24&times;7 vs Light / 2h day rows differ by <strong>~12&times;</strong> on the variable cost.
+Fixed floor stays ~$23/mo (Azure Cache) regardless.</div>
+
+<h3 style="margin-top:38px"><span class="chip">B</span><span class="chip" style="margin-left:4px;">C</span> Job Summarisation &amp; Parts Finder &mdash; Shared AI Server + Vector Store</h3>
+<p>B and C share one central AI service and one vector store (&sect;3 Technology Stack), so their
+infrastructure cost is <strong>one shared line, not two</strong>. Usecase-b-architecture.html's source
+design carries no cost projection of its own, so the fixed baseline below is lifted entirely from
+<b>usecase-C-system-design.html &sect;15 Cost Projection</b> &mdash; the only one of the three source docs
+that quantified this tier &mdash; and covers both use cases' traffic against the same Container Apps /
+vector-store instances.</p>
+
+<h4 style="font-size:14.5px;font-weight:700;margin:18px 0 10px;">Fixed monthly baseline (est.)</h4>
+<div class="cl-table-wrap"><table class="cl-table s10-table">
+<thead><tr><th>Component</th><th>Assumption</th><th>~ Monthly</th></tr></thead>
+<tbody>
+<tr><td>Azure Container Apps &middot; FastAPI AI Server<span class="s10-shared">shared B&middot;C</span></td><td>1&ndash;2 tasks (0.5 vCPU / 1&nbsp;GB)</td><td>$20 &ndash; $40</td></tr>
+<tr><td>Azure-hosted vector store<span class="s10-shared">shared B&middot;C</span></td><td>Serverless, pay-per-use (storage + queries) &mdash; source rate: Amazon S3 Vectors</td><td>$5 &ndash; $15</td></tr>
+<tr><td>Azure Monitor + OpenTelemetry</td><td>Logs, metrics, traces (moderate volume) &mdash; source rate: CloudWatch + ADOT</td><td>$15 &ndash; $30</td></tr>
+<tr><td>Load balancer + data transfer</td><td>Baseline</td><td>$20</td></tr>
+<tr><td>Self-hosted models (LiteLLM + LLM + embedding)</td><td>Client hardware, on-prem &mdash; unchanged</td><td>&mdash; (client's cost)</td></tr>
+</tbody>
+<tfoot><tr><td colspan="2">Fixed subtotal (shared across B &amp; C)</td><td>&asymp; $60 &ndash; $105 / mo</td></tr></tfoot>
+</table></div>
+
+<h4 style="font-size:14.5px;font-weight:700;margin:22px 0 10px;">Variable &mdash; per prediction/summary</h4>
+<p>Each call is one embedding pass and one generation/ranking pass on the customer-hosted models (no
+per-token fee, per &sect;3) plus one vector-store similarity query &mdash; source estimate: a small
+fraction of a cent (&lt;&nbsp;<code>$0.001</code>) per call. SQL Server reads/writes are the cross-cloud hop
+covered separately below, not billed per-call here.</p>
+<div class="cl-table-wrap"><table class="cl-table s10-table">
+<thead><tr><th>Scenario</th><th>Calls / mo (B + C combined)</th><th>Variable</th><th>Fixed + Variable (est.)</th></tr></thead>
+<tbody>
+<tr><td>Light pilot</td><td>500</td><td>&lt; $1</td><td>&asymp; $60 &ndash; $105</td></tr>
+<tr><td>Typical</td><td>5,000</td><td>&asymp; $2 &ndash; $5</td><td>&asymp; $65 &ndash; $110</td></tr>
+<tr><td>Heavy</td><td>50,000</td><td>&asymp; $10 &ndash; $25</td><td>&asymp; $70 &ndash; $130</td></tr>
+</tbody>
+</table></div>
+<div class="callout azure"><b>Self-hosting keeps the marginal cost near zero:</b> no per-token model fees and
+no always-on vector-DB cluster &mdash; the fixed baseline stays small and B/C's combined call volume scales
+cheaply on top of it. This scenario table was sized against C's traffic in its source design; B adds calls
+against the same shared instances rather than a second bill.</div>
+
+<h3 style="margin-top:38px">Database &amp; Cross-Cloud Egress &mdash; the One AWS Line</h3>
+<p>Per &sect;3/&sect;4, the SQL Server system of record is the one piece of Stream 1 that deliberately stays
+on AWS instead of moving to Azure. It is its own cost line, not folded into the Azure figures above.</p>
+<div class="cl-table-wrap"><table class="cl-table s10-table">
+<thead><tr><th>Component</th><th>Cloud</th><th>~ Monthly</th></tr></thead>
+<tbody>
+<tr><td>AWS SQL Server (system of record)</td><td><span class="pill aws">AWS</span></td><td>Existing / sunk &mdash; both source designs (system-design.html &sect;13, usecase-C-system-design.html &sect;15) exclude it from their own projections as unchanged by this project. No incremental cost here.</td></tr>
+<tr><td>Cross-cloud egress (Azure&nbsp;&harr;&nbsp;AWS data transfer)</td><td><span class="pill aws">AWS</span> egress</td><td><strong>TBD &mdash; depends on traffic.</strong> No source figure exists for this line in any of the three designs; see &sect;4 Infrastructure.</td></tr>
+</tbody>
+</table></div>
+<div class="callout warn"><b>New cost this project adds:</b> the egress line is a genuinely new cost, not a
+relabeled one &mdash; none of the three single-cloud source designs paid a cross-cloud data-transfer fee,
+because none of them had a cross-cloud hop. Every dispatch read/write (A) and every <code>ai.*</code>
+read/write (B, C) against AWS SQL Server from Azure compute bills AWS egress on the way out, per &sect;4's
+cross-cloud callout. Sizing this requires a traffic estimate (dispatches/day &times; summaries/day &times;
+parts-lookups/day &times; average payload size) that no source design provides &mdash; get an AWS Data
+Transfer OUT quote once real volume is known, rather than guessing a number here.</div>
+
 </section>
 
