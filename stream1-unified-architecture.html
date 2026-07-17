@@ -19,6 +19,7 @@
    --amber-soft:#fff7ed; --amber-line:#fed7aa;
    --green-soft:#ecfdf5; --green-line:#a7f3d0;
    --red-soft:#fef2f2; --red-line:#fecaca;
+   --purple-soft:#f3e8ff; --purple-line:#e9d5ff;
  }
  *{margin:0;padding:0;box-sizing:border-box;}
  body{font-family:'Segoe UI',system-ui,-apple-system,sans-serif;background:var(--bg);color:var(--text);line-height:1.6;}
@@ -72,6 +73,32 @@
  .flow-num{min-width:36px;height:36px;border-radius:50%;background:var(--primary);color:#fff;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:16px;}
  .flow-content h4{margin:0 0 6px;}
  .flow-content p{margin:0;font-size:14px;color:var(--text-muted);}
+
+ /* -- §1 Overview: kind badge (algorithm vs AI), from problem-statement.html -- */
+ .kind{font-size:10px;font-weight:800;letter-spacing:.07em;text-transform:uppercase;padding:3px 9px;border-radius:999px;border:1px solid;}
+ .kind.algo{background:var(--green-soft);color:var(--green);border-color:var(--green-line);}
+ .kind.ai{background:var(--purple-soft);color:var(--purple);border-color:var(--purple-line);}
+
+ /* -- §1 Overview: where badge (surface · actor), from problem-statement.html -- */
+ .where{display:inline-block;font-size:11px;font-weight:650;color:var(--text-muted);padding:3px 9px;background:#f1f5f9;border:1px solid var(--border);border-radius:999px;}
+
+ /* -- §1 Overview: compact 3-up use-case row (condensed from problem-statement.html's full flow cards) -- */
+ .uc-row{display:grid;grid-template-columns:repeat(3,1fr);gap:18px;margin-top:20px;}
+ @media(max-width:900px){.uc-row{grid-template-columns:1fr;}}
+ .uc-mini{background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:18px 20px;display:flex;flex-direction:column;gap:9px;}
+ .uc-mini-head{display:flex;align-items:center;gap:8px;flex-wrap:wrap;}
+ .uc-mini h3{font-size:15px;font-weight:700;line-height:1.3;}
+ .uc-mini p{font-size:12.5px;color:var(--text-muted);line-height:1.55;}
+ .uc-mini p b{color:var(--text);font-weight:700;}
+
+ /* -- §1 Overview: connecting flow-note + Azure cloud-placement callout -- */
+ .flow-note{margin-top:18px;font-size:13.5px;color:var(--text-muted);}
+ .flow-note b{color:var(--text);}
+ .flow-note a{color:var(--primary);font-weight:650;text-decoration:none;}
+ .flow-note a:hover{text-decoration:underline;}
+ .callout{margin-top:16px;padding:14px 18px;border-radius:10px;font-size:13px;line-height:1.6;border:1px solid;}
+ .callout.azure{background:var(--primary-light);border-color:var(--primary);color:var(--text);}
+ .callout.azure b{color:var(--primary-dark);}
 </style>
 </head>
 <body>
@@ -84,7 +111,81 @@
 
 <section id="s1">
 <h2>1. Stream 1 Overview</h2>
-<!-- filled in Task 2 -->
+
+<div class="card">
+  <p>ClimatePros runs commercial refrigeration &amp; HVAC field service: <b>~900–1,000 technicians</b>,
+  <b>46 branches</b>, <b>10,000+ sites</b>. Work orders arrive automatically. Everything after that
+  still runs on a <b>phone call and a technician's memory</b>. Three use cases, three bottlenecks,
+  one job.</p>
+  <p style="margin-top:12px"><b>Where AI sits:</b> Use Case A is a <b>deterministic algorithm — no
+  LLM</b>. It replaces a decision a dispatcher already makes by hand, so it must be explainable and
+  repeatable. Use Cases B and C use AI, and in both the <b>technician can always override it</b>.</p>
+
+  <div class="counts">
+    <div class="count"><div class="n">~900–1,000</div><div class="l">Technicians</div></div>
+    <div class="count"><div class="n">46</div><div class="l">Branches</div></div>
+    <div class="count"><div class="n">10,000+</div><div class="l">Sites</div></div>
+  </div>
+</div>
+
+<div class="uc-row">
+  <div class="uc-mini">
+    <div class="uc-mini-head">
+      <span class="chip">A</span>
+      <span class="kind algo">Algorithm · no LLM</span>
+    </div>
+    <h3>Auto-Dispatch — finding the right technician</h3>
+    <span class="where">Web portal · Dispatcher</span>
+    <p class="pain">Confirming a tech today means <b>dialling ~40 candidates one at a time</b>,
+    ~2–3 min each — the throughput ceiling for two dispatchers per branch.</p>
+    <p class="solve"><b>We solve:</b> rank techs on distance, familiarity, time-to-free and job
+    priority; push an accept/decline offer and cascade automatically. Pure rules and math —
+    no LLM — so every assignment is explainable.</p>
+  </div>
+
+  <div class="uc-mini">
+    <div class="uc-mini-head">
+      <span class="chip">B</span>
+      <span class="kind ai">AI · tech overrides</span>
+    </div>
+    <h3>Job Summarisation Copilot — changing the job status</h3>
+    <span class="where">Mobile · Technician at end of job</span>
+    <p class="pain">Every job's mandatory closeout means <b>10–15 min of forms and two free-text
+    notes</b> — done properly. In practice ~40% of notes end up ≤40 characters.</p>
+    <p class="solve"><b>We solve:</b> restructure the tech's rough words into a clean note for
+    customer and office, and suggest form values from similar past jobs. Never fabricates, never
+    blocks Save. Target: <b>10–15 min → ~15 s</b>.</p>
+  </div>
+
+  <div class="uc-mini">
+    <div class="uc-mini-head">
+      <span class="chip">C</span>
+      <span class="kind ai">AI · tech overrides</span>
+    </div>
+    <h3>Technician Parts Finder — finding the part that isn't on the truck</h3>
+    <span class="where">Mobile · Technician on-site</span>
+    <p class="pain">When the first three sources (truck, nearby techs, warehouse) come up empty,
+    the fourth is a <b>phone call to a supplier who may not answer</b> — billable hours burned, or
+    a second truck roll.</p>
+    <p class="solve"><b>We solve:</b> AI suggests the likely part from the problem and equipment;
+    one search shows where it is across all four sources. The tech decides where to pick it up —
+    no price ranking, no ordering.</p>
+  </div>
+</div>
+
+<p class="flow-note">
+  Work order in → <b>(A)</b> the right tech is offered the job on the web portal → tech arrives on
+  site → <b>(C)</b> the missing part is found on mobile without a phone call → <b>(B)</b> the
+  closeout note writes itself. Full step-by-step diagrams for all three: see
+  <a href="#s5">§5 Operational Flows</a>.
+</p>
+
+<div class="callout azure">
+  <b>Cloud placement:</b> the existing FieldJetX platform and all new infra run on <b>Azure</b>;
+  the SQL Server system of record stays on <b>AWS</b> (sole cross-cloud dependency). This restates
+  the existing-platform cloud from the per-use-case docs, which describe the existing platform as
+  running on AWS EC2.
+</div>
 </section>
 
 <section id="s2">
