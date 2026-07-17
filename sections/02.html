@@ -373,7 +373,7 @@
   <section class="uca-layer">
     <div class="uca-layer-title">Shared Data Store <span class="uca-tag uca-tag--exist">Existing</span></div>
     <div class="uca-box uca-box--exist">
-      <h4>🗄 Amazon RDS <span style="font-size:9px;font-weight:800;letter-spacing:.06em;padding:2px 7px;border-radius:999px;background:var(--primary-light);color:var(--primary-dark);margin-left:6px">AWS</span></h4>
+      <h4>🗄 AWS SQL Server <span style="font-size:9px;font-weight:800;letter-spacing:.06em;padding:2px 7px;border-radius:999px;background:var(--primary-light);color:var(--primary-dark);margin-left:6px">AWS</span></h4>
       <div class="role">Single SQL database (SQL Server) &middot; system of record</div>
       <div class="uca-db-consumers">
         <span class="uca-consumer">🅰️🅱️ Azure VM Servers <em>read / write</em></span>
@@ -386,7 +386,7 @@
 
 </div>
 </div>
-<p class="diagram-note">Use Case A architecture, adapted from <b>system-design.html &sect;4</b>: blue = existing &middot; unchanged, amber dashed = new &middot; this project, purple = toggle/config flow, green = DB read/write. <b>Amazon RDS (AWS)</b> is the sole AWS component; Server A/B, Container Apps, Redis and Notification Hubs all run on <b>Azure</b>.</p>
+<p class="diagram-note">Use Case A architecture, adapted from <b>system-design.html &sect;4</b>: blue = existing &middot; unchanged, amber dashed = new &middot; this project, purple = toggle/config flow, green = DB read/write. <b>AWS SQL Server</b> is the sole AWS component; Server A/B, Container Apps, Redis and Notification Hubs all run on <b>Azure</b>.</p>
 <p class="uc-adds" style="margin-top:26px"><span class="chip">B</span> <b>B adds:</b> central FastAPI AI server + vector history index + summarise pipeline.</p>
 <div class="diagram-frame">
  <svg viewBox="0 0 1240 650" width="100%" style="min-width:1000px; font-family:inherit;">
