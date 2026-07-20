@@ -1,4 +1,10 @@
 <section id="s1">
+<style>
+  #s1 .pain{border-left:3px solid var(--red-line);padding-left:12px;}
+  #s1 .hurt{border-left:3px solid var(--red-line);padding-left:12px;margin-top:-2px;}
+  #s1 .hurt b{color:var(--red);}
+  #s1 .solve{opacity:.9;}
+</style>
 <h2>1. Stream 1 Overview</h2>
 
 <div class="card">
@@ -25,11 +31,14 @@
     </div>
     <h3>Auto-Dispatch — finding the right technician</h3>
     <span class="where">Web portal · Dispatcher</span>
-    <p class="pain">Confirming a tech today means <b>dialling ~40 candidates one at a time</b>,
-    ~2–3 min each — the throughput ceiling for two dispatchers per branch.</p>
-    <p class="solve"><b>We solve:</b> rank techs on distance, familiarity, time-to-free and job
-    priority; push an accept/decline offer and cascade automatically. Pure rules and math —
-    no LLM — so every assignment is explainable.</p>
+    <p class="pain">A dispatcher has a job ready and <b>~40 candidate techs</b> in the region. The four
+    things that decide the right one — how far, how familiar with the site, how soon free, how urgent —
+    are each <b>buried behind separate clicks or held in the dispatcher's head</b>. Confirming one means
+    <b>dialling candidates one at a time</b>, ~2–3 min each; no answer → call the next.</p>
+    <p class="hurt"><b>Why it hurts:</b> two dispatchers per branch are the <b>throughput ceiling</b> —
+    more job volume means more headcount, not faster dispatch.</p>
+    <p class="solve"><b>We solve:</b> rank on those same four factors; push an accept/decline offer that
+    cascades automatically. No LLM — every assignment explainable.</p>
   </div>
 
   <div class="uc-mini">
@@ -39,11 +48,16 @@
     </div>
     <h3>Job Summarisation Copilot — changing the job status</h3>
     <span class="where">Mobile · Technician at end of job</span>
-    <p class="pain">Every job's mandatory closeout means <b>10–15 min of forms and two free-text
-    notes</b> — done properly. In practice ~40% of notes end up ≤40 characters.</p>
-    <p class="solve"><b>We solve:</b> restructure the tech's rough words into a clean note for
-    customer and office, and suggest form values from similar past jobs. Never fabricates, never
-    blocks Save. Target: <b>10–15 min → ~15 s</b>.</p>
+    <p class="pain">Every job ends with a <b>mandatory status change</b>, and behind it sits a wall of
+    forms plus <b>two free-text notes</b> — one for the customer, one for the office. Done properly it
+    takes <b>10–15 min</b>, often in a machine room with no signal where voice dictation is only
+    <b>~30% accurate</b>.</p>
+    <p class="hurt"><b>Why it hurts:</b> so the tech skimps — <b>~40% of 16.3M notes are ≤40 chars</b>,
+    the most common note is literally "checked history". Downstream the <b>office can't bill or
+    route</b> ("Replaced motor" — but no motor in the parts list).</p>
+    <p class="solve"><b>We solve:</b> restructure rough words into a clean customer/office note and
+    suggest form values from similar jobs; flag what's missing. Never fabricates, never blocks Save.
+    Target: <b>10–15 min → ~15 s</b>.</p>
   </div>
 
   <div class="uc-mini">
@@ -53,12 +67,15 @@
     </div>
     <h3>Technician Parts Finder — finding the part that isn't on the truck</h3>
     <span class="where">Mobile · Technician on-site</span>
-    <p class="pain">When the first three sources (truck, nearby techs, warehouse) come up empty,
-    the fourth is a <b>phone call to a supplier who may not answer</b> — billable hours burned, or
-    a second truck roll.</p>
-    <p class="solve"><b>We solve:</b> AI suggests the likely part from the problem and equipment;
-    one search shows where it is across all four sources. The tech decides where to pick it up —
-    no price ranking, no ordering.</p>
+    <p class="pain">On site the tech needs a part. Three sources the app already answers — truck, nearby
+    techs, warehouse. The fourth, a <b>third-party supplier</b>, is a phone call: Google search, 1–3
+    calls, <b>hope they answer</b>.</p>
+    <p class="hurt"><b>Why it hurts:</b> the same physical part carries a <b>different number at every
+    vendor</b>, and the supplier API matches <b>exact part number only — no fuzzy logic</b>. A human
+    bridges that gap by phone under emergency pressure; miss it and it's a <b>return dispatch</b> — a
+    second truck roll, job can't finish today.</p>
+    <p class="solve"><b>We solve:</b> AI suggests the likely part; one search shows where it is across
+    all four sources with location and distance. No price ranking, no ordering.</p>
   </div>
 </div>
 
@@ -69,11 +86,5 @@
   <a href="#s5">§5 Operational Flows</a>.
 </p>
 
-<div class="callout azure">
-  <b>Cloud placement:</b> the existing FieldJetX platform and all new infra run on <b>Azure</b>;
-  the SQL Server system of record stays on <b>AWS</b> (sole cross-cloud dependency). This restates
-  the existing-platform cloud from the per-use-case docs, which describe the existing platform as
-  running on AWS EC2.
-</div>
 </section>
 
