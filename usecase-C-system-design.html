@@ -1,0 +1,1144 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Technician Parts Finder · System Design — ClimatePros</title>
+<style>
+  :root{
+    --brand:#114D9A;
+    --brand-deep:#0d3d7a;
+    --brand-fill:rgba(17,77,154,.08);
+    --brand-fill-strong:rgba(17,77,154,.14);
+    --ink:#0f172a;
+    --ink-2:#334155;
+    --ink-3:#64748b;
+    --line:#e2e8f0;
+    --line-2:#cbd5e1;
+    --bg:#f1f5f9;
+    --card:#ffffff;
+    --code-bg:#0f172a;
+    --code-ink:#e2e8f0;
+    --green:#0f9d58;
+    --amber:#b7791f;
+    --red:#dc2626;
+    --amber-fill:rgba(183,121,31,.10);
+    --green-fill:rgba(15,157,88,.10);
+    --red-fill:rgba(220,38,38,.08);
+    --radius:14px;
+    --shadow:0 1px 2px rgba(15,23,42,.04),0 4px 16px rgba(15,23,42,.06);
+    --mono:"SFMono-Regular",ui-monospace,"Cascadia Code","Consolas","Liberation Mono",monospace;
+    --sans:-apple-system,BlinkMacSystemFont,"Segoe UI","Inter",Roboto,Helvetica,Arial,sans-serif;
+  }
+  *{box-sizing:border-box}
+  html{scroll-behavior:smooth}
+  body{margin:0;background:var(--bg);color:var(--ink);font-family:var(--sans);
+       font-size:16px;line-height:1.65;-webkit-font-smoothing:antialiased}
+
+  a{color:var(--brand);text-decoration:none}
+  a:hover{text-decoration:underline}
+
+  /* ---------- layout ---------- */
+  .layout{display:grid;grid-template-columns:280px minmax(0,1fr);gap:0;max-width:1400px;margin:0 auto}
+
+  /* ---------- sidebar TOC ---------- */
+  .toc{position:sticky;top:0;align-self:start;height:100vh;overflow-y:auto;
+       padding:28px 20px 40px;border-right:1px solid var(--line);background:var(--card)}
+  .toc .brand{display:flex;align-items:center;gap:10px;margin-bottom:6px}
+  .toc .brand .dot{width:30px;height:30px;border-radius:8px;background:var(--brand);
+       display:grid;place-items:center;color:#fff;font-weight:800;font-size:15px;flex:none}
+  .toc .brand .who{font-weight:700;font-size:14px;letter-spacing:.2px;color:var(--ink)}
+  .toc .brand .sub{font-size:11px;color:var(--ink-3);text-transform:uppercase;letter-spacing:1px}
+  .toc h4{font-size:11px;text-transform:uppercase;letter-spacing:1.2px;color:var(--ink-3);
+       margin:26px 0 8px;font-weight:700}
+  .toc nav a{display:block;padding:6px 10px;border-radius:8px;color:var(--ink-2);font-size:13.5px;
+       line-height:1.4;border-left:2px solid transparent}
+  .toc nav a:hover{background:var(--brand-fill);text-decoration:none;color:var(--brand-deep)}
+  .toc nav a.active{background:var(--brand-fill-strong);color:var(--brand-deep);
+       border-left-color:var(--brand);font-weight:600}
+  .toc nav a .n{color:var(--ink-3);font-variant-numeric:tabular-nums;margin-right:7px;font-size:12px}
+
+  /* ---------- content ---------- */
+  .content{padding:0 clamp(20px,4vw,64px) 120px;min-width:0}
+  header.doc{padding:56px 0 30px;border-bottom:1px solid var(--line);margin-bottom:8px}
+  header.doc .eyebrow{color:var(--brand);font-weight:700;font-size:13px;letter-spacing:1.5px;
+       text-transform:uppercase}
+  header.doc h1{font-size:clamp(28px,4vw,42px);line-height:1.12;margin:12px 0 14px;
+       letter-spacing:-.5px}
+  header.doc p.lead{font-size:18px;color:var(--ink-2);max-width:70ch;margin:0}
+  .meta-row{display:flex;flex-wrap:wrap;gap:8px;margin-top:22px}
+  .chip{display:inline-flex;align-items:center;gap:6px;font-size:12.5px;font-weight:600;
+       padding:5px 11px;border-radius:999px;background:var(--brand-fill);color:var(--brand-deep);
+       border:1px solid rgba(17,77,154,.15)}
+  .chip.gray{background:#f1f5f9;color:var(--ink-2);border-color:var(--line)}
+
+  section{padding:44px 0;border-bottom:1px solid var(--line);scroll-margin-top:20px}
+  section:last-of-type{border-bottom:0}
+  .kicker{display:inline-block;font-size:12px;font-weight:700;letter-spacing:1.4px;
+       text-transform:uppercase;color:var(--ink-3);margin-bottom:6px}
+  section h2{font-size:26px;letter-spacing:-.3px;margin:2px 0 6px;display:flex;
+       align-items:baseline;gap:12px}
+  section h2 .num{color:var(--brand);font-variant-numeric:tabular-nums;font-size:19px;font-weight:700;flex:none}
+  section h3{font-size:17px;margin:28px 0 8px;color:var(--ink)}
+  section h4{font-size:14px;margin:20px 0 6px;color:var(--ink-2);text-transform:uppercase;
+       letter-spacing:.6px}
+  p{margin:12px 0}
+  ul,ol{margin:12px 0;padding-left:22px}
+  li{margin:6px 0}
+  strong{color:var(--ink)}
+  code{font-family:var(--mono);font-size:.88em;background:var(--brand-fill);color:var(--brand-deep);
+       padding:1.5px 6px;border-radius:6px;border:1px solid rgba(17,77,154,.12)}
+
+  /* section band tint */
+  .band{font-size:11px;font-weight:800;letter-spacing:2px;text-transform:uppercase;
+       color:var(--brand);background:var(--brand-fill);display:inline-block;padding:6px 12px;
+       border-radius:8px;margin:56px 0 -8px}
+  .band:first-child{margin-top:20px}
+
+  /* cards / grids */
+  .grid{display:grid;gap:14px}
+  .grid.c2{grid-template-columns:repeat(2,minmax(0,1fr))}
+  .grid.c3{grid-template-columns:repeat(3,minmax(0,1fr))}
+  .grid.c4{grid-template-columns:repeat(4,minmax(0,1fr))}
+  .card{background:var(--card);border:1px solid var(--line);border-radius:var(--radius);
+       padding:18px;box-shadow:var(--shadow)}
+  .card .ic{font-size:22px;line-height:1;margin-bottom:8px}
+  .card h5{margin:0 0 4px;font-size:14.5px}
+  .card p{margin:0;font-size:13.5px;color:var(--ink-3);line-height:1.5}
+
+  /* tables */
+  .twrap{overflow-x:auto;border:1px solid var(--line);border-radius:var(--radius);
+       box-shadow:var(--shadow);margin:16px 0}
+  table{border-collapse:collapse;width:100%;font-size:14px;background:var(--card)}
+  th,td{text-align:left;padding:11px 14px;border-bottom:1px solid var(--line);vertical-align:top}
+  th{background:#f8fafc;font-weight:700;font-size:12.5px;text-transform:uppercase;
+       letter-spacing:.5px;color:var(--ink-2);white-space:nowrap}
+  tr:last-child td{border-bottom:0}
+  td code{white-space:nowrap}
+  .method{font-family:var(--mono);font-weight:700;font-size:12px;padding:2px 8px;border-radius:6px;
+       display:inline-block}
+  .method.get{background:var(--green-fill);color:var(--green)}
+  .method.post{background:var(--brand-fill);color:var(--brand-deep)}
+
+  /* code blocks */
+  pre{background:var(--code-bg);color:var(--code-ink);padding:18px 20px;border-radius:var(--radius);
+       overflow-x:auto;font-family:var(--mono);font-size:13px;line-height:1.6;margin:16px 0}
+  pre code{background:none;color:inherit;border:0;padding:0;font-size:inherit}
+  pre .c{color:#94a3b8}
+  pre .k{color:#7dd3fc}
+  pre .s{color:#86efac}
+
+  /* callouts */
+  .callout{border-radius:var(--radius);padding:14px 16px 14px 18px;margin:16px 0;
+       border:1px solid var(--line);background:var(--card);display:flex;gap:12px}
+  .callout .ic{font-size:19px;line-height:1.4;flex:none}
+  .callout .bd{min-width:0}
+  .callout p{margin:0;font-size:14px;color:var(--ink-2)}
+  .callout.note{background:var(--brand-fill);border-color:rgba(17,77,154,.18)}
+  .callout.warn{background:var(--amber-fill);border-color:rgba(183,121,31,.25)}
+  .callout.good{background:var(--green-fill);border-color:rgba(15,157,88,.25)}
+
+  /* diagram figure */
+  figure.diagram{margin:20px 0 6px;border:1px solid var(--line-2);border-radius:var(--radius);
+       overflow:hidden;box-shadow:var(--shadow);background:#f8fafc}
+  figure.diagram .diagram-scroll{overflow-x:auto;background:#fff;padding:12px 8px}
+  figure.diagram figcaption{padding:11px 16px;font-size:13px;color:var(--ink-3);
+       border-top:1px solid var(--line);background:var(--card);display:flex;
+       justify-content:space-between;gap:12px;flex-wrap:wrap}
+
+  /* flow steps */
+  .steps{counter-reset:step;margin:16px 0;padding:0;list-style:none}
+  .steps li{position:relative;padding:10px 0 10px 46px;border-bottom:1px dashed var(--line)}
+  .steps li:last-child{border-bottom:0}
+  .steps li::before{counter-increment:step;content:counter(step);position:absolute;left:0;top:9px;
+       width:30px;height:30px;border-radius:50%;background:var(--brand);color:#fff;font-weight:700;
+       font-size:14px;display:grid;place-items:center}
+
+  .pill{display:inline-block;font-family:var(--mono);font-size:11.5px;font-weight:600;
+       padding:2px 8px;border-radius:6px;background:#f1f5f9;color:var(--ink-2);border:1px solid var(--line)}
+  .pill.free{background:var(--green-fill);color:var(--green);border-color:rgba(15,157,88,.2)}
+  .pill.paid{background:var(--amber-fill);color:var(--amber);border-color:rgba(183,121,31,.2)}
+
+  .mobile-toc{display:none}
+  footer.doc{padding:36px 0 0;color:var(--ink-3);font-size:13px}
+
+  /* ---------- responsive ---------- */
+  @media(max-width:1000px){
+    .layout{grid-template-columns:1fr}
+    .toc{display:none}
+    .mobile-toc{display:block;background:var(--card);border:1px solid var(--line);
+         border-radius:var(--radius);padding:14px 16px;margin:20px 0 4px}
+    .mobile-toc summary{font-weight:700;cursor:pointer;color:var(--brand-deep)}
+    .mobile-toc nav{columns:2;margin-top:10px}
+    .mobile-toc nav a{display:block;font-size:13px;padding:4px 0;color:var(--ink-2)}
+    .grid.c3,.grid.c4{grid-template-columns:repeat(2,minmax(0,1fr))}
+  }
+  @media(max-width:560px){
+    .grid.c2,.grid.c3,.grid.c4{grid-template-columns:1fr}
+    .mobile-toc nav{columns:1}
+    header.doc{padding-top:34px}
+  }
+</style>
+</head>
+<body>
+<div class="layout">
+
+  <!-- ===================== SIDEBAR TOC ===================== -->
+  <aside class="toc">
+    <div class="brand">
+      <div class="dot">CP</div>
+      <div>
+        <div class="who">ClimatePros</div>
+        <div class="sub">Use Case C</div>
+      </div>
+    </div>
+    <h4>High-Level Design</h4>
+    <nav>
+      <a href="#overview"><span class="n">01</span>System Overview</a>
+      <a href="#problem"><span class="n">02</span>Problem &amp; Goals</a>
+      <a href="#stack"><span class="n">03</span>Technology Stack</a>
+      <a href="#architecture"><span class="n">04</span>High-Level Architecture</a>
+      <a href="#infra"><span class="n">05</span>Infrastructure</a>
+    </nav>
+    <h4>Core Design</h4>
+    <nav>
+      <a href="#data-model"><span class="n">06</span>Data Model</a>
+      <a href="#ranking"><span class="n">07</span>RAG Prediction &amp; Ranking</a>
+      <a href="#sourcing"><span class="n">08</span>Sourcing Algorithm</a>
+      <a href="#api"><span class="n">09</span>API Reference</a>
+      <a href="#client"><span class="n">10</span>Client Flow (FJX 2.2)</a>
+      <a href="#observability"><span class="n">11</span>Observability</a>
+    </nav>
+    <h4>Operations &amp; Appendix</h4>
+    <nav>
+      <a href="#deployment"><span class="n">12</span>Deployment &amp; Rollout</a>
+      <a href="#security"><span class="n">13</span>Security &amp; PII</a>
+      <a href="#fault"><span class="n">14</span>Fault Tolerance</a>
+      <a href="#cost"><span class="n">15</span>Cost Projection</a>
+      <a href="#future"><span class="n">16</span>Future Improvements</a>
+    </nav>
+  </aside>
+
+  <!-- ===================== CONTENT ===================== -->
+  <main class="content">
+
+    <header class="doc">
+      <div class="eyebrow">System Design Document</div>
+      <h1>Technician Parts Finder</h1>
+      <p class="lead">AI-assisted parts prediction and multi-source sourcing, delivered inside the
+        existing FieldJetX (FJX&nbsp;2.2) mobile app — so a technician knows <em>which</em> parts a job
+        needs and <em>where</em> to gather each one before leaving for site.</p>
+      <div class="meta-row">
+        <span class="chip">🏢 ClimatePros · Use Case C</span>
+        <span class="chip gray">Status: Target Architecture</span>
+        <span class="chip gray">Client: FieldJetX FJX 2.2 (mobile)</span>
+        <span class="chip gray">Service: ECS Fargate · FastAPI</span>
+        <span class="chip gray">Models: customer-hosted</span>
+      </div>
+    </header>
+
+    <details class="mobile-toc">
+      <summary>Contents</summary>
+      <nav>
+        <a href="#overview">01 · System Overview</a>
+        <a href="#problem">02 · Problem &amp; Goals</a>
+        <a href="#stack">03 · Technology Stack</a>
+        <a href="#architecture">04 · High-Level Architecture</a>
+        <a href="#infra">05 · Infrastructure</a>
+        <a href="#data-model">06 · Data Model</a>
+        <a href="#ranking">07 · RAG Prediction &amp; Ranking</a>
+        <a href="#sourcing">08 · Sourcing Algorithm</a>
+        <a href="#api">09 · API Reference</a>
+        <a href="#client">10 · Client Flow</a>
+        <a href="#observability">11 · Observability</a>
+        <a href="#deployment">12 · Deployment &amp; Rollout</a>
+        <a href="#security">13 · Security &amp; PII</a>
+        <a href="#fault">14 · Fault Tolerance</a>
+        <a href="#cost">15 · Cost Projection</a>
+        <a href="#future">16 · Future Improvements</a>
+      </nav>
+    </details>
+
+    <span class="band">High-Level Design</span>
+
+    <!-- 01 OVERVIEW -->
+    <section id="overview">
+      <span class="kicker">01 · Overview</span>
+      <h2><span class="num">01</span>System Overview</h2>
+      <p>The Technician Parts Finder adds two capabilities to the FieldJetX FJX&nbsp;2.2 mobile app used by
+        field technicians: <strong>predicting the parts a dispatch is likely to need</strong> from the
+        dispatch's written reason, and <strong>sourcing each part across every place it can be gathered</strong>
+        — the tech's own van, other Climate Pros warehouses, the branch warehouse, and the nearest United
+        Refrigeration vendor branch.</p>
+      <p><strong>Core principle:</strong> the system learns from its own history. Every completed dispatch in
+        the system of record feeds a retrieval index, so predictions improve as more work is done — no manual
+        rules to maintain. Prediction is <em>additive and advisory</em>: the technician stays in control and
+        can always add parts manually.</p>
+
+      <div class="grid c4" style="margin-top:18px">
+        <div class="card"><div class="ic">🔮</div><h5>RAG Prediction</h5>
+          <p>Embed the dispatch reason, retrieve the most similar past jobs, and rank the parts those jobs
+             actually used.</p></div>
+        <div class="card"><div class="ic">📦</div><h5>Multi-Source Gather</h5>
+          <p>For every part, surface all stock locations — own inventory first (free), vendor last (priced).</p></div>
+        <div class="card"><div class="ic">🔁</div><h5>Self-Learning Loop</h5>
+          <p>Completed dispatches are re-embedded and upserted into the vector store, closing the feedback
+             loop automatically.</p></div>
+        <div class="card"><div class="ic">✍️</div><h5>Manual Fallback</h5>
+          <p>If prediction is unavailable, the technician adds parts from inventory search — the flow never
+             blocks.</p></div>
+      </div>
+    </section>
+
+    <!-- 02 PROBLEM -->
+    <section id="problem">
+      <span class="kicker">02 · Motivation</span>
+      <h2><span class="num">02</span>Problem &amp; Goals</h2>
+      <p><strong>Current bottleneck.</strong> A technician reads a dispatch, guesses which parts the repair
+        will require from experience, and then hunts for those parts across their van, nearby warehouses, and
+        vendor counters. Wrong guesses mean second trips; blind sourcing means driving further than necessary
+        or paying a vendor for something already sitting in a colleague's van.</p>
+
+      <h3>Goals</h3>
+      <div class="twrap">
+        <table>
+          <thead><tr><th>Goal</th><th>What it means</th></tr></thead>
+          <tbody>
+            <tr><td><strong>Predict from history</strong></td><td>Turn the free-text dispatch reason into a
+              ranked, confidence-scored list of likely parts, grounded in what similar past jobs actually used.</td></tr>
+            <tr><td><strong>Source everywhere</strong></td><td>For each part, show every place it can be
+              gathered, ordered so the cheapest/closest option is picked first.</td></tr>
+            <tr><td><strong>Minimize trips &amp; cost</strong></td><td>Prefer the tech's own stock (free) over
+              other warehouses, and warehouses over the priced vendor branch.</td></tr>
+            <tr><td><strong>Stay in the existing app</strong></td><td>Deliver entirely inside FJX&nbsp;2.2 —
+              no new app for the technician to learn or install.</td></tr>
+            <tr><td><strong>Improve automatically</strong></td><td>Every completed dispatch makes the next
+              prediction better, with no rule maintenance.</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <h3>Success metric</h3>
+      <p>Reduction in <strong>parts-driven return trips</strong> per dispatch, and the share of predicted
+        parts the technician accepts (prediction acceptance rate).</p>
+
+      <h3>Non-goals</h3>
+      <ul>
+        <li>Replacing technician judgment — predictions are suggestions, never auto-committed.</li>
+        <li>Automatic purchasing or PO creation from the vendor (a future improvement).</li>
+        <li>Warehouse/inventory management — stock levels remain owned by the system of record.</li>
+      </ul>
+    </section>
+
+    <!-- 03 STACK -->
+    <section id="stack">
+      <span class="kicker">03 · Stack</span>
+      <h2><span class="num">03</span>Technology Stack</h2>
+      <p>Nine cooperating components across three zones: the <strong>existing FieldJetX platform</strong>
+        (unchanged), the <strong>new AI layer</strong> (this project, running in a private AWS VPC), and
+        <strong>customer hardware</strong> hosting the client-provided models. The prediction path is
+        model-driven; the sourcing path fans out to the systems that own live stock and supplier pricing.</p>
+      <div class="twrap">
+        <table>
+          <thead><tr><th>Layer</th><th>Technology</th><th>Role &amp; rationale</th></tr></thead>
+          <tbody>
+            <tr><td>Client</td><td><strong>FieldJetX FJX&nbsp;2.2</strong> (Flutter · Cupertino)</td>
+              <td>Existing technician mobile app. Adds "Add Parts with AI", manual inventory add, and a
+                sourcing screen — no separate app. Talks only to the existing .NET APIs, never directly to
+                the AI layer.</td></tr>
+            <tr><td>Platform APIs</td><td><strong>.NET Legacy API + .NET Microservices API</strong> (AWS EC2)</td>
+              <td>The existing FieldJetX backend, unchanged — except a <strong>new AI proxy route</strong> on
+                the Microservices API that forwards Predict / Source calls to the AI server. Keeps auth and
+                the mobile contract where they already live.</td></tr>
+            <tr><td>AI service</td><td><strong>FastAPI AI Server</strong> (Python · AWS ECS Fargate)</td>
+              <td>New. Hosts the <em>Predict API</em> and <em>Source API</em>; orchestrates embedding,
+                retrieval, ranking, and sourcing. Stateless tasks in a private AWS VPC, horizontally
+                scalable.</td></tr>
+            <tr><td>Embedding</td><td><strong>Self-hosted embedding model</strong> (customer hardware)</td>
+              <td>Client-provided model, hosted on the customer's own hardware. Converts dispatch reason text
+                into vectors for semantic retrieval (asymmetric document/query embeddings) — dispatch text
+                never leaves for a third-party AI provider.</td></tr>
+            <tr><td>Ranking</td><td><strong>Self-hosted LLM</strong> (customer hardware)</td>
+              <td>Client-provided model that ranks &amp; aggregates the parts retrieved from similar past
+                jobs into a confidence-scored list.</td></tr>
+            <tr><td>Vector DB</td><td><strong>Amazon S3 Vectors</strong></td>
+              <td>New. Stores embedded historical dispatch reasons with their used-parts metadata
+                (embedded site history). Serverless and pay-per-use; cosine similarity search.</td></tr>
+            <tr><td>System of record</td><td><strong>SQL Server</strong> (<code>fieldgetics</code>)
+              + new <code>ai.*</code> schema</td>
+              <td>Owns dispatches, inventory, and stock-by-location. The AI layer reads stock and persists
+                parts lists into a <strong>new <code>ai.*</code> schema</strong> — clear isolation of AI data
+                from the existing tables.</td></tr>
+            <tr><td>Supplier</td><td><strong>United Refrigeration</strong> via CP API Gateway</td>
+              <td>Outside parts supplier — nearest-branch stock and location; price from the CP supplier
+                cross-reference.</td></tr>
+            <tr><td>Observability</td><td><strong>AWS CloudWatch + ADOT</strong> (OpenTelemetry)</td>
+              <td>New. Distributed tracing, metrics, and structured logs across every predict/source/supplier
+                call.</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <!-- 04 ARCHITECTURE -->
+    <section id="architecture">
+      <span class="kicker">04 · Architecture</span>
+      <h2><span class="num">04</span>High-Level Architecture</h2>
+      <p>Three zones: the <strong>existing FieldJetX platform</strong> stays unchanged, the <strong>new AI
+        layer</strong> runs in a private AWS VPC, and the <strong>models are self-hosted on customer
+        hardware</strong>. The technician triggers the flow from FJX&nbsp;2.2; the .NET Microservices API
+        proxies to the FastAPI AI Server, which orchestrates retrieval, ranking, and multi-source gathering —
+        and every completed dispatch feeds back into the index.</p>
+
+      <figure class="diagram">
+        <div class="diagram-scroll">
+ <svg viewBox="0 0 1240 650" width="100%" style="min-width:1000px; font-family:inherit;">
+ <defs>
+ <marker id="be-blue" markerWidth="10" markerHeight="10" refX="7" refY="3.5" orient="auto"><path d="M0,0 L7,3.5 L0,7 Z" fill="#2563eb"/></marker>
+ <marker id="be-amber" markerWidth="10" markerHeight="10" refX="7" refY="3.5" orient="auto"><path d="M0,0 L7,3.5 L0,7 Z" fill="#d97706"/></marker>
+ <marker id="be-green" markerWidth="10" markerHeight="10" refX="7" refY="3.5" orient="auto"><path d="M0,0 L7,3.5 L0,7 Z" fill="#059669"/></marker>
+ <marker id="be-green-r" markerWidth="10" markerHeight="10" refX="1" refY="3.5" orient="auto"><path d="M7,0 L0,3.5 L7,7 Z" fill="#059669"/></marker>
+ <marker id="be-purple" markerWidth="10" markerHeight="10" refX="7" refY="3.5" orient="auto"><path d="M0,0 L7,3.5 L0,7 Z" fill="#7c3aed"/></marker>
+ </defs>
+
+ <!-- ===== ZONE 1: EXISTING FIELDJETX PLATFORM ===== -->
+ <rect x="18" y="60" width="500" height="520" rx="16" fill="#eff4ff" stroke="#60a5fa" stroke-width="1.5" stroke-dasharray="7 5"/>
+ <text x="268" y="88" text-anchor="middle" font-size="12" font-weight="700" fill="#0f3a8e" letter-spacing="1">EXISTING FIELDJETX PLATFORM</text>
+ <text x="268" y="104" text-anchor="middle" font-size="10" fill="#64748b">unchanged</text>
+
+ <!-- ===== ZONE 2: NEW AI LAYER ===== -->
+ <rect x="560" y="60" width="480" height="520" rx="16" fill="#fffaf3" stroke="#d97706" stroke-width="1.5" stroke-dasharray="7 5"/>
+ <text x="800" y="88" text-anchor="middle" font-size="12" font-weight="700" fill="#b45309" letter-spacing="1">NEW AI LAYER &middot; THIS PROJECT</text>
+ <text x="800" y="104" text-anchor="middle" font-size="10" fill="#b45309">runs in a private AWS VPC</text>
+
+ <!-- ===== ZONE 3: CUSTOMER SELF-HOSTED HARDWARE ===== -->
+ <rect x="1052" y="150" width="185" height="320" rx="16" fill="#faf5ff" stroke="#7c3aed" stroke-width="1.5" stroke-dasharray="7 5"/>
+ <text x="1144" y="176" text-anchor="middle" font-size="11" font-weight="700" fill="#5b21b6" letter-spacing="1">CUSTOMER HARDWARE</text>
+ <text x="1144" y="192" text-anchor="middle" font-size="9.5" fill="#7c6aa6">models self-hosted by the client</text>
+
+ <!-- Mobile App -->
+ <rect x="40" y="130" width="160" height="110" rx="14" fill="#fff" stroke="#93c5fd" stroke-width="1.5"/>
+ <text x="120" y="177" text-anchor="middle" font-size="15" font-weight="700" fill="#0f3a8e">&#128241; Mobile App</text>
+ <text x="120" y="198" text-anchor="middle" font-size="11" fill="#64748b">FieldJetX (Flutter)</text>
+
+ <!-- arrow mobile -> .NET -->
+ <path d="M200 167 H 286" fill="none" stroke="#2563eb" stroke-width="2.5" marker-end="url(#be-blue)"/>
+ <text x="243" y="155" text-anchor="middle" font-size="11" font-weight="700" fill="#2563eb" stroke="#ffffff" stroke-width="5" paint-order="stroke">opens &ldquo;Add parts&rdquo;</text>
+ <circle cx="230" cy="190" r="9" fill="#1a56db"/>
+ <text x="230" y="194" text-anchor="middle" font-size="10" font-weight="800" fill="#fff">1</text>
+
+ <!-- .NET APIs -->
+ <rect x="290" y="130" width="206" height="75" rx="10" fill="#fff" stroke="#93c5fd" stroke-width="1.5"/>
+ <text x="393" y="164" text-anchor="middle" font-size="13" font-weight="700" fill="#1e293b">.NET Legacy API</text>
+ <text x="393" y="185" text-anchor="middle" font-size="10" fill="#64748b">AWS EC2</text>
+
+ <rect x="290" y="235" width="206" height="90" rx="10" fill="#fff" stroke="#93c5fd" stroke-width="2"/>
+ <text x="393" y="266" text-anchor="middle" font-size="13" font-weight="700" fill="#1e293b">.NET Microservices API</text>
+ <text x="393" y="285" text-anchor="middle" font-size="10" fill="#64748b">AWS EC2</text>
+ <text x="393" y="306" text-anchor="middle" font-size="10" font-weight="700" fill="#d97706">+ AI proxy route (new)</text>
+
+
+ <!-- SQL Server (the client's existing database, extended with ai.* tables) -->
+ <path d="M215 468 h190 v58 a95,13 0 0 1 -190 0 z" fill="#fff" stroke="#2563eb" stroke-width="2"/>
+ <ellipse cx="310" cy="468" rx="95" ry="13" fill="#fff" stroke="#2563eb" stroke-width="2"/>
+ <text x="310" y="496" text-anchor="middle" font-size="12.5" font-weight="700" fill="#0f3a8e">SQL Server</text>
+ <text x="310" y="514" text-anchor="middle" font-size="10" font-weight="700" fill="#d97706">+ new ai.* schema</text>
+ <text x="310" y="529" text-anchor="middle" font-size="9.5" font-weight="600" fill="#b45309">clear isolation of AI data</text>
+
+ <!-- APIs read/write the shared SQL Server (bus) -->
+ <path d="M290 300 H 250" fill="none" stroke="#2563eb" stroke-width="2"/>
+ <path d="M290 190 H 250 V 450" fill="none" stroke="#2563eb" stroke-width="2" marker-end="url(#be-blue)"/>
+ <circle cx="250" cy="300" r="3.5" fill="#2563eb"/>
+ <text x="238" y="335" text-anchor="middle" font-size="11" font-weight="700" fill="#2563eb" stroke="#ffffff" stroke-width="5" paint-order="stroke" transform="rotate(-90 238 335)">reads + writes</text>
+
+ <!-- arrow .NET -> FastAPI (proxy) -->
+ <path d="M496 280 H 602" fill="none" stroke="#d97706" stroke-width="2.5" marker-end="url(#be-amber)"/>
+ <text x="551" y="268" text-anchor="middle" font-size="11.5" font-weight="700" fill="#b45309" stroke="#ffffff" stroke-width="5" paint-order="stroke">calls Predict / Source</text>
+ <circle cx="551" cy="300" r="9" fill="#1a56db"/>
+ <text x="551" y="304" text-anchor="middle" font-size="10" font-weight="800" fill="#fff">2</text>
+
+ <!-- enrichment reads: FastAPI -> Legacy -->
+ <path d="M610 250 L 504 175" fill="none" stroke="#d97706" stroke-width="1.8" stroke-dasharray="6 4" marker-end="url(#be-amber)"/>
+ <text x="552" y="195" text-anchor="middle" font-size="11" font-weight="700" fill="#b45309" stroke="#ffffff" stroke-width="5" paint-order="stroke">read dispatch reason + stock</text>
+ <circle cx="580" cy="228" r="9" fill="#1a56db"/>
+ <text x="580" y="232" text-anchor="middle" font-size="10" font-weight="800" fill="#fff">3</text>
+
+ <!-- FastAPI AI Server -->
+ <rect x="610" y="235" width="220" height="90" rx="12" fill="#fff" stroke="#d97706" stroke-width="2.5"/>
+ <rect x="782" y="227" width="40" height="16" rx="8" fill="#d97706"/>
+ <text x="802" y="239" text-anchor="middle" font-size="9" font-weight="800" fill="#fff">NEW</text>
+ <text x="720" y="278" text-anchor="middle" font-size="14" font-weight="700" fill="#1e293b">&#9889; FastAPI AI Server</text>
+ <text x="720" y="300" text-anchor="middle" font-size="10" fill="#64748b">AWS ECS Fargate</text>
+
+ <!-- Vector DB -->
+ <rect x="850" y="430" width="160" height="90" rx="12" fill="#fff" stroke="#d97706" stroke-width="1.8" stroke-dasharray="6 4"/>
+ <rect x="960" y="422" width="40" height="16" rx="8" fill="#d97706"/>
+ <text x="980" y="434" text-anchor="middle" font-size="9" font-weight="800" fill="#fff">NEW</text>
+ <text x="930" y="464" text-anchor="middle" font-size="12.5" font-weight="700" fill="#b45309">&#129522; Vector DB</text>
+ <text x="930" y="482" text-anchor="middle" font-size="10" fill="#64748b">Amazon S3 Vectors</text>
+ <text x="930" y="498" text-anchor="middle" font-size="10" fill="#64748b">embedded site history</text>
+
+ <!-- Self-hosted models on customer hardware -->
+ <rect x="1067" y="205" width="155" height="88" rx="12" fill="#f3e8ff" stroke="#7c3aed" stroke-width="1.8"/>
+ <text x="1144" y="240" text-anchor="middle" font-size="11.5" font-weight="700" fill="#5b21b6">&#129504; Self-hosted LLM</text>
+ <text x="1144" y="258" text-anchor="middle" font-size="9" fill="#7c6aa6">ranks &amp; aggregates parts</text>
+ <text x="1144" y="272" text-anchor="middle" font-size="9" fill="#7c6aa6">client-provided model</text>
+
+ <rect x="1067" y="330" width="155" height="88" rx="12" fill="#f3e8ff" stroke="#7c3aed" stroke-width="1.8"/>
+ <text x="1144" y="365" text-anchor="middle" font-size="11.5" font-weight="700" fill="#5b21b6">&#129513; Embedding model</text>
+ <text x="1144" y="383" text-anchor="middle" font-size="9" fill="#7c6aa6">embeds the dispatch reason</text>
+ <text x="1144" y="397" text-anchor="middle" font-size="9" fill="#7c6aa6">client-provided &middot; self-hosted</text>
+
+ <!-- FastAPI -> self-hosted models on customer hardware -->
+ <path d="M830 262 H 1063" fill="none" stroke="#7c3aed" stroke-width="2" marker-end="url(#be-purple)"/>
+ <text x="948" y="253" text-anchor="middle" font-size="10.5" font-weight="700" fill="#7c3aed" stroke="#ffffff" stroke-width="5" paint-order="stroke">rank predicted parts</text>
+ <circle cx="880" cy="262" r="9" fill="#1a56db"/>
+ <text x="880" y="266" text-anchor="middle" font-size="10" font-weight="800" fill="#fff">5</text>
+ <path d="M830 300 L 1063 372" fill="none" stroke="#7c3aed" stroke-width="2" marker-end="url(#be-purple)"/>
+ <text x="946" y="356" text-anchor="middle" font-size="10.5" font-weight="700" fill="#7c3aed" stroke="#ffffff" stroke-width="5" paint-order="stroke">embed dispatch reason</text>
+
+ <!-- FastAPI -> Vector (queries) -->
+ <path d="M830 305 H 930 V 426" fill="none" stroke="#d97706" stroke-width="2" stroke-dasharray="6 4" marker-end="url(#be-amber)"/>
+ <text x="908" y="298" text-anchor="middle" font-size="11" font-weight="700" fill="#b45309" stroke="#ffffff" stroke-width="5" paint-order="stroke">query similar past dispatches</text>
+ <circle cx="848" cy="305" r="9" fill="#1a56db"/>
+ <text x="848" y="309" text-anchor="middle" font-size="10" font-weight="800" fill="#fff">4</text>
+
+ <!-- FastAPI <-> SQL (the new layer writes into the client's existing database) -->
+ <path d="M660 325 V 480 H 411" fill="none" stroke="#059669" stroke-width="2.2" marker-end="url(#be-green)" marker-start="url(#be-green-r)"/>
+ <text x="545" y="468" text-anchor="middle" font-size="11" font-weight="700" fill="#047857" stroke="#ffffff" stroke-width="5" paint-order="stroke">read stock &middot; persist parts</text>
+ <circle cx="600" cy="480" r="9" fill="#1a56db"/>
+ <text x="600" y="484" text-anchor="middle" font-size="10" font-weight="800" fill="#fff">6</text>
+
+ <!-- embed: SQL -> Vector -->
+ <path d="M411 510 H 846" fill="none" stroke="#059669" stroke-width="2" stroke-dasharray="4 4" marker-end="url(#be-green)"/>
+ <text x="628" y="528" text-anchor="middle" font-size="11" font-weight="700" fill="#047857" stroke="#ffffff" stroke-width="5" paint-order="stroke">re-embed on dispatch complete &middot; learning loop</text>
+
+ <!-- Observability layer (CloudWatch + ADOT) -->
+ <path d="M745 325 V 538" fill="none" stroke="#d97706" stroke-width="1.6" stroke-dasharray="4 4" marker-end="url(#be-amber)"/>
+ <text x="745" y="432" text-anchor="middle" font-size="10" font-weight="700" fill="#b45309" stroke="#ffffff" stroke-width="5" paint-order="stroke">traces + logs</text>
+ <rect x="575" y="542" width="450" height="32" rx="10" fill="#fff7ed" stroke="#d97706" stroke-width="1.8"/>
+ <rect x="985" y="534" width="40" height="16" rx="8" fill="#d97706"/>
+ <text x="1005" y="546" text-anchor="middle" font-size="9" font-weight="800" fill="#fff">NEW</text>
+ <text x="792" y="562" text-anchor="middle" font-size="11" font-weight="700" fill="#b45309">&#128202; AWS CloudWatch + ADOT &middot; all traces &amp; logs recorded here</text>
+
+ <!-- legend -->
+ <line x1="40" y1="628" x2="70" y2="628" stroke="#2563eb" stroke-width="2.5"/><text x="76" y="632" font-size="10" fill="#475569">exists today &middot; unchanged</text>
+ <line x1="215" y1="628" x2="245" y2="628" stroke="#d97706" stroke-width="2.5"/><text x="251" y="632" font-size="10" fill="#475569">new &middot; this project</text>
+ <line x1="350" y1="628" x2="380" y2="628" stroke="#d97706" stroke-width="2" stroke-dasharray="6 4"/><text x="386" y="632" font-size="10" fill="#475569">async / background</text>
+ <line x1="500" y1="628" x2="530" y2="628" stroke="#7c3aed" stroke-width="2"/><text x="536" y="632" font-size="10" fill="#475569">self-hosted models</text>
+ <line x1="665" y1="628" x2="695" y2="628" stroke="#059669" stroke-width="2.2"/><text x="701" y="632" font-size="10" fill="#475569">persist / embed</text>
+ <circle cx="800" cy="628" r="8" fill="#1a56db"/><text x="800" y="631.5" text-anchor="middle" font-size="9" font-weight="800" fill="#fff">1</text><text x="814" y="632" font-size="10" fill="#475569">steps 1&#8211;6 &middot; one parts request, in order</text>
+ </svg>
+        </div>
+        <figcaption>
+          <span>Technician Parts Finder — high-level architecture: existing FieldJetX platform (unchanged) ·
+            new AI layer in a private AWS VPC · self-hosted models on customer hardware. Steps 1–6 trace one
+            parts request.</span>
+        </figcaption>
+      </figure>
+
+      <h3>Request flow</h3>
+      <ol class="steps">
+        <li>Technician taps <strong>"Add parts"</strong> on a dispatch in FieldJetX (FJX&nbsp;2.2) — the app
+            talks to the existing <strong>.NET APIs</strong>, exactly as it does today <em>(step 1)</em>.</li>
+        <li>The .NET Microservices API's new <strong>AI proxy route</strong> forwards the
+            <strong>Predict</strong> / <strong>Source</strong> call to the <strong>FastAPI AI Server</strong>
+            (ECS Fargate) <em>(step 2)</em>.</li>
+        <li>The AI server reads the dispatch <strong>reason</strong> and stock context from the
+            <strong>.NET Legacy API</strong> <em>(step 3)</em>.</li>
+        <li>The dispatch reason is embedded by the <strong>self-hosted embedding model</strong> on customer
+            hardware.</li>
+        <li>The query vector is searched against the <strong>Vector DB</strong> (Amazon S3 Vectors) and the
+            nearest past dispatches are retrieved (<strong>RAG</strong>) <em>(step 4)</em>.</li>
+        <li>The <strong>self-hosted LLM</strong> ranks &amp; aggregates the parts those jobs used and the
+            result returns to the technician <em>(step 5)</em>.</li>
+        <li>The Source API gathers own-stock per part from <strong>SQL Server</strong> and persists the
+            parts list into the new <code>ai.*</code> schema <em>(step 6)</em>; the supplier tier is fetched
+            server-side from the <strong>United Refrigeration</strong> CP Gateway (outside the diagram's
+            numbered path).</li>
+        <li>All calls are traced to <strong>CloudWatch + ADOT</strong>.</li>
+        <li>When a dispatch is later <strong>marked complete</strong> in SQL Server, its reason + parts are
+            <strong>re-embedded and upserted</strong> into the Vector DB — closing the learning loop.</li>
+      </ol>
+    </section>
+
+    <!-- 05 INFRA -->
+    <section id="infra">
+      <span class="kicker">05 · Infrastructure</span>
+      <h2><span class="num">05</span>Infrastructure</h2>
+      <div class="twrap">
+        <table>
+          <thead><tr><th>Component</th><th>Responsibility</th><th>Scaling / notes</th></tr></thead>
+          <tbody>
+            <tr><td><strong>.NET Legacy + Microservices APIs</strong> (AWS EC2)</td><td>Existing FieldJetX
+              platform — unchanged. The Microservices API adds the new <strong>AI proxy route</strong>, the
+              single entry point from the mobile app into the AI layer.</td><td>Existing platform scaling;
+              the proxy route adds a thin pass-through only.</td></tr>
+            <tr><td><strong>FastAPI AI Server</strong> (ECS Fargate)</td><td>Predict + Source APIs;
+              orchestration of embedding, retrieval, ranking, and supplier calls.</td><td>Stateless Fargate
+              tasks in a private AWS VPC; scale horizontally by task count. Service auto scaling on CPU /
+              request latency.</td></tr>
+            <tr><td><strong>Vector DB (Amazon S3 Vectors)</strong></td><td>Semantic index of historical
+              dispatch reasons + used-parts metadata (embedded site history).</td><td>Serverless,
+              pay-per-use; no cluster to size or patch. Cosine similarity queries.</td></tr>
+            <tr><td><strong>Self-hosted embedding model</strong> (customer hardware)</td><td>Text → vector
+              for documents (index time) and queries (request time).</td><td>Client-provided model on the
+              customer's own hardware; batching at index time.</td></tr>
+            <tr><td><strong>Self-hosted LLM</strong> (customer hardware)</td><td>Ranks &amp; aggregates
+              retrieved parts into the confidence-scored prediction.</td><td>Client-provided model on the
+              customer's own hardware; sized by the client for request-time latency.</td></tr>
+            <tr><td><strong>SQL Server (<code>fieldgetics</code> + <code>ai.*</code>)</strong>
+              </td><td>Dispatches, inventory, stock-by-location, completed-dispatch history; the new
+              <code>ai.*</code> schema holds AI-written data (persisted parts lists).</td><td>Read replicas
+              for hot inventory/stock lookups; least-privilege service account scoped to reads + the
+              <code>ai.*</code> schema.</td></tr>
+            <tr><td><strong>United CP API Gateway</strong></td><td>Outside supplier branch stock +
+              location.</td><td>External; nearest-branch lookup per part, with graceful degradation on
+              outage.</td></tr>
+            <tr><td><strong>CloudWatch + ADOT</strong></td><td>Traces, metrics, logs, health checks — all
+              traces &amp; logs recorded here.</td><td>OpenTelemetry collector sidecar per Fargate task;
+              alarms on error rate &amp; latency.</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <span class="band">Core Design</span>
+
+    <!-- 06 DATA MODEL -->
+    <section id="data-model">
+      <span class="kicker">06 · Data</span>
+      <h2><span class="num">06</span>Data Model</h2>
+      <p>Two stores cooperate: the <strong>relational system of record</strong> (SQL Server
+        <code>fieldgetics</code>) owns dispatches, inventory, and stock; the <strong>vector store</strong>
+        (Amazon S3 Vectors) holds the semantic index used for prediction. AI-written data lands in a
+        <strong>new <code>ai.*</code> schema</strong> in the same SQL Server — clear isolation from the
+        existing tables.</p>
+
+      <h3>System of record — <code>fieldgetics</code> (SQL Server)</h3>
+      <div class="twrap">
+        <table>
+          <thead><tr><th>Entity</th><th>Key fields used</th><th>Purpose in this system</th></tr></thead>
+          <tbody>
+            <tr><td><code>Dispatch</code></td><td><code>reason</code>, <code>problemCode</code>,
+              <code>repairCategory</code>, <code>priority</code>, <code>nte</code>,
+              <code>branchWarehouse</code></td><td>The <code>reason</code> text is the prediction input;
+              completion feeds the learning loop.</td></tr>
+            <tr><td><code>DispatchPartsRequest</code> / <code>Inventory</code></td><td>part number, name,
+              category</td><td>Parts catalog and the parts a dispatch requests/uses.</td></tr>
+            <tr><td><code>InventoryLocationXref</code></td><td>location, quantity-on-hand</td>
+              <td>Stock by location — drives own-stock (truck + warehouse) availability in sourcing.</td></tr>
+            <tr><td><code>InventorySupplierXREF</code></td><td><code>currentcost</code></td>
+              <td>Vendor price for a part (the United API returns stock + location; price is applied from
+              here).</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <h3>New <code>ai.*</code> schema — AI-owned relational data</h3>
+      <p>Everything the AI layer <em>writes</em> to SQL Server lives in its own schema: the parts lists a
+        technician commits (with per-source allocations), prediction acceptance signals, and indexing
+        bookkeeping. Nothing in the existing <code>dbo</code> tables changes — the AI footprint can be
+        audited, backed up, or dropped independently.</p>
+
+      <h3>Vector store — dispatch-parts index (Amazon S3 Vectors)</h3>
+      <p>Each historical <em>completed</em> dispatch becomes one record, indexed for cosine similarity:</p>
+      <pre><code><span class="c"># one record per completed dispatch</span>
+id        = dispatchNo                 <span class="c"># stable key → idempotent upsert</span>
+document  = dispatch.reason            <span class="c"># the embedded text</span>
+embedding = embed(reason, DOCUMENT)    <span class="c"># vector (cosine / HNSW)</span>
+metadata  = { partsUsed: [ {partNo, qty}, ... ] }</code></pre>
+      <div class="callout note"><div class="ic">🗝️</div><div class="bd"><p>The vector store holds only the
+        <strong>reason text</strong> and the <strong>parts that were actually used</strong>. It is a
+        derived, rebuildable index — the relational database remains the system of record.</p></div></div>
+    </section>
+
+    <!-- 07 RANKING -->
+    <section id="ranking">
+      <span class="kicker">07 · Algorithm</span>
+      <h2><span class="num">07</span>RAG Prediction &amp; Ranking</h2>
+      <p>Prediction is retrieval-augmented: find the most similar past dispatches, then rank the parts those
+        dispatches used, weighting <strong>closeness over raw frequency</strong> so one near-identical job
+        outranks several loosely-similar ones.</p>
+
+      <h3>Pipeline</h3>
+      <ol>
+        <li><strong>Asymmetric embedding.</strong> Historical reasons are embedded at index time with a
+          <em>document</em> task type; the live dispatch reason is embedded per request with a
+          <em>query</em> task type. Both run on the <strong>self-hosted embedding model</strong> on customer
+          hardware — dispatch text never goes to an external AI provider.</li>
+        <li><strong>Retrieve.</strong> Search the vector store (Amazon S3 Vectors) for the top
+          <code>K = 15</code> nearest neighbors, returning cosine distances and each neighbor's
+          <code>partsUsed</code>.</li>
+        <li><strong>Rank &amp; aggregate.</strong> The <strong>self-hosted LLM</strong> ranks &amp; aggregates
+          the retrieved parts: convert distance to similarity, gate on a threshold, and accumulate a
+          cubed-similarity score per part.</li>
+        <li><strong>Confidence &amp; select.</strong> Normalize scores, clamp to a confidence band, return the
+          top parts, and pre-select the confident ones.</li>
+      </ol>
+
+      <h3>Scoring (exact)</h3>
+      <pre><code>sim            = 1 − cosine_distance
+<span class="k">if</span> sim &gt; 0.55:                      <span class="c"># SIM_THRESHOLD — neighbor contributes</span>
+    <span class="k">for</span> part <span class="k">in</span> neighbor.partsUsed:
+        score[part]     += sim ** 3      <span class="c"># closeness &gt; frequency</span>
+        timesUsed[part] += 1
+
+confidence(part) = clamp( round( score[part] / max_score × 95 ), 20, 95 )
+
+return top 6 parts by score              <span class="c"># each pre-selected if confidence ≥ 60</span></code></pre>
+
+      <div class="twrap">
+        <table>
+          <thead><tr><th>Constant</th><th>Value</th><th>Effect</th></tr></thead>
+          <tbody>
+            <tr><td><code>TOP_K</code></td><td>15</td><td>Neighbors retrieved per query.</td></tr>
+            <tr><td><code>SIM_THRESHOLD</code></td><td>0.55</td><td>A neighbor contributes only if
+              <code>sim &gt; 0.55</code>; weaker matches are ignored.</td></tr>
+            <tr><td>Weight</td><td><code>sim³</code></td><td>Cubed similarity — sharply favors very close
+              matches.</td></tr>
+            <tr><td>Confidence band</td><td>[20, 95]</td><td>Normalized to the top score × 95, then clamped.</td></tr>
+            <tr><td>Output size</td><td>Top 6</td><td>Highest-scoring parts returned to the technician.</td></tr>
+            <tr><td><code>CONFIDENCE_THRESHOLD</code></td><td>60</td><td>Parts with confidence ≥ 60 are
+              <strong>pre-selected</strong> in the UI; the rest are shown unchecked.</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <p>The response also reports <code>basedOn</code> — the number of neighbors above threshold — so the
+        client can convey how much history a prediction rests on.</p>
+
+      <h3>Indexing &amp; the self-learning loop</h3>
+      <ul>
+        <li><strong>Idempotent upsert</strong> keyed by <code>dispatchNo</code>: only dispatches not already
+          indexed are embedded, so re-runs and restarts are cheap.</li>
+        <li><strong>Rate-limit-aware batching</strong>: embeddings are computed in batches with pacing and
+          retry-with-backoff on throttling.</li>
+        <li><strong>Feedback loop</strong>: when a dispatch is marked complete in SQL Server, its reason and
+          used parts are embedded and upserted — the very next similar job benefits (the dashed
+          learning-loop arrow in the architecture diagram).</li>
+      </ul>
+    </section>
+
+    <!-- 08 SOURCING -->
+    <section id="sourcing">
+      <span class="kicker">08 · Algorithm</span>
+      <h2><span class="num">08</span>Sourcing Algorithm</h2>
+      <p>For each requested part, the Source API returns <strong>every place the part can be gathered</strong>,
+        ordered so the technician takes the cheapest, closest stock first and only falls back to the priced
+        vendor when needed.</p>
+
+      <h3>Source tiers</h3>
+      <div class="twrap">
+        <table>
+          <thead><tr><th>Tier</th><th>What it is</th><th>Distance</th><th>Price</th></tr></thead>
+          <tbody>
+            <tr><td><span class="pill">truck</span></td><td>The technician's own van inventory.</td>
+              <td>0 mi</td><td><span class="pill free">free</span></td></tr>
+            <tr><td><span class="pill">warehouse</span></td><td>Other Climate Pros warehouses — including
+              <em>other technicians' vans</em> — plus the branch warehouse.</td><td>by distance,
+              nearest first</td><td><span class="pill free">free</span></td></tr>
+            <tr><td><span class="pill">vendor</span></td><td>The nearest United Refrigeration branch —
+              the outside parts supplier (CP API Gateway).</td><td>from gateway</td>
+              <td><span class="pill paid">priced</span></td></tr>
+          </tbody>
+        </table>
+      </div>
+      <div class="callout note"><div class="ic">🚐</div><div class="bd"><p><strong>A van is a warehouse.</strong>
+        Per operations, there is no separate "nearby technician" tier — another tech's van is modeled as a
+        warehouse (labeled with the person's name, a warehouse code, and a street address). This keeps the
+        model simple and reflects how stock actually moves in the field.</p></div></div>
+
+      <h3>Ordering &amp; allocation</h3>
+      <ul>
+        <li><strong>Sort:</strong> truck first (0 mi), then all other sources by <strong>ascending
+          distance</strong> — closest picked first.</li>
+        <li><strong>Pricing:</strong> own stock (truck + warehouse) has no price; only the United vendor tier
+          carries a dollar cost, applied from <code>InventorySupplierXREF.currentcost</code>.</li>
+        <li><strong>Split large needs:</strong> per-source quantities are limited, so a large requested
+          quantity is spread across sources. The client allocates greedily down the sorted list —
+          each source takes <code>min(remaining_need, available)</code> until the need is met.</li>
+      </ul>
+      <pre><code><span class="c"># greedy allocation across the sorted sources</span>
+remaining = qtyNeeded
+<span class="k">for</span> src <span class="k">in</span> sources:            <span class="c"># truck first, then nearest → furthest</span>
+    take        = min(remaining, src.available)
+    src.taken   = take
+    remaining  -= take
+    <span class="k">if</span> remaining == 0: <span class="k">break</span></code></pre>
+      <div class="callout warn"><div class="ic">⚠️</div><div class="bd"><p>If the vendor lookup fails, the
+        vendor tier is <strong>dropped</strong> rather than failing the whole request — the technician still
+        sees all own-stock options. See <a href="#fault">Fault Tolerance</a>.</p></div></div>
+    </section>
+
+    <!-- 09 API -->
+    <section id="api">
+      <span class="kicker">09 · Interface</span>
+      <h2><span class="num">09</span>API Reference</h2>
+      <p>The FastAPI AI Server exposes a deliberately small HTTP surface, reached by FJX&nbsp;2.2 through the
+        .NET Microservices API's <strong>AI proxy route</strong> — the mobile app never calls the AI layer
+        directly, and the proxy forwards exactly the two control endpoints
+        (<code>/parts/predict</code>, <code>/parts/source</code>).</p>
+
+      <div class="twrap">
+        <table>
+          <thead><tr><th>Endpoint</th><th>Purpose</th></tr></thead>
+          <tbody>
+            <tr><td><span class="method get">GET</span> <code>/health</code></td><td>Liveness / deploy probe
+              (load-balancer + ECS health checks; not proxied to clients).</td></tr>
+            <tr><td><span class="method post">POST</span> <code>/parts/predict</code></td><td>RAG-predicted
+              parts for a dispatch — via the AI proxy route.</td></tr>
+            <tr><td><span class="method post">POST</span> <code>/parts/source</code></td><td>All sources per
+              part — via the AI proxy route.</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <div class="callout note"><div class="ic">ℹ️</div><div class="bd"><p>Everything else the flow touches
+        stays where it already lives: <strong>dispatch list/detail and the manual-add inventory tabs /
+        catalog search are served by the existing .NET APIs, unchanged</strong>. The AI server does not serve
+        or duplicate them — it <em>reads</em> the dispatch reason and stock context from the Legacy API
+        (diagram step&nbsp;3), and calls the United CP Gateway server-side for the supplier tier.</p></div></div>
+
+      <h3><span class="method post">POST</span> <code>/parts/predict</code></h3>
+      <pre><code><span class="c">// request</span>
+{ <span class="k">"dispatchId"</span>: <span class="s">"..."</span> }
+
+<span class="c">// response → PredictedPart[]</span>
+[ {
+  <span class="k">"inventoryId"</span>: <span class="s">"C066"</span>,
+  <span class="k">"name"</span>:        <span class="s">"Condenser Fan Motor 1/4 HP"</span>,
+  <span class="k">"partNumber"</span>:  <span class="s">"C066"</span>,
+  <span class="k">"confidence"</span>:  88,          <span class="c">// 20–95</span>
+  <span class="k">"selected"</span>:    true,        <span class="c">// pre-selected when confidence ≥ 60</span>
+  <span class="k">"timesUsed"</span>:   3
+} ]</code></pre>
+      <p>Returns <code>503</code> when the prediction subsystem (embedding model / vector store) is
+        unavailable — the client falls back to manual add. <code>502</code> on an upstream failure during
+        prediction.</p>
+
+      <h3><span class="method post">POST</span> <code>/parts/source</code></h3>
+      <pre><code><span class="c">// request</span>
+{ <span class="k">"inventoryIds"</span>: [<span class="s">"C066"</span>, <span class="s">"24708"</span>], <span class="k">"dispatchId"</span>: <span class="s">"..."</span>, <span class="k">"priority"</span>: <span class="s">"Normal"</span> }
+
+<span class="c">// response → SourcedPart[]</span>
+[ {
+  <span class="k">"inventoryId"</span>: <span class="s">"C066"</span>,
+  <span class="k">"name"</span>:        <span class="s">"Condenser Fan Motor 1/4 HP"</span>,
+  <span class="k">"partNumber"</span>:  <span class="s">"C066"</span>,
+  <span class="k">"qtyNeeded"</span>:   1,
+  <span class="k">"sources"</span>: [ {
+    <span class="k">"tier"</span>:        <span class="s">"truck"</span>,      <span class="c">// truck | warehouse | vendor</span>
+    <span class="k">"label"</span>:       <span class="s">"Your Truck — IL01 WH V1885"</span>,
+    <span class="k">"detail"</span>:      <span class="s">"Bin C2"</span>,
+    <span class="k">"distanceMi"</span>:  0.0,
+    <span class="k">"qtyAvailable"</span>: 2,
+    <span class="k">"price"</span>:       null        <span class="c">// null for own stock; $ for vendor</span>
+  } ]
+} ]</code></pre>
+
+      <h3>Supplier integration — United CP Gateway (server-side, outbound)</h3>
+      <p>For the vendor tier of <code>/parts/source</code>, the AI server calls the ClimatePros API Gateway
+        for United Refrigeration <strong>from the backend</strong> — the contract below is the gateway's own
+        shape, so the integration is a drop-in and the subscription key never leaves the server:</p>
+      <pre><code><span class="c">// request</span>
+{ <span class="k">"item"</span>: <span class="s">"C066"</span>, <span class="k">"coordinates"</span>: { <span class="k">"latitude"</span>: 21.30, <span class="k">"longitude"</span>: -157.85 },
+  <span class="k">"qty"</span>: 1, <span class="k">"miles"</span>: 50, <span class="k">"branchesIn"</span>: [], <span class="k">"limit"</span>: 1 }
+
+<span class="c">// response</span>
+{ <span class="k">"code"</span>: 100, <span class="k">"success"</span>: true, <span class="k">"response"</span>: <span class="s">"OK"</span>, <span class="k">"errors"</span>: [],
+  <span class="k">"inventory"</span>: [ { <span class="k">"branchNo"</span>, <span class="k">"address1"</span>, <span class="k">"city"</span>, <span class="k">"state"</span>, <span class="k">"zipcd"</span>,
+                  <span class="k">"phone"</span>, <span class="k">"miles"</span>, <span class="k">"workingHours"</span>, <span class="k">"item"</span>, <span class="k">"qtyAvail"</span> } ] }</code></pre>
+
+      <h3>Contract notes</h3>
+      <div class="twrap">
+        <table>
+          <thead><tr><th>Concern</th><th>Behavior</th></tr></thead>
+          <tbody>
+            <tr><td>Auth</td><td>Bearer token from the FJX&nbsp;2.2 session, validated at the .NET
+              Microservices API before the AI proxy route forwards the call; the AI server is reachable only
+              from inside the VPC. Supplier gateway calls use a subscription key held server-side (see
+              <a href="#security">Security</a>).</td></tr>
+            <tr><td>Errors</td><td><code>400</code> validation · <code>404</code> dispatch not found ·
+              <code>502</code> upstream failure · <code>503</code> prediction unavailable.</td></tr>
+            <tr><td>CORS</td><td>Restricted to the FJX&nbsp;2.2 mobile origin / native client in production.</td></tr>
+            <tr><td>Idempotency</td><td>Predict and source are read-only and side-effect free; safe to retry.</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <!-- 10 CLIENT -->
+    <section id="client">
+      <span class="kicker">10 · Client</span>
+      <h2><span class="num">10</span>Client Flow (FJX 2.2 mobile)</h2>
+      <p>The experience lives inside FieldJetX (Flutter · Cupertino, brand <code>#114D9A</code>, Lucide icons —
+        consistent with the FieldJetX/Symphony theme). From a dispatch, the technician moves through a short
+        parts flow: <strong>dispatch → add parts → source → confirm</strong>.</p>
+
+      <div class="grid c2">
+        <div class="card"><h5>🔮 Add Parts with AI</h5><p>Calls <code>/parts/predict</code> and
+          <strong>merges</strong> results into the current list, de-duplicated by <code>inventoryId</code> —
+          prediction is additive, never a replacement. Confident parts arrive pre-selected.</p></div>
+        <div class="card"><h5>✍️ Add from Inventory</h5><p>Manual search over inventory tabs
+          (<code>truck / all / cons / customer</code>) and catalog; selected items merge into the same list
+          with the same de-dupe rule.</p></div>
+        <div class="card"><h5>📦 Source &amp; allocate</h5><p>Calls <code>/parts/source</code>, then a
+          per-part <em>Need</em> stepper drives greedy allocation across the sorted sources; the quantity is
+          clamped to total availability.</p></div>
+        <div class="card"><h5>✅ Confirm</h5><p>A summary shows each part and exactly which sources it will be
+          taken from (own stock highlighted, vendor flagged) before the technician commits.</p></div>
+      </div>
+
+      <h3>Behavior details</h3>
+      <ul>
+        <li><strong>Additive merge, dedupe by <code>inventoryId</code>:</strong> AI and manual adds never
+          overwrite an existing entry; a part already on the list keeps its quantity.</li>
+        <li><strong>Per-dispatch persistence:</strong> each dispatch's parts list is retained, so re-opening a
+          dispatch restores its work in progress.</li>
+        <li><strong>AI vs manual signalling:</strong> a part's confidence distinguishes an AI suggestion from
+          a manually added part in the UI.</li>
+        <li><strong>Greedy re-allocation:</strong> changing the Need count re-fills the allocation across
+          sources immediately, clamped to what's available.</li>
+      </ul>
+    </section>
+
+    <!-- 11 OBSERVABILITY -->
+    <section id="observability">
+      <span class="kicker">11 · Observability</span>
+      <h2><span class="num">11</span>Observability &amp; Tracing</h2>
+      <p>Every predict, source, and vendor call is traced end-to-end with <strong>AWS CloudWatch + ADOT</strong>
+        (the AWS Distro for OpenTelemetry), so latency and failures are attributable to a specific stage.</p>
+      <div class="grid c3">
+        <div class="card"><div class="ic">🧭</div><h5>Traces</h5><p>One span tree per request: proxy →
+          embed → vector search → rank, and per-part fan-out to SQL Server / United.</p></div>
+        <div class="card"><div class="ic">📊</div><h5>Metrics</h5><p>Prediction latency (including the
+          self-hosted model hops), neighbors above threshold (<code>basedOn</code>), supplier-lookup success
+          rate, and the source mix (truck / warehouse / vendor).</p></div>
+        <div class="card"><div class="ic">🪵</div><h5>Logs</h5><p>Structured request logs correlated by trace
+          id; no raw customer PII in log bodies.</p></div>
+      </div>
+      <p>Alarms fire on elevated error rate or p95 latency; the <code>/health</code> endpoint backs load-balancer
+        and deployment health checks.</p>
+    </section>
+
+    <span class="band">Operations &amp; Appendix</span>
+
+    <!-- 12 DEPLOYMENT -->
+    <section id="deployment">
+      <span class="kicker">12 · Operations</span>
+      <h2><span class="num">12</span>Deployment &amp; Rollout</h2>
+      <p>The FastAPI AI Server ships as a container image to ECS Fargate in a private AWS VPC, bound to an
+        injected <code>$PORT</code>, with the vector index seeded from historical completed dispatches before
+        go-live. The mobile app needs no release for the backend rollout — it reaches the AI layer through the
+        .NET Microservices API's proxy route.</p>
+
+      <h4>Phase 0 — Provision</h4>
+      <ul>
+        <li>ECS Fargate service (private VPC) + internal load balancer; container image built in CI.</li>
+        <li>Amazon S3 Vectors bucket + index created; connectivity to the customer-hosted embedding model and
+          LLM configured and health-checked.</li>
+        <li>Network path + credentials to SQL Server (reads + the new <code>ai.*</code> schema), the .NET
+          Legacy API, and the United CP Gateway.</li>
+        <li><code>ai.*</code> schema migration applied to SQL Server; AI proxy route deployed on the .NET
+          Microservices API.</li>
+      </ul>
+      <h4>Phase 1 — Seed the index</h4>
+      <ul>
+        <li>Batch-embed historical completed dispatches on the self-hosted embedding model (idempotent upsert
+          by <code>dispatchNo</code>).</li>
+        <li>Validate retrieval quality on a held-out set of recent dispatches.</li>
+      </ul>
+      <h4>Phase 2 — Client rollout</h4>
+      <ul>
+        <li>Ship the "Add Parts with AI" / sourcing experience in FJX&nbsp;2.2 behind a <strong>feature
+          flag</strong>, enabled per branch/division.</li>
+        <li>Pilot with a small technician cohort; watch acceptance rate and source mix.</li>
+      </ul>
+      <h4>Phase 3 — Go-live &amp; continuous learning</h4>
+      <ul>
+        <li>Expand the flag division-by-division.</li>
+        <li>Wire the <strong>on-completion re-embed</strong> pipeline so the index grows automatically.</li>
+      </ul>
+      <div class="twrap">
+        <table>
+          <thead><tr><th>Env</th><th>Vector DB</th><th>Supplier</th><th>Purpose</th></tr></thead>
+          <tbody>
+            <tr><td>Staging</td><td>Isolated S3 Vectors index</td><td>Gateway (test key)</td><td>Validation before each release.</td></tr>
+            <tr><td>Production</td><td>Production S3 Vectors index</td><td>Gateway (prod key)</td><td>Live technician traffic.</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <!-- 13 SECURITY -->
+    <section id="security">
+      <span class="kicker">13 · Security</span>
+      <h2><span class="num">13</span>Security &amp; PII</h2>
+      <div class="twrap">
+        <table>
+          <thead><tr><th>Area</th><th>Control</th></tr></thead>
+          <tbody>
+            <tr><td>Client → service auth</td><td>Bearer token from the FJX&nbsp;2.2 session, validated at
+              the .NET Microservices API before the AI proxy route forwards the call; CORS restricted to the
+              mobile client.</td></tr>
+            <tr><td>Network isolation</td><td>The AI layer runs in a <strong>private AWS VPC</strong> — the
+              FastAPI AI Server is not internet-reachable; only the .NET proxy route (and the VPC paths to
+              SQL Server, S3 Vectors, and the customer-hosted models) can reach it.</td></tr>
+            <tr><td>Model hosting</td><td>Embedding and LLM inference run on <strong>client-provided,
+              self-hosted models on customer hardware</strong> — dispatch text and parts history are never
+              sent to a third-party AI provider.</td></tr>
+            <tr><td>Supplier gateway</td><td>United calls carry the <code>Ocp-Apim-Subscription-Key</code>
+              header; the key is held <strong>server-side only</strong> and never reaches the mobile client.</td></tr>
+            <tr><td>Secrets management</td><td>All credentials (gateway key, DB, model endpoints) resolved
+              from a secret store — <strong>AWS Secrets Manager / SSM Parameter Store</strong> — with rotation.
+              No secrets in source or images.</td></tr>
+            <tr><td>Data store access</td><td>Least-privilege SQL Server account: read-scoped on inventory
+              and dispatch tables, write access confined to the new <code>ai.*</code> schema;
+              network-restricted to the service subnet.</td></tr>
+            <tr><td>Transport</td><td>TLS on all hops (client, proxy, gateway, model endpoints, internal
+              service calls).</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <h3>PII inventory</h3>
+      <ul>
+        <li><strong>Dispatch &amp; customer detail</strong> (name, address, phone) — served to the authenticated
+          technician only; excluded from log bodies.</li>
+        <li><strong>Van / warehouse locations</strong> — used transiently for distance ordering; not
+          persisted beyond short-lived caching.</li>
+        <li><strong>The vector store (S3 Vectors) holds no direct customer PII</strong> — only dispatch reason
+          text and used part numbers — reducing the sensitivity of the derived index.</li>
+      </ul>
+      <div class="callout good"><div class="ic">🔐</div><div class="bd"><p>Because the vector index is derived
+        and rebuildable, it can be re-seeded from the system of record at any time — supporting deletion and
+        data-retention requests handled at the SQL Server layer.</p></div></div>
+    </section>
+
+    <!-- 14 FAULT -->
+    <section id="fault">
+      <span class="kicker">14 · Reliability</span>
+      <h2><span class="num">14</span>Fault Tolerance &amp; Reliability</h2>
+      <p>The system is designed to <strong>degrade gracefully</strong> — no single dependency can block a
+        technician from adding and sourcing parts.</p>
+      <div class="twrap">
+        <table>
+          <thead><tr><th>Failure</th><th>Behavior</th></tr></thead>
+          <tbody>
+            <tr><td>Self-hosted models / vector store unavailable</td><td><code>/parts/predict</code> returns
+              <code>503</code>; the client falls back to <strong>manual inventory add</strong> — the flow
+              continues.</td></tr>
+            <tr><td>Supplier (United) outage</td><td>The vendor tier is <strong>dropped</strong> from a part's
+              sources; own-stock options are still returned. The request does not fail.</td></tr>
+            <tr><td>Model throttling / slowness</td><td><strong>Retry with backoff</strong> and batched pacing
+              at index time; request-time timeouts bound prediction latency. Transient throttling doesn't
+              corrupt the index.</td></tr>
+            <tr><td>Duplicate / repeated indexing</td><td><strong>Idempotent upsert</strong> keyed by
+              <code>dispatchNo</code> — re-running indexing never double-counts a dispatch.</td></tr>
+            <tr><td>SQL Server slow / unavailable</td><td>Read replicas + brief caching for hot stock lookups;
+              sourcing surfaces last-known availability where safe.</td></tr>
+            <tr><td>Service task crash</td><td>Stateless Fargate tasks behind the load balancer; ECS service
+              scheduling replaces unhealthy tasks (health-checked via <code>/health</code>).</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <!-- 15 COST -->
+    <section id="cost">
+      <span class="kicker">15 · Cost</span>
+      <h2><span class="num">15</span>Cost Projection</h2>
+      <p>Cost splits into a <strong>fixed AWS infrastructure</strong> baseline and a <strong>variable
+        per-prediction</strong> component. Because the embedding model and LLM are <strong>self-hosted on
+        customer hardware</strong>, there is no per-token model fee in this budget — the models' cost is the
+        client's hardware, outside this projection. Figures below are planning estimates (on-demand, single
+        region) — tune to actual task sizing and traffic.</p>
+
+      <h4>Fixed monthly baseline (est.)</h4>
+      <div class="twrap">
+        <table>
+          <thead><tr><th>Component</th><th>Assumption</th><th>~ Monthly</th></tr></thead>
+          <tbody>
+            <tr><td>ECS Fargate · FastAPI AI Server</td><td>1–2 tasks (0.5 vCPU / 1 GB)</td><td>$20 – $40</td></tr>
+            <tr><td>Vector DB · Amazon S3 Vectors</td><td>Serverless, pay-per-use (storage + queries)</td><td>$5 – $15</td></tr>
+            <tr><td>CloudWatch + ADOT</td><td>Logs, metrics, traces (moderate volume)</td><td>$15 – $30</td></tr>
+            <tr><td>Load balancer + data transfer</td><td>Baseline</td><td>$20</td></tr>
+            <tr><td>Self-hosted models</td><td>Customer hardware (client-provided)</td><td>— (client's cost)</td></tr>
+            <tr><td colspan="2"><strong>Fixed subtotal (AWS)</strong></td><td><strong>≈ $60 – $105 / mo</strong></td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <h4>Variable — per prediction</h4>
+      <p>Each prediction is one embedding pass and one ranking pass on the customer-hosted models (no
+        per-token fee) plus one S3 Vectors similarity query — the billed AWS unit cost is a small fraction of
+        a cent (≈ <code>&lt; $0.001</code> per prediction). Sourcing calls (SQL Server, United) are
+        internal/contracted and not billed per-call here.</p>
+      <div class="twrap">
+        <table>
+          <thead><tr><th>Scenario</th><th>Predictions / mo</th><th>Variable (AWS)</th><th>Fixed + Variable (est.)</th></tr></thead>
+          <tbody>
+            <tr><td>Light pilot</td><td>500</td><td>&lt; $1</td><td>≈ $60 – $105</td></tr>
+            <tr><td>Typical</td><td>5,000</td><td>≈ $2 – $5</td><td>≈ $65 – $110</td></tr>
+            <tr><td>Heavy</td><td>50,000</td><td>≈ $10 – $25</td><td>≈ $70 – $130</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <div class="callout note"><div class="ic">💡</div><div class="bd"><p>Self-hosting the models and using a
+        serverless vector store shifts the profile: no per-token model fees and no always-on vector DB
+        cluster, so the fixed AWS baseline stays small and prediction volume scales cheaply. One-time index
+        seeding and the on-completion re-embed loop run on the customer-hosted embedding model — effectively
+        negligible in AWS spend.</p></div></div>
+    </section>
+
+    <!-- 16 FUTURE -->
+    <section id="future">
+      <span class="kicker">16 · Roadmap</span>
+      <h2><span class="num">16</span>Future Improvements</h2>
+      <div class="grid c2">
+        <div class="card"><h5>🎓 Skill / certification gating</h5><p>Filter or flag predicted parts by the
+          technician's certifications and the equipment on the dispatch.</p></div>
+        <div class="card"><h5>🔁 Feedback / reward loop</h5><p>Learn from which suggested parts the technician
+          actually used vs. dismissed, feeding acceptance signals back into ranking.</p></div>
+        <div class="card"><h5>📈 Beyond new requests</h5><p>Extend prediction to follow-up visits and
+          preventive-maintenance dispatches, not just brand-new service calls.</p></div>
+        <div class="card"><h5>🛒 Assisted ordering</h5><p>One-tap vendor purchase/reservation from the United
+          gateway when own stock can't cover the need.</p></div>
+        <div class="card"><h5>🌎 Multi-region scaling</h5><p>Per-division indices and vendor branch sets as the
+          capability rolls out beyond the initial region.</p></div>
+        <div class="card"><h5>⏱️ Real-time stock</h5><p>Tighter live inventory sync so allocation reflects
+          stock committed by other in-flight dispatches.</p></div>
+      </div>
+    </section>
+
+    <footer class="doc">
+      <p>ClimatePros · Use Case C — Technician Parts Finder · System Design (target architecture).
+         Architecture per <code>climatepros-usecase-c-parts-finder.html</code>.</p>
+    </footer>
+
+  </main>
+</div>
+
+<script>
+  // Scroll-spy: highlight the active section in the sidebar TOC.
+  (function () {
+    var links = Array.prototype.slice.call(document.querySelectorAll('.toc nav a'));
+    if (!links.length || !('IntersectionObserver' in window)) return;
+    var byId = {};
+    links.forEach(function (a) { byId[a.getAttribute('href').slice(1)] = a; });
+    var sections = links
+      .map(function (a) { return document.getElementById(a.getAttribute('href').slice(1)); })
+      .filter(Boolean);
+    var current = null;
+    var io = new IntersectionObserver(function (entries) {
+      entries.forEach(function (e) {
+        if (e.isIntersecting) {
+          if (current) current.classList.remove('active');
+          current = byId[e.target.id];
+          if (current) current.classList.add('active');
+        }
+      });
+    }, { rootMargin: '-15% 0px -75% 0px', threshold: 0 });
+    sections.forEach(function (s) { io.observe(s); });
+  })();
+</script>
+</body>
+</html>
