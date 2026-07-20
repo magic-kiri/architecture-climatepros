@@ -176,6 +176,70 @@
 </div>
 <p class="diagram-note">All components <b>Azure</b> except the SQL Server system of record <b>(AWS)</b> &mdash; the single cross-cloud dependency.</p>
 
+<style>
+ .s2-flow-intro{font-size:14px;color:var(--text);margin:20px 0 14px;line-height:1.55;}
+ .s2-flow-intro b{color:var(--primary-dark);}
+ .s2-flow-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:14px;margin:0 0 8px;}
+ .s2-flow{border:1px solid var(--border);border-radius:12px;padding:15px 17px;background:var(--surface);border-left:4px solid var(--muted-line,#cbd5e1);}
+ .s2-flow--entry{border-left-color:var(--blue);}
+ .s2-flow--data{border-left-color:var(--green);}
+ .s2-flow--dispatch{border-left-color:var(--amber);}
+ .s2-flow--ai{border-left-color:var(--amber);}
+ .s2-flow--model{border-left-color:var(--purple);}
+ .s2-flow--obs{border-left-color:#0891b2;}
+ .s2-flow h4{font-size:13px;font-weight:800;letter-spacing:.02em;text-transform:uppercase;margin:0 0 4px;color:var(--text);}
+ .s2-flow--entry h4{color:var(--blue);}
+ .s2-flow--data h4{color:var(--green-dark);}
+ .s2-flow--dispatch h4,.s2-flow--ai h4{color:var(--amber-dark);}
+ .s2-flow--model h4{color:var(--purple-dark);}
+ .s2-flow--obs h4{color:#0e7490;}
+ .s2-flow .s2-hop{font-size:12px;font-weight:700;color:var(--text-muted);margin:0 0 7px;font-family:ui-monospace,SFMono-Regular,Menlo,monospace;}
+ .s2-flow p.s2-desc{font-size:12.5px;color:var(--text);margin:0;line-height:1.5;}
+ .s2-flow p.s2-desc b{font-weight:700;}
+</style>
+
+<p class="s2-flow-intro">The diagram groups the system into five zones &mdash; <b>clients</b>, the <b>existing FieldJetX platform</b>, the <b>new Azure infrastructure</b>, the <b>private on-prem models</b>, and a cross-cutting <b>observability</b> layer. What follows is the overall flow: which entity talks to which, and why. Per-use-case wiring (queues, locks, schemas, ranking, scoring) is detailed in <b>&sect;2b</b> &mdash; this section stays deliberately high-level.</p>
+
+<div class="s2-flow-grid">
+
+ <div class="s2-flow s2-flow--entry">
+  <h4>Entry &middot; single front door</h4>
+  <p class="s2-hop">Web App &nbsp;+&nbsp; Mobile App &rarr; Azure VM (.NET APIs)</p>
+  <p class="s2-desc">Both clients speak <b>only</b> to the existing .NET APIs on the Azure VM over HTTPS. Neither the new infrastructure nor the models are ever reached directly &mdash; the legacy platform stays the single entry point and gains just two new additions: an <b>AI proxy route</b> and a <b>Container-scale controller</b> (spins workers up/down).</p>
+ </div>
+
+ <div class="s2-flow s2-flow--data">
+  <h4>Data &middot; shared system of record</h4>
+  <p class="s2-hop">Azure VM &nbsp;&harr;&nbsp; SQL Server (AWS) &nbsp;&harr;&nbsp; Container Apps / FastAPI</p>
+  <p class="s2-desc">The <b>SQL Server DB</b> is the one AWS component and the shared source of truth for all three use cases. The Azure VM reads/writes it directly; the new workers and the AI server also read/write it (job data, part stock, AI outputs). This Azure&rarr;AWS hop is the <b>sole cross-cloud dependency</b>.</p>
+ </div>
+
+ <div class="s2-flow s2-flow--dispatch">
+  <h4>Dispatch &middot; Use Case A &middot; no LLM</h4>
+  <p class="s2-hop">.NET &rarr; Redis &rarr; Container Apps &rarr; Notification Hubs &rarr; Mobile</p>
+  <p class="s2-desc">When auto-dispatch is on, the .NET API <b>publishes</b> the job to Azure Cache for Redis and the scale monitor spins Container Apps workers <b>0&rarr;1</b>. Workers <b>consume</b> the stream, rank technicians, and push accept/decline offers out through Azure Notification Hubs (APNs/FCM) to the technician's phone. The reply path returns via the .NET API. <b>Deterministic &mdash; no model involved.</b></p>
+ </div>
+
+ <div class="s2-flow s2-flow--ai">
+  <h4>AI &middot; Use Cases B &amp; C</h4>
+  <p class="s2-hop">.NET &rarr; FastAPI AI Server &rarr; Vector DB &nbsp;/&nbsp; SQL</p>
+  <p class="s2-desc">For summarisation (B) and parts finding (C), the .NET AI proxy forwards the request to the <b>FastAPI AI Server</b> &mdash; the single central AI service and the <b>only path to the models</b>. It queries/upserts the <b>Vector DB</b> for historical retrieval and reads/writes SQL to persist outputs.</p>
+ </div>
+
+ <div class="s2-flow s2-flow--model">
+  <h4>Models &middot; private, on-prem</h4>
+  <p class="s2-hop">FastAPI &rarr; LiteLLM Gateway &rarr; self-hosted LLM / embedding / Gemini</p>
+  <p class="s2-desc">All inference goes through the on-prem <b>LiteLLM Gateway</b>, which routes to the self-hosted qwen3-vl-moe (vLLM) and bge-m3 embedding, with <b>Gemini as external fallback</b>. No service calls a model directly &mdash; LiteLLM is the sole gate, keeping data inside ClimatePros infra.</p>
+ </div>
+
+ <div class="s2-flow s2-flow--obs">
+  <h4>Observability &middot; cross-cutting</h4>
+  <p class="s2-hop">all services &rarr; OpenTelemetry / Azure Monitor</p>
+  <p class="s2-desc">Every service emits traces and logs to a shared observability layer (OpenTelemetry &middot; Azure Monitor).</p>
+ </div>
+
+</div>
+
 <h3>2b &middot; Detailed architecture per use case</h3>
 
 <p class="uc-adds"><span class="chip">A</span> <b>A adds:</b> durable dispatch queue + Container Apps worker + push-offer cascade.</p>
