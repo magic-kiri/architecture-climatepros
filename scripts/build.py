@@ -1,18 +1,21 @@
 #!/usr/bin/env python3
-"""Assemble the section fragments into the single, self-contained
-`stream1-unified-architecture.html` — the deliverable that opens anywhere
-(double-click / file://, local server, or GitHub Pages).
+"""OPTIONAL bundler. The primary deliverable is the short loader shell
+`stream1-unified-architecture.html`, which renders sections/*.html at runtime
+(needs an http server). Run this only when you want a SINGLE self-contained
+file that also opens via file:// (double-click) — e.g. offline sharing.
 
-Edit the small source files, then run this to regenerate the output:
+Output: stream1-unified-architecture.bundle.html — inlines the stylesheet, the
+nav, the hero, and every section fragment in document order. Edit the small
+source files, never the bundle:
   - sections/style.css   shared stylesheet (inlined into <style>)
+  - sections/_nav.html   fixed navigation sidebar (+ its scrollspy script)
   - sections/_hero.html  the page hero
-  - sections/NN.html      one <section> per concern, in numeric order
-Never hand-edit stream1-unified-architecture.html — it is generated."""
+  - sections/NN.html      one <section> per concern, in numeric order"""
 import pathlib
 
 ROOT = pathlib.Path(__file__).resolve().parent.parent
 SEC = ROOT / "sections"
-OUT = ROOT / "stream1-unified-architecture.html"
+OUT = ROOT / "stream1-unified-architecture.bundle.html"
 
 style = (SEC / "style.css").read_text(encoding="utf-8")
 nav = (SEC / "_nav.html").read_text(encoding="utf-8")
