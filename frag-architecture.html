@@ -39,7 +39,7 @@ body{margin:0}
   #wires .wg .wlabel{transition:font-size .15s ease}
   #wires .wg:hover .wlabel{font-size:13px;font-weight:800}
   #wires .wg:hover .wlabel::selection{background:transparent}
-  /* inline branch arrow (Server B -> Fargate) */
+  /* inline branch arrow (.NET Microservices API -> Fargate) */
   .branch-svg{cursor:pointer}
   .branch-svg svg path{transition:stroke-width .15s ease, filter .15s ease}
   .branch-svg:hover svg path{stroke-width:4;filter:drop-shadow(0 1px 4px rgba(15,23,42,.3))}
@@ -307,9 +307,9 @@ body{margin:0}
       <h3>🖥️ Dashboard — Admin UI</h3>
       <div class="role">Operator control surface</div>
       <ul>
-        <li><strong>Dispatch request</strong> → handled by Server A</li>
-        <li><strong>New — Auto-Dispatch toggle</strong> → handled by Server B</li>
-        <li><strong>New — Configuration</strong> (e.g. task count <em>N</em>) → handled by Server B</li>
+        <li><strong>Dispatch request</strong> → handled by .NET Legacy API</li>
+        <li><strong>New — Auto-Dispatch toggle</strong> → handled by .NET Microservices API</li>
+        <li><strong>New — Configuration</strong> (e.g. task count <em>N</em>) → handled by .NET Microservices API</li>
       </ul>
     </div>
   </section>
@@ -326,7 +326,7 @@ body{margin:0}
       <div class="grid2">
         <div class="box exist focusable" id="serverA">
           <span class="badge exist">Existing</span>
-          <h3>🅰️ Server A</h3>
+          <h3>🅰️ .NET Legacy API</h3>
           <div class="role">Request entry point</div>
           <ul>
             <li>API endpoints · user sessions</li>
@@ -335,7 +335,7 @@ body{margin:0}
         </div>
         <div class="box exist focusable" id="serverB">
           <span class="badge exist">Existing</span>
-          <h3>🅱️ Server B</h3>
+          <h3>🅱️ .NET Microservices API</h3>
           <div class="role">Orchestrator</div>
           <ul>
             <li>Manual task initiator</li>
@@ -346,7 +346,7 @@ body{margin:0}
     </div>
   </section>
 
-  <!-- BRANCH CONNECTOR: Server B -> Fargate (right). Server A -> Stream drawn by #wires rail (left). -->
+  <!-- BRANCH CONNECTOR: .NET Microservices API -> Fargate (right). .NET Legacy API -> Stream drawn by #wires rail (left). -->
   <div class="branch">
     <div class="branch-path spacer"></div>
     <div class="branch-path b">
@@ -356,7 +356,7 @@ body{margin:0}
           <path d="M30 0 L30 62" fill="none" stroke="#d97706" stroke-width="2.5" stroke-dasharray="6 4" marker-end="url(#arrB)"/>
         </svg>
       </div>
-      <div class="branch-label b"><strong>Server B → Fargate Pool</strong><span>AWS ECS API → scale tasks (ON=<em>N</em>, configurable · e.g. 3 / OFF=0)</span></div>
+      <div class="branch-label b"><strong>.NET Microservices API → Fargate Pool</strong><span>AWS ECS API → scale tasks (ON=<em>N</em>, configurable · e.g. 3 / OFF=0)</span></div>
     </div>
   </div>
 
@@ -456,7 +456,7 @@ body{margin:0}
     <div class="redis-row">
       <div class="redis-item" id="streamBox">
         <span class="k">STREAM · dispatch:stream</span>
-        <p>Tracks incoming dispatch requests per division. Durable buffer between Server A and the Fargate workers.</p>
+        <p>Tracks incoming dispatch requests per division. Durable buffer between .NET Legacy API and the Fargate workers.</p>
       </div>
       <div class="redis-item">
         <span class="k">MUTEX · lock:div:*</span>
@@ -535,8 +535,8 @@ body{margin:0}
     var s = S.getBoundingClientRect();
 
     // points relative to wrap
-    var ax = a.left - w.left;            // Server A left edge
-    var ay = a.top - w.top + a.height/2; // Server A vertical center
+    var ax = a.left - w.left;            // .NET Legacy API left edge
+    var ay = a.top - w.top + a.height/2; // .NET Legacy API vertical center
     var sx = s.left - w.left;            // Stream box left edge
     var sy = s.top - w.top + s.height/2; // Stream box vertical center
     var gutter = 16;                      // left rail x
@@ -610,14 +610,14 @@ body{margin:0}
             ' H '+sx;
     var rg = wire(d, '#2563eb', {'stroke-linejoin':'round','marker-end':'url(#rail-arrow)'});
 
-    // start dot at Server A
+    // start dot at .NET Legacy API
     rg.appendChild(mk('circle',{cx:ax, cy:ay, r:4, fill:'#2563eb'}));
 
     // rotated label along the vertical rail
     var midY = (ay + sy)/2;
     var t = mk('text',{x:gutter-7, y:midY, fill:'#2563eb','font-size':11,'font-weight':700,
       'text-anchor':'middle','class':'wlabel','transform':'rotate(-90 '+(gutter-7)+' '+midY+')'});
-    t.textContent = 'Server A → publish → dispatch:stream';
+    t.textContent = '.NET Legacy API → publish → dispatch:stream';
     rg.appendChild(t);
   }
 

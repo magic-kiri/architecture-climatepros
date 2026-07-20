@@ -641,13 +641,13 @@
     <div class="tech-card"><div class="tech-icon">&#128241;</div><div class="tech-name">Flutter</div><div class="tech-ver">technician app · existing</div><div class="tech-role">Receives push, POSTs Accept/Reject</div></div>
     <div class="tech-card"><div class="tech-icon">&#128227;</div><div class="tech-name">Amazon SNS</div><div class="tech-ver">mobile push · new</div><div class="tech-role">Send layer &rarr; APNs + FCM; one Publish per device endpoint</div></div>
     <div class="tech-card"><div class="tech-icon">&#127822;</div><div class="tech-name">APNs + FCM</div><div class="tech-ver">iOS + Android transports</div><div class="tech-role">Required delivery channels. <strong>FCM mandatory for Android.</strong> Both free</div></div>
-    <div class="tech-card"><div class="tech-icon">&#9889;</div><div class="tech-name">FastAPI</div><div class="tech-ver">Python · existing EC2 Server A/B</div><div class="tech-role">API entry (A) + orchestrator/ECS manager (B); <code>/dispatch/respond</code></div></div>
+    <div class="tech-card"><div class="tech-icon">&#9889;</div><div class="tech-name">FastAPI</div><div class="tech-ver">Python · existing EC2 .NET Legacy/Microservices API</div><div class="tech-role">API entry (A) + orchestrator/ECS manager (B); <code>/dispatch/respond</code></div></div>
     <div class="tech-card"><div class="tech-icon">&#128230;</div><div class="tech-name">Fargate Worker</div><div class="tech-ver">Python · <code>redis.asyncio</code> · new</div><div class="tech-role">Async consumer; <strong>20 dispatches concurrent per task</strong></div></div>
     <div class="tech-card"><div class="tech-icon">&#128293;</div><div class="tech-name">Redis (ElastiCache)</div><div class="tech-ver">cache.t4g.small · new</div><div class="tech-role">Streams (<code>XREADGROUP</code>/<code>XACK</code>/<code>XCLAIM</code>), locks, reply <code>BLPOP</code></div></div>
     <div class="tech-card"><div class="tech-icon">&#128736;</div><div class="tech-name">AWS ECS Fargate</div><div class="tech-ver">1 vCPU / 2 GB · new</div><div class="tech-role">Serverless worker pool; scales 0&harr;N on toggle</div></div>
-    <div class="tech-card"><div class="tech-icon">&#9729;</div><div class="tech-name">Amazon EC2</div><div class="tech-ver">existing app host</div><div class="tech-role">Runs Server A + Server B (unchanged infra)</div></div>
+    <div class="tech-card"><div class="tech-icon">&#9729;</div><div class="tech-name">Amazon EC2</div><div class="tech-ver">existing app host</div><div class="tech-role">Runs .NET Legacy API + .NET Microservices API (unchanged infra)</div></div>
     <div class="tech-card"><div class="tech-icon">&#128024;</div><div class="tech-name">Amazon RDS</div><div class="tech-ver">SQL Server · existing</div><div class="tech-role">System of record — technicians, jobs, assignments</div></div>
-    <div class="tech-card"><div class="tech-icon">&#128295;</div><div class="tech-name">boto3</div><div class="tech-ver">AWS SDK for Python</div><div class="tech-role">Server B drives ECS <code>update_service</code> / task scaling; SNS Publish</div></div>
+    <div class="tech-card"><div class="tech-icon">&#128295;</div><div class="tech-name">boto3</div><div class="tech-ver">AWS SDK for Python</div><div class="tech-role">.NET Microservices API drives ECS <code>update_service</code> / task scaling; SNS Publish</div></div>
   </div>
   <div class="callout"><strong>Why SNS + FCM both:</strong> SNS is only the sender/fan-out. Android push must ride FCM (Google requirement); iOS rides APNs. SNS wraps both behind one Publish API. Push cost is effectively $0 — see Cost Projection.</div>
 </section>
@@ -657,9 +657,9 @@
   <iframe src="./frag-architecture.html" title="Auto-Dispatch — end-to-end architecture diagram" loading="lazy" class="diagram-frame" style="width:100%;height:1650px;border:1px solid var(--border);border-radius:12px;background:#f4f6fa;"></iframe>
   <h3>Request Flow</h3>
   <ol style="padding-left:24px;">
-    <li><strong>Dashboard</strong> sends the dispatch request to <strong>Server A</strong>; toggle + config (<code>N</code>) to <strong>Server B</strong>.</li>
-    <li>If the division is <code>ENABLED</code>, Server A publishes the dispatch id to <code>dispatch:stream</code>.</li>
-    <li><strong>Server B</strong> (via boto3) scales the Fargate pool to <code>N</code> on enable, to <code>0</code> on disable.</li>
+    <li><strong>Dashboard</strong> sends the dispatch request to <strong>.NET Legacy API</strong>; toggle + config (<code>N</code>) to <strong>.NET Microservices API</strong>.</li>
+    <li>If the division is <code>ENABLED</code>, .NET Legacy API publishes the dispatch id to <code>dispatch:stream</code>.</li>
+    <li><strong>.NET Microservices API</strong> (via boto3) scales the Fargate pool to <code>N</code> on enable, to <code>0</code> on disable.</li>
     <li>A <strong>Fargate worker</strong> <code>XREADGROUP</code>s the message, locks its candidate technicians (<code>lock:tech:{id}</code>), and runs the assignment flow.</li>
     <li>The worker notifies technicians via <strong>SNS</strong> and blocks on a per-tech Redis list (<code>BLPOP</code>) for the reply.</li>
     <li>On assignment the worker writes to <strong>RDS</strong>, releases the lock, and <code>XACK</code>s the message.</li>
@@ -669,7 +669,7 @@
 <section id="infra">
   <h2>5. Infrastructure</h2>
   <div class="infra-grid">
-    <div class="infra-card" style="border-color: var(--primary);"><div class="infra-icon">&#9729;</div><div class="infra-name">EC2 App Host</div><div class="infra-tech">Server A + Server B (FastAPI)</div><div class="infra-port">existing</div></div>
+    <div class="infra-card" style="border-color: var(--primary);"><div class="infra-icon">&#9729;</div><div class="infra-name">EC2 App Host</div><div class="infra-tech">.NET Legacy API + .NET Microservices API (FastAPI)</div><div class="infra-port">existing</div></div>
     <div class="infra-card" style="border-color: #8b5cf6;"><div class="infra-icon">&#128230;</div><div class="infra-name">ECS Fargate Pool</div><div class="infra-tech">1 vCPU / 2 GB · Python worker</div><div class="infra-port">0 &harr; N tasks</div></div>
     <div class="infra-card" style="border-color: #ef4444;"><div class="infra-icon">&#128293;</div><div class="infra-name">ElastiCache Redis</div><div class="infra-tech">cache.t4g.small</div><div class="infra-port">:6379</div></div>
     <div class="infra-card" style="border-color: #0ea5e9;"><div class="infra-icon">&#128024;</div><div class="infra-name">Amazon RDS</div><div class="infra-tech">SQL Server · system of record</div><div class="infra-port">:1433</div></div>
@@ -683,7 +683,7 @@
   <div class="table-wrapper"><table>
     <thead><tr><th>Structure</th><th>Key</th><th>Purpose</th></tr></thead>
     <tbody>
-      <tr><td><span class="badge badge-ws">STREAM</span></td><td><code>dispatch:stream</code></td><td>Durable buffer of incoming dispatch requests between Server A and the Fargate workers. Consumed via a consumer group (<code>XREADGROUP</code>) — all N workers compete; each message goes to exactly one worker.</td></tr>
+      <tr><td><span class="badge badge-ws">STREAM</span></td><td><code>dispatch:stream</code></td><td>Durable buffer of incoming dispatch requests between .NET Legacy API and the Fargate workers. Consumed via a consumer group (<code>XREADGROUP</code>) — all N workers compete; each message goes to exactly one worker.</td></tr>
       <tr><td><span class="badge badge-patch">MUTEX</span></td><td><code>lock:tech:{techId}</code></td><td>Per-technician distributed lock. A request acquires locks on <em>its candidate technicians</em> before offering, in a fixed order (e.g. ascending <code>techId</code>) to avoid deadlock between overlapping requests. Requests with disjoint candidates run in parallel — even in the same division; requests sharing a technician serialize on that lock, so a tech is never double-offered. TTL self-releases on a crashed worker.</td></tr>
       <tr><td><span class="badge badge-post">LIST</span></td><td><code>resp:{dispatchId}:{techId}</code></td><td>Per-technician reply channel. EC2 <code>LPUSH</code>es the Accept/Reject; the worker <code>BLPOP</code>s it — instant wake, no polling. <code>EXPIRE 60s</code> self-cleans.</td></tr>
     </tbody>

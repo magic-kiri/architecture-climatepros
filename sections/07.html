@@ -37,7 +37,7 @@ Adapted from <b>system-design.html &sect;6 Redis Data Structures</b>.</p>
 <div class="cl-table-wrap"><table class="cl-table">
 <thead><tr><th>Structure</th><th>Key</th><th>Purpose</th></tr></thead>
 <tbody>
-<tr><td><span class="s7-badge purple">STREAM</span></td><td><code>dispatch:stream</code></td><td>Durable buffer of incoming dispatch requests between Server A and the Container Apps workers. Consumed via a consumer group (<code>XREADGROUP</code>) &mdash; all N workers compete; each message goes to exactly one worker.</td></tr>
+<tr><td><span class="s7-badge purple">STREAM</span></td><td><code>dispatch:stream</code></td><td>Durable buffer of incoming dispatch requests between .NET Legacy API and the Container Apps workers. Consumed via a consumer group (<code>XREADGROUP</code>) &mdash; all N workers compete; each message goes to exactly one worker.</td></tr>
 <tr><td><span class="s7-badge amber">MUTEX</span></td><td><code>lock:tech:{techId}</code></td><td>Per-technician distributed lock. A request acquires locks on <em>its candidate technicians</em> before offering, in a fixed order (e.g. ascending <code>techId</code>) to avoid deadlock between overlapping requests. Requests with disjoint candidates run in parallel &mdash; even in the same division; requests sharing a technician serialize on that lock, so a tech is never double-offered. TTL self-releases on a crashed worker.</td></tr>
 <tr><td><span class="s7-badge green">LIST</span></td><td><code>resp:{dispatchId}:{techId}</code></td><td>Per-technician reply channel. The Azure VM API <code>LPUSH</code>es the Accept/Reject; the worker <code>BLPOP</code>s it &mdash; instant wake, no polling. <code>EXPIRE 60s</code> self-cleans.</td></tr>
 </tbody>
