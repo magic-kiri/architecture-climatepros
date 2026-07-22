@@ -284,7 +284,7 @@ body{margin:0}
   <header class="top">
     <div class="eyebrow">ClimatePros · System Architecture</div>
     <h1>Auto-Dispatch — End-to-End Architecture</h1>
-    <p class="sub">How an admin toggle drives fully automated, division-isolated dispatch — layered on top of the existing EC2 application servers, with a new Redis + AWS Fargate processing tier for concurrency, fault tolerance, and cost control — plus an Amazon SNS round-trip for real-time technician notification and reply.</p>
+    <p class="sub">How an admin toggle drives fully automated, division-isolated dispatch — layered on top of the existing Azure VM application servers, with a new Azure Cache for Redis + Azure Container Apps processing tier for concurrency, fault tolerance, and cost control — plus an Azure Notification Hubs round-trip for real-time technician notification and reply.</p>
   </header>
 
   <div class="legend">
@@ -293,7 +293,7 @@ body{margin:0}
     <div class="item"><span style="width:26px;height:0;border-top:2.5px solid #2563eb;display:inline-block"></span> Dispatch flow</div>
     <div class="item"><span style="width:26px;height:0;border-top:2.5px solid #7c3aed;display:inline-block"></span> Toggle / configuration flow</div>
     <div class="item"><span style="width:26px;height:0;border-top:2.5px solid #059669;display:inline-block"></span> DB read / write</div>
-    <div class="item"><span style="width:26px;height:0;border-top:2.5px solid #d97706;display:inline-block"></span> SNS push / technician reply</div>
+    <div class="item"><span style="width:26px;height:0;border-top:2.5px solid #d97706;display:inline-block"></span> Notification Hubs push / technician reply</div>
   </div>
 
   <div class="stage">
@@ -318,10 +318,10 @@ body{margin:0}
 
   <!-- EC2 -->
   <section class="layer" id="ec2layer">
-    <div class="layer-title">2 · Existing Application Tier <span class="tag exist">Single EC2 Instance</span></div>
+    <div class="layer-title">2 · Existing Application Tier <span class="tag exist">Single Azure VM</span></div>
     <div class="ec2">
       <div class="ec2-head">
-        <span class="name">☁️ AWS EC2 — Application Host <span class="tag exist" style="margin-left:6px">Existing</span></span>
+        <span class="name">☁️ Azure VM — Application Host <span class="tag exist" style="margin-left:6px">Existing</span></span>
       </div>
       <div class="grid2">
         <div class="box exist focusable" id="serverA">
@@ -339,14 +339,14 @@ body{margin:0}
           <div class="role">Orchestrator</div>
           <ul>
             <li>Manual task initiator</li>
-            <li><strong>New logic:</strong> ECS Fargate manager — watches toggles, scales tasks (ON=<em>N</em> configurable · e.g. 3 / OFF=0), flushes stream on disable</li>
+            <li><strong>New logic:</strong> Azure Container Apps manager — watches toggles, scales tasks (ON=<em>N</em> configurable · e.g. 3 / OFF=0), flushes stream on disable</li>
           </ul>
         </div>
       </div>
     </div>
   </section>
 
-  <!-- BRANCH CONNECTOR: .NET Microservices API -> Fargate (right). .NET Legacy API -> Stream drawn by #wires rail (left). -->
+  <!-- BRANCH CONNECTOR: .NET Microservices API -> Fargate (right). Application Host -> Stream drawn by #wires rail (left). -->
   <div class="branch">
     <div class="branch-path spacer"></div>
     <div class="branch-path b">
@@ -356,13 +356,13 @@ body{margin:0}
           <path d="M30 0 L30 62" fill="none" stroke="#d97706" stroke-width="2.5" stroke-dasharray="6 4" marker-end="url(#arrB)"/>
         </svg>
       </div>
-      <div class="branch-label b"><strong>.NET Microservices API → Fargate Pool</strong><span>AWS ECS API → scale tasks (ON=<em>N</em>, configurable · e.g. 3 / OFF=0)</span></div>
+      <div class="branch-label b"><strong>.NET Microservices API → Container Apps Pool</strong><span>Azure Container Apps API → scale tasks (ON=<em>N</em>, configurable · e.g. 3 / OFF=0)</span></div>
     </div>
   </div>
 
   <!-- FARGATE POOL -->
   <section class="layer fargate focusable new-focus" id="fargate">
-    <div class="layer-title">3 · AWS ECS Fargate Pool <span class="tag new">New</span></div>
+    <div class="layer-title">3 · Azure Container Apps Pool <span class="tag new">New</span></div>
     <div class="scale-row" style="margin-bottom:18px">
       <div class="scale-chip"><span class="dot on"></span><span class="sc-txt"><strong>ON — <em>N</em> tasks running</strong><span>configurable · 3 used here · scales up on enable</span></span></div>
       <div class="scale-chip"><span class="dot off"></span><span class="sc-txt"><strong>OFF — 0 tasks</strong><span>scales to zero + flushes stream (cost save)</span></span></div>
@@ -385,7 +385,7 @@ body{margin:0}
         <ol>
           <li><code>XREADGROUP</code> from <code>dispatch:stream</code></li>
           <li>Try lock <code>lock:div:Div_A</code> → <span class="pill ok">✓ SUCCESS</span></li>
-          <li>Nearest techs (RDS) → <strong>SNS Publish</strong> to each device</li>
+          <li>Nearest techs (RDS) → <strong>Notification Hubs Send</strong> to each device</li>
           <li><code>BLPOP resp:{id}:{tech}</code> — block for reply ⏳</li>
           <li>Rank &amp; assign → release lock · <code>XACK</code></li>
         </ol>
@@ -395,7 +395,7 @@ body{margin:0}
         <ol>
           <li><code>XREADGROUP</code> from <code>dispatch:stream</code></li>
           <li>Try lock <code>lock:div:Div_B</code> → <span class="pill ok">✓ SUCCESS</span></li>
-          <li>Nearest techs (RDS) → <strong>SNS Publish</strong> to each device</li>
+          <li>Nearest techs (RDS) → <strong>Notification Hubs Send</strong> to each device</li>
           <li><code>BLPOP resp:{id}:{tech}</code> — block for reply ⏳</li>
           <li>Rank &amp; assign → release lock · <code>XACK</code></li>
         </ol>
@@ -407,22 +407,22 @@ body{margin:0}
       <span class="rt-cta-icon">🔍</span>
       <span class="rt-cta-text">
         <span class="rt-cta-title"><span class="rt-cta-label">Expand</span> — how each dispatch request is processed</span>
-        <span class="rt-cta-sub">Drill into the per-technician SNS push → phone → EC2 → Redis → BLPOP reply loop</span>
+        <span class="rt-cta-sub">Drill into the per-technician Notification Hubs push → phone → Azure VM → Redis → BLPOP reply loop</span>
       </span>
       <span class="rt-cta-chevron">▾</span>
     </button>
 
     <!-- SNS ROUND-TRIP (inside a winning task's flow) -->
     <div class="rt-block collapsed" id="snsBlock">
-      <div class="conn" style="margin-top:22px">Inside a winning worker's flow (e.g. C2 / C3): <strong>notify each nearby technician via Amazon SNS</strong>, then block on a per-technician Redis key for the reply — <strong>no polling, instant wake</strong></div>
+      <div class="conn" style="margin-top:22px">Inside a winning worker's flow (e.g. C2 / C3): <strong>notify each nearby technician via Azure Notification Hubs</strong>, then block on a per-technician Redis key for the reply — <strong>no polling, instant wake</strong></div>
 
       <!-- outbound: Task -> SNS -> Phone -->
       <div class="rt-lane out">
-        <div class="rt-lane-h"><span class="rt-badge out">① Outbound</span> Push notification · Fargate Task → SNS → Technician Phone</div>
+        <div class="rt-lane-h"><span class="rt-badge out">① Outbound</span> Push notification · Container Apps Task → Notification Hubs → Technician Phone</div>
         <div class="rt-row">
-        <div class="rt-node amber"><span class="rt-k">📦 Fargate Task</span><span class="rt-s"><code>SNS Publish</code> · TargetArn = endpointArn<br>msg = { dispatchId, techId, job }</span></div>
+        <div class="rt-node amber"><span class="rt-k">📦 Container Apps Task</span><span class="rt-s"><code>Notification Hubs Send</code> · installationId = deviceHandle<br>msg = { dispatchId, techId, job }</span></div>
         <div class="rt-arr">→</div>
-        <div class="rt-node amber"><span class="rt-k">📣 Amazon SNS</span><span class="rt-s">Platform apps: <strong>APNs</strong> (iOS) + <strong>FCM</strong> (Android) · per-device endpoints</span></div>
+        <div class="rt-node amber"><span class="rt-k">📣 Azure Notification Hubs</span><span class="rt-s">Platform notification services: <strong>APNs</strong> (iOS) + <strong>FCM</strong> (Android) · per-device registrations</span></div>
         <div class="rt-arr">→</div>
         <div class="rt-node blue"><span class="rt-k">📱 Technician Phone</span><span class="rt-s">Flutter app · push arrives carrying dispatchId + techId</span></div>
         </div>
@@ -432,19 +432,19 @@ body{margin:0}
 
       <!-- inbound: Phone -> EC2 -> Redis -> Task -->
       <div class="rt-lane in">
-        <div class="rt-lane-h"><span class="rt-badge in">② Inbound</span> Reply path · Technician Phone → EC2 API → Redis → Fargate Task</div>
+        <div class="rt-lane-h"><span class="rt-badge in">② Inbound</span> Reply path · Technician Phone → Azure VM API → Redis → Container Apps Task</div>
         <div class="rt-row">
         <div class="rt-node blue"><span class="rt-k">📱 Technician Phone</span><span class="rt-s">POST reply { dispatchId, techId, accept }</span></div>
         <div class="rt-arr green">→</div>
-        <div class="rt-node blue"><span class="rt-k">🅰️🅱️ EC2 API</span><span class="rt-s"><code>/dispatch/respond</code><br><code>SETNX resp:done</code> (dedupe) · <code>LPUSH</code> reply</span></div>
+        <div class="rt-node blue"><span class="rt-k">🅰️🅱️ Azure VM API</span><span class="rt-s"><code>/dispatch/respond</code><br><code>SETNX resp:done</code> (dedupe) · <code>LPUSH</code> reply</span></div>
         <div class="rt-arr green">→</div>
         <div class="rt-node amber"><span class="rt-k">🔑 Redis · resp:{id}:{tech}</span><span class="rt-s">LIST · durable buffer · <code>EXPIRE 60s</code></span></div>
         <div class="rt-arr green">→</div>
-        <div class="rt-node amber"><span class="rt-k">📦 Fargate Task <span style="color:var(--green);font-weight:700">↩ loop closes</span></span><span class="rt-s"><code>BLPOP</code> wakes instantly → rank &amp; assign (RDS)</span></div>
+        <div class="rt-node amber"><span class="rt-k">📦 Container Apps Task <span style="color:var(--green);font-weight:700">↩ loop closes</span></span><span class="rt-s"><code>BLPOP</code> wakes instantly → rank &amp; assign (RDS)</span></div>
         </div>
       </div>
 
-      <p style="margin:14px 0 0;font-size:12px;color:var(--muted)">SNS = push out only (fire-and-forget). Reply path is <strong>Phone → EC2 → Redis → Task</strong>. Worker's <code>BLPOP</code> timeout <em>T</em> must stay below the division lock TTL; on timeout the worker escalates to the next technician batch.</p>
+      <p style="margin:14px 0 0;font-size:12px;color:var(--muted)">Notification Hubs = push out only (fire-and-forget). Reply path is <strong>Phone → Azure VM → Redis → Task</strong>. Worker's <code>BLPOP</code> timeout <em>T</em> must stay below the division lock TTL; on timeout the worker escalates to the next technician batch.</p>
     </div>
   </section>
 
@@ -452,11 +452,11 @@ body{margin:0}
 
   <!-- REDIS -->
   <section class="layer focusable new-focus">
-    <div class="layer-title">4 · Redis Infrastructure Layer <span class="tag new">New</span></div>
+    <div class="layer-title">4 · Azure Cache for Redis Layer <span class="tag new">New</span></div>
     <div class="redis-row">
       <div class="redis-item" id="streamBox">
         <span class="k">STREAM · dispatch:stream</span>
-        <p>Tracks incoming dispatch requests per division. Durable buffer between .NET Legacy API and the Fargate workers.</p>
+        <p>Tracks incoming dispatch requests per division. Durable buffer between .NET Legacy API and the Container Apps workers.</p>
       </div>
       <div class="redis-item">
         <span class="k">MUTEX · lock:div:*</span>
@@ -464,7 +464,7 @@ body{margin:0}
       </div>
       <div class="redis-item" id="respBox" style="grid-column:1 / -1">
         <span class="k">LIST · resp:{dispatchId}:{techId}</span>
-        <p>Per-technician reply channel. EC2 <code>LPUSH</code>es the Accept/Reject; the worker <code>BLPOP</code>s it — instant wake, <strong>no polling</strong>. <code>EXPIRE 60s</code> self-cleans.</p>
+        <p>Per-technician reply channel. Azure VM <code>LPUSH</code>es the Accept/Reject; the worker <code>BLPOP</code>s it — instant wake, <strong>no polling</strong>. <code>EXPIRE 60s</code> self-cleans.</p>
       </div>
     </div>
   </section>
@@ -489,11 +489,11 @@ body{margin:0}
     <section class="layer">
       <div class="layer-title">Shared Data Store <span class="tag exist">Existing</span></div>
       <div class="box exist focusable" id="rdsBox">
-        <h3>🗄️ Amazon RDS</h3>
-        <div class="role">Single SQL database · system of record</div>
+        <h3>🗄️ Amazon RDS <span class="tag exist" style="margin-left:4px">AWS</span></h3>
+        <div class="role">Single SQL Server database · system of record · stays on AWS (lone cross-cloud dependency)</div>
         <div class="db-consumers">
-          <span class="consumer">🅰️🅱️ EC2 Servers <em>read / write</em></span>
-          <span class="consumer">📦 ECS Fargate tasks <em>read / write</em></span>
+          <span class="consumer">🅰️🅱️ Azure VM Servers <em>read / write</em></span>
+          <span class="consumer">📦 Container Apps tasks <em>read / write</em></span>
         </div>
       </div>
     </section>
@@ -588,7 +588,7 @@ body{margin:0}
           var g = wire('M '+(sx+2)+' '+sy+' H '+colX+' V '+(dbTop-2), '#059669',
             {'stroke-linejoin':'round','marker-end':'url(#db-arrow)','marker-start':'url(#db-arrow-r)'});
           var t = mk('text',{x:(sx+colX)/2, y:sy-9, fill:'#059669','font-size':11,'font-weight':700,'text-anchor':'middle','class':'wlabel'});
-          t.textContent = 'EC2 ⇄ RDS'; g.appendChild(t);
+          t.textContent = 'Azure VM ⇄ RDS'; g.appendChild(t);
         })();
         // Fargate -> RDS: straight horizontal line into the DB left edge
         (function(){
@@ -598,26 +598,29 @@ body{margin:0}
           var g = wire('M '+(sx+2)+' '+y+' H '+(dbLeft-2), '#059669',
             {'marker-end':'url(#db-arrow)','marker-start':'url(#db-arrow-r)'});
           var t = mk('text',{x:(sx+dbLeft)/2, y:y-9, fill:'#059669','font-size':11,'font-weight':700,'text-anchor':'middle','class':'wlabel'});
-          t.textContent = 'Fargate ⇄ RDS'; g.appendChild(t);
+          t.textContent = 'Container Apps ⇄ RDS'; g.appendChild(t);
         })();
       }
     }
 
-    // orthogonal path: A.left -> gutter -> down -> into Stream.left
-    var d = 'M '+ax+' '+ay+
+    // orthogonal path: Application Host.left -> gutter -> down -> into Stream.left
+    var host = document.getElementById('ec2layer').getBoundingClientRect();
+    var hx = host.left - w.left;            // Application Host left edge
+    var hy = host.top - w.top + host.height/2; // Application Host vertical center
+    var d = 'M '+hx+' '+hy+
             ' H '+gutter+
             ' V '+sy+
             ' H '+sx;
     var rg = wire(d, '#2563eb', {'stroke-linejoin':'round','marker-end':'url(#rail-arrow)'});
 
-    // start dot at .NET Legacy API
-    rg.appendChild(mk('circle',{cx:ax, cy:ay, r:4, fill:'#2563eb'}));
+    // start dot at Application Host
+    rg.appendChild(mk('circle',{cx:hx, cy:hy, r:4, fill:'#2563eb'}));
 
     // rotated label along the vertical rail
-    var midY = (ay + sy)/2;
+    var midY = (hy + sy)/2;
     var t = mk('text',{x:gutter-7, y:midY, fill:'#2563eb','font-size':11,'font-weight':700,
       'text-anchor':'middle','class':'wlabel','transform':'rotate(-90 '+(gutter-7)+' '+midY+')'});
-    t.textContent = '.NET Legacy API → publish → dispatch:stream';
+    t.textContent = 'Application Host → publish → dispatch:stream';
     rg.appendChild(t);
   }
 

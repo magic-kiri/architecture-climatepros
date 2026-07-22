@@ -1,0 +1,222 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Use Case A · Auto-Dispatch — architecture diagram</title>
+<link rel="stylesheet" href="style.css">
+<style>html,body{margin:0}body{background:#fff;padding:14px 16px;overflow-x:auto}</style>
+</head>
+<body>
+<div class="uca-diagram">
+
+<div class="uca-legend">
+  <div class="uca-legend-item"><span class="uca-swatch uca-swatch--exist"></span> Existing system <span class="uca-legend-note">&mdash; already live today</span></div>
+  <div class="uca-legend-item"><span class="uca-swatch uca-swatch--new"></span> New for auto-dispatch <span class="uca-legend-note">&mdash; added by this project</span></div>
+  <div class="uca-legend-item"><span style="width:26px;height:0;border-top:2.5px solid #2563eb;display:inline-block"></span> Dispatch flow</div>
+  <div class="uca-legend-item"><span style="width:26px;height:0;border-top:2.5px solid #7c3aed;display:inline-block"></span> Toggle / configuration flow</div>
+  <div class="uca-legend-item"><span style="width:26px;height:0;border-top:2.5px solid #059669;display:inline-block"></span> DB read / write</div>
+  <div class="uca-legend-item"><span style="width:26px;height:0;border-top:2.5px solid #d97706;display:inline-block"></span> Notification Hubs push / technician reply</div>
+</div>
+
+<div class="uca-stage">
+<div class="uca-main-col">
+
+<section class="uca-layer">
+  <div class="uca-layer-title">1 &middot; Control Plane <span class="uca-tag uca-tag--exist">Existing UI</span></div>
+  <div class="uca-box uca-box--exist">
+    <span class="uca-badge uca-badge--exist">Existing</span>
+    <h4>🖥️ Dashboard &mdash; Admin UI</h4>
+    <div class="role">Operator control surface</div>
+    <ul>
+      <li><strong>Dispatch request</strong> &rarr; handled by .NET Legacy API</li>
+      <li><strong>New &mdash; Auto-Dispatch toggle</strong> &rarr; handled by .NET Microservices API</li>
+      <li><strong>New &mdash; Configuration</strong> (e.g. task count <em>N</em>) &rarr; handled by .NET Microservices API</li>
+    </ul>
+  </div>
+</section>
+
+<div class="uca-arrow-row">
+  <div class="uca-arrow-col uca-arrow-col--blue">
+    <svg width="22" height="26" viewBox="0 0 22 26"><path d="M11 0v20M4 14l7 7 7-7" fill="none" stroke="#2563eb" stroke-width="2"/></svg>
+    Dispatch request
+  </div>
+  <div class="uca-arrow-col uca-arrow-col--vio">
+    <svg width="22" height="26" viewBox="0 0 22 26"><path d="M11 0v20M4 14l7 7 7-7" fill="none" stroke="#7c3aed" stroke-width="2"/></svg>
+    Toggle + Configuration (N)
+  </div>
+</div>
+
+<section class="uca-layer">
+  <div class="uca-layer-title">2 &middot; Existing Application Tier <span class="uca-tag uca-tag--exist">Single Azure VM Instance</span></div>
+  <div class="uca-ec2">
+    <div class="uca-ec2-head">
+      <span class="uca-ec2-name">☁ Azure VM &mdash; Application Host <span class="uca-tag uca-tag--exist" style="margin-left:6px">Existing</span></span>
+    </div>
+    <div class="uca-grid2">
+      <div class="uca-box uca-box--exist">
+        <span class="uca-badge uca-badge--exist">Existing</span>
+        <h4>🅰️ .NET Legacy API</h4>
+        <div class="role">Request entry point</div>
+        <ul>
+          <li>API endpoints &middot; user sessions</li>
+          <li><strong>New logic:</strong> if division = <code>ENABLED</code>, publish payload to Redis Stream</li>
+        </ul>
+      </div>
+      <div class="uca-box uca-box--exist">
+        <span class="uca-badge uca-badge--exist">Existing</span>
+        <h4>🅱️ .NET Microservices API</h4>
+        <div class="role">Orchestrator</div>
+        <ul>
+          <li>Manual task initiator</li>
+          <li><strong>New logic:</strong> Container Apps manager &mdash; watches toggles, scales apps (ON=<em>N</em> configurable &middot; e.g. 3 / OFF=0), flushes stream on disable</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+</section>
+
+<div class="uca-branch">
+  <div class="uca-branch-path"></div>
+  <div class="uca-branch-path">
+    <div class="uca-branch-svg">
+      <svg width="60" height="70" viewBox="0 0 60 70">
+        <defs><marker id="uca-arrB" markerWidth="9" markerHeight="9" refX="6" refY="3" orient="auto"><path d="M0,0 L6,3 L0,6 Z" fill="#d97706"/></marker></defs>
+        <path d="M30 0 L30 62" fill="none" stroke="#d97706" stroke-width="2.5" stroke-dasharray="6 4" marker-end="url(#uca-arrB)"/>
+      </svg>
+    </div>
+    <div class="uca-branch-label uca-branch-label--b"><strong>.NET Microservices API &rarr; Container Apps Pool</strong><span>Azure Container Apps API &rarr; scale replicas (ON=<em>N</em>, configurable &middot; e.g. 3 / OFF=0)</span></div>
+  </div>
+</div>
+
+<section class="uca-layer uca-fargate">
+  <div class="uca-layer-title">3 &middot; Azure Container Apps Pool <span class="uca-tag uca-tag--new">New</span></div>
+  <div class="uca-scale-row" style="margin-bottom:18px">
+    <div class="uca-scale-chip"><span class="uca-dot uca-dot--on"></span><span class="uca-sc-txt"><strong>ON &mdash; <em>N</em> replicas running</strong><span>configurable &middot; 3 used here &middot; scales up on enable</span></span></div>
+    <div class="uca-scale-chip"><span class="uca-dot uca-dot--off"></span><span class="uca-sc-txt"><strong>OFF &mdash; 0 replicas</strong><span>scales to zero + flushes stream (cost save)</span></span></div>
+  </div>
+
+  <div class="uca-conn">All <em>N</em> tasks read the same group via <code>XREADGROUP</code> &mdash; competing consumers <span style="color:var(--muted)">(N configurable; 3 shown below as example)</span></div>
+
+  <div class="uca-grid3">
+    <div class="uca-task">
+      <h5>📦 Task C1</h5>
+      <ol>
+        <li><code>XREADGROUP</code> from <code>dispatch:stream</code></li>
+        <li>Try lock <code>lock:div:Div_A</code></li>
+        <li>Result: <span class="uca-pill uca-pill--fail">✕ FAIL</span> (Div_A held)</li>
+        <li>Back off &mdash; NACK / release message for later pickup</li>
+      </ol>
+    </div>
+    <div class="uca-task">
+      <h5>📦 Task C2</h5>
+      <ol>
+        <li><code>XREADGROUP</code> from <code>dispatch:stream</code></li>
+        <li>Try lock <code>lock:div:Div_A</code> &rarr; <span class="uca-pill uca-pill--ok">✓ SUCCESS</span></li>
+        <li>Nearest techs (RDS) &rarr; <strong>Notification Hubs Publish</strong> to each device</li>
+        <li><code>BLPOP resp:{id}:{tech}</code> &mdash; block for reply ⏳</li>
+        <li>Rank &amp; assign &rarr; release lock &middot; <code>XACK</code></li>
+      </ol>
+    </div>
+    <div class="uca-task">
+      <h5>📦 Task C3</h5>
+      <ol>
+        <li><code>XREADGROUP</code> from <code>dispatch:stream</code></li>
+        <li>Try lock <code>lock:div:Div_B</code> &rarr; <span class="uca-pill uca-pill--ok">✓ SUCCESS</span></li>
+        <li>Nearest techs (RDS) &rarr; <strong>Notification Hubs Publish</strong> to each device</li>
+        <li><code>BLPOP resp:{id}:{tech}</code> &mdash; block for reply ⏳</li>
+        <li>Rank &amp; assign &rarr; release lock &middot; <code>XACK</code></li>
+      </ol>
+    </div>
+  </div>
+
+  <div class="uca-rt-block">
+    <div class="uca-conn">Inside a winning worker's flow (e.g. C2 / C3): <strong>notify each nearby technician via Azure Notification Hubs</strong>, then block on a per-technician Redis key for the reply &mdash; <strong>no polling, instant wake</strong></div>
+
+    <div class="uca-rt-lane uca-rt-lane--out">
+      <div class="uca-rt-lane-h"><span class="uca-rt-badge uca-rt-badge--out">① Outbound</span> Push notification &middot; Container Apps instance &rarr; Notification Hubs &rarr; Technician Phone</div>
+      <div class="uca-rt-row">
+        <div class="uca-rt-node uca-rt-node--amber"><span class="uca-rt-k">📦 Container Apps instance</span><span class="uca-rt-s">Notification Hubs send &middot; installation id = deviceInstallationId<br>msg = { dispatchId, techId, job }</span></div>
+        <div class="uca-rt-arr">&rarr;</div>
+        <div class="uca-rt-node uca-rt-node--amber"><span class="uca-rt-k">📣 Azure Notification Hubs</span><span class="uca-rt-s">APNs (iOS) + FCM (Android) &middot; per-device registration</span></div>
+        <div class="uca-rt-arr">&rarr;</div>
+        <div class="uca-rt-node uca-rt-node--blue"><span class="uca-rt-k">📱 Technician Phone</span><span class="uca-rt-s">Flutter app &middot; push arrives carrying dispatchId + techId</span></div>
+      </div>
+    </div>
+
+    <div class="uca-rt-turn">technician taps Accept / Reject &darr;</div>
+
+    <div class="uca-rt-lane uca-rt-lane--in">
+      <div class="uca-rt-lane-h"><span class="uca-rt-badge uca-rt-badge--in">② Inbound</span> Reply path &middot; Technician Phone &rarr; Azure VM API &rarr; Redis &rarr; Container Apps instance</div>
+      <div class="uca-rt-row">
+        <div class="uca-rt-node uca-rt-node--blue"><span class="uca-rt-k">📱 Technician Phone</span><span class="uca-rt-s">POST reply { dispatchId, techId, accept }</span></div>
+        <div class="uca-rt-arr" style="color:var(--green)">&rarr;</div>
+        <div class="uca-rt-node uca-rt-node--blue"><span class="uca-rt-k">🅰️🅱️ Azure VM API</span><span class="uca-rt-s"><code>/dispatch/respond</code><br><code>SETNX resp:done</code> (dedupe) &middot; <code>LPUSH</code> reply</span></div>
+        <div class="uca-rt-arr" style="color:var(--green)">&rarr;</div>
+        <div class="uca-rt-node uca-rt-node--amber"><span class="uca-rt-k">🔑 Redis &middot; resp:{id}:{tech}</span><span class="uca-rt-s">LIST &middot; durable buffer &middot; <code>EXPIRE 60s</code></span></div>
+        <div class="uca-rt-arr" style="color:var(--green)">&rarr;</div>
+        <div class="uca-rt-node uca-rt-node--amber"><span class="uca-rt-k">📦 Container Apps instance <span style="color:var(--green);font-weight:700">↩ loop closes</span></span><span class="uca-rt-s"><code>BLPOP</code> wakes instantly &rarr; rank &amp; assign (RDS)</span></div>
+      </div>
+    </div>
+
+    <p style="margin:14px 0 0;font-size:12px;color:var(--muted)">Notification Hubs = push out only (fire-and-forget). Reply path is <strong>Phone &rarr; Azure VM &rarr; Redis &rarr; Container Apps</strong>. Worker's <code>BLPOP</code> timeout <em>T</em> must stay below the division lock TTL; on timeout the worker escalates to the next technician batch.</p>
+  </div>
+</section>
+
+<div class="uca-down"><svg width="22" height="26"><path d="M11 0v20M4 14l7 7 7-7" fill="none" stroke="#94a3b8" stroke-width="2"/></svg></div>
+
+<section class="uca-layer">
+  <div class="uca-layer-title">4 &middot; Azure Cache for Redis &mdash; Infrastructure Layer <span class="uca-tag uca-tag--new">New</span></div>
+  <div class="uca-redis-row">
+    <div class="uca-redis-item">
+      <span class="uca-redis-k">STREAM &middot; dispatch:stream</span>
+      <p>Tracks incoming dispatch requests per division. Durable buffer between .NET Legacy API and the Container Apps workers.</p>
+    </div>
+    <div class="uca-redis-item">
+      <span class="uca-redis-k">MUTEX &middot; lock:div:*</span>
+      <p>Distributed per-division lock. Guarantees sequential, non-parallel processing &mdash; no two workers touch the same division at once.</p>
+    </div>
+    <div class="uca-redis-item" style="grid-column:1 / -1">
+      <span class="uca-redis-k">LIST &middot; resp:{dispatchId}:{techId}</span>
+      <p>Per-technician reply channel. Azure VM API <code>LPUSH</code>es the Accept/Reject; the worker <code>BLPOP</code>s it &mdash; instant wake, <strong>no polling</strong>. <code>EXPIRE 60s</code> self-cleans.</p>
+    </div>
+  </div>
+</section>
+
+<div class="uca-down"><svg width="22" height="26"><path d="M11 0v20M4 14l7 7 7-7" fill="none" stroke="#94a3b8" stroke-width="2"/></svg></div>
+
+<section class="uca-layer uca-edge">
+  <div class="uca-layer-title">⚠ Fault Tolerance &mdash; PEL Expiration &amp; Dual-Execution Shield <span class="uca-tag uca-tag--new">New</span></div>
+  <p style="margin:0 0 4px;font-size:13px;color:var(--ink)">If Task C2 crashes <em>or</em> processing exceeds the visibility timeout, its message stays unacknowledged in the Pending Entries List (PEL):</p>
+  <ol>
+    <li>Surviving worker (e.g. C1) claims the stuck message via <code>XCLAIM</code></li>
+    <li>C1 must first acquire <code>lock:div:Div_A</code> before running the flow</li>
+    <li><strong>Guardrail:</strong> if C2 was merely slow (not dead), the live lock <strong>blocks</strong> C1 &rarr; prevents dual execution. If C2 truly died, the lock expires and C1 safely takes over.</li>
+  </ol>
+  <p style="margin:8px 0 0;font-size:12.5px;color:var(--muted)">Net effect: exactly-once dispatch to technicians &mdash; no duplicate assignments, even under crashes or stalls.</p>
+</section>
+
+</div>
+<div class="uca-db-col">
+  <section class="uca-layer">
+    <div class="uca-layer-title">Shared Data Store <span class="uca-tag uca-tag--exist">Existing</span></div>
+    <div class="uca-box uca-box--exist">
+      <h4>🗄 AWS SQL Server <span style="font-size:9px;font-weight:800;letter-spacing:.06em;padding:2px 7px;border-radius:999px;background:var(--primary-light);color:var(--primary-dark);margin-left:6px">AWS</span></h4>
+      <div class="role">Single SQL database (SQL Server) &middot; system of record</div>
+      <div class="uca-db-consumers">
+        <span class="uca-consumer">🅰️🅱️ Azure VM Servers <em>read / write</em></span>
+        <span class="uca-consumer">📦 Container Apps tasks <em>read / write</em></span>
+      </div>
+    </div>
+  </section>
+</div>
+</div>
+
+</div>
+<script>
+function _odgPostHeight(){try{parent.postMessage({odgHeight:document.body.scrollHeight,src:location.href},'*');}catch(e){}}
+window.addEventListener('load',function(){_odgPostHeight();setTimeout(_odgPostHeight,300);});
+window.addEventListener('resize',_odgPostHeight);
+</script>
+</body>
+</html>

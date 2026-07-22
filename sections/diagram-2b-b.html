@@ -1,0 +1,161 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Use Case B · Job Summarisation — architecture diagram</title>
+<link rel="stylesheet" href="style.css">
+<style>html,body{margin:0}body{background:#fff;padding:14px 16px;overflow-x:auto}</style>
+</head>
+<body>
+ <svg viewBox="0 0 1370 650" width="100%" style="min-width:900px; font-family:inherit;">
+ <defs>
+ <marker id="be-blue" markerWidth="10" markerHeight="10" refX="7" refY="3.5" orient="auto"><path d="M0,0 L7,3.5 L0,7 Z" fill="#2563eb"/></marker>
+ <marker id="be-amber" markerWidth="10" markerHeight="10" refX="7" refY="3.5" orient="auto"><path d="M0,0 L7,3.5 L0,7 Z" fill="#d97706"/></marker>
+ <marker id="be-green" markerWidth="10" markerHeight="10" refX="7" refY="3.5" orient="auto"><path d="M0,0 L7,3.5 L0,7 Z" fill="#059669"/></marker>
+ <marker id="be-green-r" markerWidth="10" markerHeight="10" refX="1" refY="3.5" orient="auto"><path d="M7,0 L0,3.5 L7,7 Z" fill="#059669"/></marker>
+ <marker id="be-purple" markerWidth="10" markerHeight="10" refX="7" refY="3.5" orient="auto"><path d="M0,0 L7,3.5 L0,7 Z" fill="#7c3aed"/></marker>
+ <marker id="be-grey" markerWidth="10" markerHeight="10" refX="7" refY="3.5" orient="auto"><path d="M0,0 L7,3.5 L0,7 Z" fill="#94a3b8"/></marker>
+ </defs>
+
+ <!-- ===== ZONE 1: EXISTING FIELDJETX PLATFORM ===== -->
+ <rect x="18" y="60" width="500" height="520" rx="16" fill="#eff4ff" stroke="#60a5fa" stroke-width="1.5" stroke-dasharray="7 5"/>
+ <text x="268" y="88" text-anchor="middle" font-size="12" font-weight="700" fill="#0f3a8e" letter-spacing="1">EXISTING FIELDJETX PLATFORM</text>
+ <text x="268" y="104" text-anchor="middle" font-size="10" fill="#64748b">unchanged</text>
+
+ <!-- ===== ZONE 2: NEW AI LAYER ===== -->
+ <rect x="560" y="60" width="480" height="520" rx="16" fill="#fffaf3" stroke="#d97706" stroke-width="1.5" stroke-dasharray="7 5"/>
+ <text x="800" y="88" text-anchor="middle" font-size="12" font-weight="700" fill="#b45309" letter-spacing="1">NEW AI SERVICE</text>
+ <text x="800" y="104" text-anchor="middle" font-size="10" fill="#b45309">containerized &middot; cloud-agnostic</text>
+
+ <!-- ===== ZONE 3: PRIVATE MODEL INFRA (on-prem, ClimatePros office) — vertical stack ===== -->
+ <rect x="1050" y="150" width="300" height="390" rx="16" fill="#faf5ff" stroke="#7c3aed" stroke-width="1.8" stroke-dasharray="7 5"/>
+ <text x="1200" y="178" text-anchor="middle" font-size="11" font-weight="800" fill="#5b21b6">PRIVATE MODEL INFRA</text>
+ <text x="1200" y="193" text-anchor="middle" font-size="9.5" font-weight="600" fill="#7c6aa6">CLIMATEPROS OFFICE &middot; on-prem</text>
+
+ <!-- LiteLLM gateway (routing) -->
+ <rect x="1068" y="208" width="264" height="66" rx="12" fill="#f3e8ff" stroke="#7c3aed" stroke-width="2"/>
+ <text x="1200" y="237" text-anchor="middle" font-size="14.5" font-weight="700" fill="#5b21b6">&#128257; LiteLLM Gateway</text>
+ <text x="1200" y="257" text-anchor="middle" font-size="10" fill="#7c6aa6">routing &middot; primary + fallback</text>
+
+ <!-- gateway -> vLLM / Embedding -->
+ <path d="M1130 274 V 307" fill="none" stroke="#7c3aed" stroke-width="2" marker-end="url(#be-purple)"/>
+ <path d="M1270 274 V 307" fill="none" stroke="#7c3aed" stroke-width="2" marker-end="url(#be-purple)"/>
+
+ <!-- Self-hosted LLM (vLLM) -->
+ <rect x="1068" y="309" width="124" height="98" rx="12" fill="#fff" stroke="#7c3aed" stroke-width="1.8"/>
+ <text x="1130" y="341" text-anchor="middle" font-size="11.5" font-weight="700" fill="#5b21b6">&#129504; Self-hosted LLM</text>
+ <text x="1130" y="368" text-anchor="middle" font-size="10" fill="#7c6aa6">qwen3-vl-moe</text>
+ <text x="1130" y="383" text-anchor="middle" font-size="10" fill="#7c6aa6">vLLM</text>
+
+ <!-- Embedding -->
+ <rect x="1208" y="309" width="124" height="98" rx="12" fill="#fff" stroke="#7c3aed" stroke-width="1.8"/>
+ <text x="1270" y="341" text-anchor="middle" font-size="11.5" font-weight="700" fill="#5b21b6">&#129513; Embedding</text>
+ <text x="1270" y="372" text-anchor="middle" font-size="10" fill="#7c6aa6">bge-m3</text>
+
+ <!-- gateway -> Gemini (fallback, routes down the centre gap) -->
+ <path d="M1200 274 V 458" fill="none" stroke="#7c3aed" stroke-width="1.8" stroke-dasharray="6 4" marker-end="url(#be-purple)"/>
+ <text x="1210" y="435" text-anchor="start" font-size="10" font-weight="700" fill="#7c3aed" stroke="#ffffff" stroke-width="4" paint-order="stroke">fallback</text>
+
+ <!-- Gemini (external fallback) -->
+ <rect x="1120" y="460" width="160" height="62" rx="12" fill="#fbfaff" stroke="#94a3b8" stroke-width="1.8" stroke-dasharray="6 4"/>
+ <text x="1200" y="488" text-anchor="middle" font-size="11.5" font-weight="700" fill="#5b21b6">&#10022; Gemini</text>
+ <text x="1200" y="506" text-anchor="middle" font-size="10" fill="#64748b">backup &middot; external</text>
+
+ <!-- Mobile App -->
+ <rect x="40" y="130" width="160" height="110" rx="14" fill="#fff" stroke="#93c5fd" stroke-width="1.5"/>
+ <text x="120" y="177" text-anchor="middle" font-size="15" font-weight="700" fill="#0f3a8e">&#128241; Mobile App</text>
+ <text x="120" y="198" text-anchor="middle" font-size="11" fill="#64748b">FieldJetX (Flutter)</text>
+
+ <!-- arrow mobile -> .NET -->
+ <path d="M200 167 H 286" fill="none" stroke="#2563eb" stroke-width="2.5" marker-end="url(#be-blue)"/>
+ <text x="243" y="155" text-anchor="middle" font-size="11" font-weight="700" fill="#2563eb" stroke="#ffffff" stroke-width="5" paint-order="stroke">existing auth</text>
+
+ <!-- .NET APIs -->
+ <rect x="290" y="130" width="206" height="75" rx="10" fill="#fff" stroke="#93c5fd" stroke-width="1.5"/>
+ <text x="393" y="164" text-anchor="middle" font-size="13" font-weight="700" fill="#1e293b">.NET Legacy API</text>
+ <text x="393" y="185" text-anchor="middle" font-size="10" fill="#64748b">Azure VM</text>
+
+ <rect x="290" y="235" width="206" height="90" rx="10" fill="#fff" stroke="#93c5fd" stroke-width="2"/>
+ <text x="393" y="266" text-anchor="middle" font-size="13" font-weight="700" fill="#1e293b">.NET Microservices API</text>
+ <text x="393" y="285" text-anchor="middle" font-size="10" fill="#64748b">Azure VM</text>
+ <text x="393" y="306" text-anchor="middle" font-size="10" font-weight="700" fill="#d97706">+ AI proxy route (new)</text>
+
+ <rect x="290" y="355" width="206" height="75" rx="10" fill="#fff" stroke="#93c5fd" stroke-width="1.5"/>
+ <text x="393" y="387" text-anchor="middle" font-size="13" font-weight="700" fill="#1e293b">Custom Forms API</text>
+ <text x="393" y="407" text-anchor="middle" font-size="10" fill="#64748b">Azure VM</text>
+
+ <!-- SQL Server (the client's existing database, extended with ai.* tables) -->
+ <path d="M215 468 h190 v58 a95,13 0 0 1 -190 0 z" fill="#fff" stroke="#2563eb" stroke-width="2"/>
+ <ellipse cx="310" cy="468" rx="95" ry="13" fill="#fff" stroke="#2563eb" stroke-width="2"/>
+ <text x="310" y="496" text-anchor="middle" font-size="12.5" font-weight="700" fill="#0f3a8e">SQL Server</text>
+ <text x="310" y="514" text-anchor="middle" font-size="10" font-weight="700" fill="#d97706">+ new isolated ai.* schema</text>
+ <text x="310" y="529" text-anchor="middle" font-size="9.5" font-weight="600" fill="#b45309">clear isolation of AI data</text>
+
+ <!-- Legacy + Microservices APIs read/write the shared SQL Server (bus); Custom Forms does NOT touch SQL -->
+ <path d="M290 300 H 250" fill="none" stroke="#2563eb" stroke-width="2"/>
+ <path d="M290 190 H 250 V 450" fill="none" stroke="#2563eb" stroke-width="2" marker-end="url(#be-blue)"/>
+ <circle cx="250" cy="300" r="3.5" fill="#2563eb"/>
+ <text x="238" y="300" text-anchor="middle" font-size="11" font-weight="700" fill="#2563eb" stroke="#ffffff" stroke-width="5" paint-order="stroke" transform="rotate(-90 238 300)">reads + writes</text>
+
+ <!-- .NET Microservices API -> Custom Forms API -->
+ <path d="M393 325 V 353" fill="none" stroke="#2563eb" stroke-width="2.2" marker-end="url(#be-blue)"/>
+ <text x="405" y="343" text-anchor="start" font-size="10.5" font-weight="700" fill="#2563eb" stroke="#ffffff" stroke-width="4" paint-order="stroke">invokes</text>
+
+ <!-- arrow .NET -> FastAPI (proxy) -->
+ <path d="M496 285 H 611" fill="none" stroke="#d97706" stroke-width="2.5" marker-end="url(#be-amber)"/>
+ <text x="553" y="274" text-anchor="middle" font-size="11.5" font-weight="700" fill="#b45309" stroke="#ffffff" stroke-width="5" paint-order="stroke">server-to-server</text>
+
+ <!-- ===== FastAPI AI Server (single box; Observability & Suggestion are internal modules) ===== -->
+ <rect x="615" y="140" width="370" height="272" rx="14" fill="#fff" stroke="#d97706" stroke-width="2.5"/>
+ <rect x="907" y="132" width="40" height="16" rx="8" fill="#d97706"/>
+ <text x="927" y="144" text-anchor="middle" font-size="9" font-weight="800" fill="#fff">NEW</text>
+ <text x="800" y="170" text-anchor="middle" font-size="15" font-weight="700" fill="#1e293b">&#9889; FastAPI AI Server</text>
+ <text x="800" y="189" text-anchor="middle" font-size="10" fill="#64748b">Docker container &middot; cloud-agnostic</text>
+
+ <!-- internal module: Observability & Evals -->
+ <rect x="633" y="202" width="334" height="90" rx="10" fill="#fffaf3" stroke="#d97706" stroke-width="1.4" stroke-dasharray="6 4"/>
+ <text x="800" y="223" text-anchor="middle" font-size="12" font-weight="700" fill="#b45309">&#128202; Observability &amp; Evals</text>
+ <text x="800" y="241" text-anchor="middle" font-size="9" fill="#64748b">every LLM call logged &rarr; ai.llm_calls</text>
+ <text x="800" y="254" text-anchor="middle" font-size="9" fill="#64748b">edits &rarr; eval set &middot; edit-rate per section</text>
+ <text x="800" y="269" text-anchor="middle" font-size="9" font-weight="700" fill="#b45309">dashboard served here &middot; viewed via .NET proxy</text>
+
+ <!-- internal module: Suggestion engine -->
+ <rect x="633" y="302" width="334" height="94" rx="10" fill="#fffaf3" stroke="#d97706" stroke-width="1.4" stroke-dasharray="6 4"/>
+ <text x="800" y="338" text-anchor="middle" font-size="12" font-weight="700" fill="#b45309">&#128200; Suggestion engine</text>
+ <text x="800" y="360" text-anchor="middle" font-size="9" fill="#64748b">lightweight LSTM &middot; classical ML</text>
+ <text x="800" y="376" text-anchor="middle" font-size="9" fill="#64748b">root cause &rarr; parts / relevant dispatches</text>
+
+ <!-- Vector DB (optional / future) — centred under FastAPI -->
+ <rect x="720" y="440" width="160" height="90" rx="12" fill="#fbfaff" stroke="#94a3b8" stroke-width="1.8"/>
+ <rect x="832" y="432" width="40" height="16" rx="8" fill="#d97706"/>
+ <text x="852" y="444" text-anchor="middle" font-size="9" font-weight="800" fill="#fff">NEW</text>
+ <text x="800" y="474" text-anchor="middle" font-size="12.5" font-weight="700" fill="#64748b">&#129522; Vector DB</text>
+ <text x="800" y="492" text-anchor="middle" font-size="10" fill="#64748b">Azure AI Search / Pinecone</text>
+ <text x="800" y="508" text-anchor="middle" font-size="10" fill="#64748b">only if evals demand it</text>
+
+ <!-- FastAPI -> private model infra (LiteLLM gateway) -->
+ <path d="M985 241 H 1064" fill="none" stroke="#7c3aed" stroke-width="2" marker-end="url(#be-purple)"/>
+
+ <!-- FastAPI -> Vector (optional, future) -->
+ <path d="M800 412 V 436" fill="none" stroke="#94a3b8" stroke-width="1.8" stroke-dasharray="6 4" marker-end="url(#be-grey)"/>
+
+ <!-- FastAPI <-> SQL (the new layer writes into the client's existing database) -->
+ <path d="M645 412 V 490 H 411" fill="none" stroke="#059669" stroke-width="2.2" marker-end="url(#be-green)" marker-start="url(#be-green-r)"/>
+ <text x="540" y="478" text-anchor="middle" font-size="11" font-weight="700" fill="#047857" stroke="#ffffff" stroke-width="5" paint-order="stroke">persist + read</text>
+
+
+ <!-- legend -->
+ <line x1="40" y1="628" x2="70" y2="628" stroke="#2563eb" stroke-width="2.5"/><text x="76" y="632" font-size="10" fill="#475569">exists today &middot; unchanged</text>
+ <line x1="215" y1="628" x2="245" y2="628" stroke="#d97706" stroke-width="2.5"/><text x="251" y="632" font-size="10" fill="#475569">new &middot; this project</text>
+ <line x1="350" y1="628" x2="380" y2="628" stroke="#7c3aed" stroke-width="2"/><text x="386" y="632" font-size="10" fill="#475569">LLM / embedding calls</text>
+ <line x1="560" y1="628" x2="590" y2="628" stroke="#059669" stroke-width="2.2"/><text x="596" y="632" font-size="10" fill="#475569">persist / read</text>
+ <line x1="665" y1="628" x2="695" y2="628" stroke="#94a3b8" stroke-width="1.8" stroke-dasharray="6 4"/><text x="701" y="632" font-size="10" fill="#475569">optional &middot; future</text>
+  </svg>
+<script>
+function _odgPostHeight(){try{parent.postMessage({odgHeight:document.body.scrollHeight,src:location.href},'*');}catch(e){}}
+window.addEventListener('load',function(){_odgPostHeight();setTimeout(_odgPostHeight,300);});
+window.addEventListener('resize',_odgPostHeight);
+</script>
+</body>
+</html>
