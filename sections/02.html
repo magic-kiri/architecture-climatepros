@@ -3,7 +3,7 @@
 
 <h3>2a &middot; Unified system diagram</h3>
 <iframe class="s2-embed" src="sections/diagram-2a.html" title="Unified system diagram" loading="lazy" style="width:100%;height:1040px;border:1px solid var(--border);border-radius:12px;background:#fff;display:block;"></iframe>
-<p class="diagram-note">All components <b>Azure</b> except the SQL Server system of record <b>(AWS)</b> &mdash; the single cross-cloud dependency. This diagram is the shared single source (<code>sections/diagram-2a.html</code>), embedded here and in <code>unified-hld.html</code>.</p>
+<p class="diagram-note">All components <b>Azure</b> except the SQL Server system of record <b>(AWS)</b> &mdash; the single cross-cloud dependency.</p>
 
 <style>
  .s2-flow-intro{font-size:14px;color:var(--text);margin:20px 0 14px;line-height:1.55;}
@@ -27,7 +27,7 @@
  .s2-flow p.s2-desc b{font-weight:700;}
 </style>
 
-<p class="s2-flow-intro">The diagram groups the system into five zones &mdash; <b>clients</b>, the <b>existing FieldJetX platform</b>, the <b>new Azure infrastructure</b>, the <b>private on-prem models</b>, and a cross-cutting <b>observability</b> layer. What follows is the overall flow: which entity talks to which, and why. Per-use-case wiring (queues, locks, schemas, ranking, scoring) is detailed in <b>&sect;2b</b> &mdash; this section stays deliberately high-level.</p>
+<p class="s2-flow-intro">The diagram groups the system into five zones &mdash; <b>clients</b>, the <b>existing FieldJetX platform</b>, the <b>new Azure infrastructure</b>, the <b>private on-prem models</b>, and a cross-cutting <b>observability</b> layer. What follows is the overall flow: which entity talks to which, and why. Per-use-case wiring (queues, locks, schemas, ranking, scoring) is detailed in <a class="xref" href="#s2">&sect;2b</a> &mdash; this section stays deliberately high-level.</p>
 
 <div class="s2-flow-grid">
 
@@ -71,12 +71,13 @@
 
 <h3>2b &middot; Detailed architecture per use case</h3>
 
-<p class="uc-adds"><span class="chip">A</span> <b>A adds:</b> durable dispatch queue + Container Apps worker + push-offer cascade.</p>
+<p class="uc-adds"><span class="uc-adds__badges"><span class="chip">A</span></span><span class="uc-adds__body"><b>A adds:</b> durable dispatch queue + Container Apps worker + push-offer cascade.</span></p>
 <iframe class="s2-embed" src="./frag-architecture.html" title="Use Case A · Auto-Dispatch architecture diagram" loading="lazy" style="width:100%;height:1650px;border:1px solid var(--border);border-radius:12px;background:#f4f6fa;display:block;"></iframe>
-<p class="diagram-note">Use Case A architecture, adapted from <b>system-design.html &sect;4</b>: blue = existing &middot; unchanged, amber dashed = new &middot; this project, purple = toggle/config flow, green = DB read/write. <b>AWS SQL Server</b> is the sole AWS component; .NET Legacy/Microservices API, Container Apps, Redis and Notification Hubs all run on <b>Azure</b>.</p>
-<p class="uc-adds" style="margin-top:26px"><span class="chip">B</span><span class="chip">C</span> <b>B &amp; C add:</b> central FastAPI AI server + vector history index. B runs the summarise pipeline; C the four-source part search + fuzzy matching &mdash; same wiring, different pipeline.</p>
+<p class="diagram-note">Use Case A architecture: blue = existing &middot; unchanged, amber dashed = new &middot; this project, purple = toggle/config flow, green = DB read/write. <b>AWS SQL Server</b> is the sole AWS component; .NET Legacy/Microservices API, Container Apps, Redis and Notification Hubs all run on <b>Azure</b>.</p>
+<p class="uc-adds" style="margin-top:26px"><span class="uc-adds__badges"><span class="chip">B</span><span class="chip">C</span></span><span class="uc-adds__body"><b>B &amp; C add:</b> central FastAPI AI server + vector history index. B runs the summarise pipeline; C the four-source part search + fuzzy matching &mdash; same wiring, different pipeline.</span></p>
 <iframe class="s2-embed" src="sections/diagram-2b-b.html" title="Use Cases B & C · shared AI architecture diagram" loading="lazy" style="width:100%;height:700px;border:1px solid var(--border);border-radius:12px;background:#fff;display:block;"></iframe>
-<p class="diagram-note"><b>One diagram serves both B and C</b> &mdash; they share the same detailed architecture (central FastAPI AI server + vector history index, same Azure/on-prem model path). Only the pipeline differs, detailed in &sect;6. Adapted from <b>usecase-b-architecture.html &sect;6</b>: blue = existing &middot; unchanged, amber dashed = new &middot; this project, purple = LLM/embedding calls (client-hosted, off-cloud), green = persist/read. The vector history index is an optional future add-on (grey dashed), added only if evals demand it. The AI service is a portable Docker container; the existing platform is restated on <b>Azure VM</b> &mdash; no AWS-specific managed service appears in this diagram.</p>
+<p class="diagram-note"><b>One diagram serves both B and C</b> &mdash; they share the same detailed architecture (central FastAPI AI server + vector history index, same Azure/on-prem model path). Only the pipeline differs, detailed in <a class="xref" href="#s6">&sect;6</a>. Blue = existing &middot; unchanged, amber dashed = new &middot; this project, purple = LLM/embedding calls (client-hosted, off-cloud), green = persist/read. The vector history index is an optional future add-on (grey dashed), added only if evals demand it. The AI service is a portable Docker container; the existing platform is restated on <b>Azure VM</b> &mdash; no AWS-specific managed service appears in this diagram.</p>
+<p class="diagram-note" style="margin-top:14px"><b>AI data is self-contained.</b> The FastAPI AI server owns its own <code>ai.*</code> schemas on the shared SQL Server and <b>does not depend on the existing application tables</b> &mdash; it persists its own outputs (summaries, part-search results) in its own schema. Because the AI datastore isn't coupled to the legacy relational schema, it could optionally migrate to a document store (e.g. MongoDB) later with little rework.</p>
 <script>
 // §2b diagrams are embedded as iframes — each renders in its own document
 // (own paint context), so nothing clips on this very tall page. Each fragment

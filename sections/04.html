@@ -1,7 +1,7 @@
 <section id="s4">
 <h2>4. Infrastructure</h2>
 
-<p>What Stream 1 already has vs. what it introduces &mdash; the same &sect;3 layers,
+<p>What Stream 1 already has vs. what it introduces &mdash; the same <a class="xref" href="#s3">&sect;3</a> layers,
 regrouped by existing-platform vs. new-build and cloud-transformed to Azure. One deliberate exception
 stays on AWS: see the callout below.</p>
 
@@ -56,11 +56,11 @@ stays on AWS: see the callout below.</p>
     fallback is a public SQL Server endpoint locked down by IP allow-listing and TLS 1.2+.</li>
     <li style="margin:6px 0"><b>Added latency:</b> every dispatch read/write (A) and every
     <code>ai.*</code> read/write (B, C) pays inter-cloud round-trip time on top of same-region
-    latency &mdash; this has to be budgeted into the P95 targets in &sect;9 Observability &amp; Evals,
+    latency &mdash; this has to be budgeted into the P95 targets in <a class="xref" href="#s9">&sect;9</a> Observability &amp; Evals,
     especially for the Auto-Dispatch worker loop's per-request SQL calls.</li>
     <li style="margin:6px 0"><b>Cost:</b> AWS bills egress on data leaving the VPC toward Azure on
     every query; that cross-cloud data-transfer line scales with dispatch/summary/parts-lookup
-    volume and belongs in &sect;10 Cost Projection alongside compute.</li>
+    volume and belongs in <a class="xref" href="#s10">&sect;10</a> Cost Projection alongside compute.</li>
     <li style="margin:6px 0"><b>Single seam:</b> this database is the <i>only</i> place Stream 1
     still touches AWS &mdash; everything else in this section is Azure or on-prem. If the link goes
     down, all three use cases fall back to their existing manual path (phone-dispatch, forms without

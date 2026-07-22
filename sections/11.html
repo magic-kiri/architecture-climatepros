@@ -34,13 +34,11 @@
 production environment to live technician traffic (<b>Onboarding</b>), and how does it behave when a
 dependency it relies on fails (<b>Fault Tolerance</b>)? A's dispatch queue, B's copilot, and C's parts
 predictor each have their own rollout phases and their own failure modes &mdash; only the underlying
-Azure services they run on (&sect;3 Technology Stack, &sect;4 Infrastructure) are shared. AWS service
+Azure services they run on (<a class="xref" href="#s3">&sect;3</a> Technology Stack, <a class="xref" href="#s4">&sect;4</a> Infrastructure) are shared. AWS service
 names in the two source designs are transformed to their Azure equivalents throughout; <b>AWS SQL
-Server</b> stays on AWS in every phase below, per &sect;3/&sect;4.</p>
+Server</b> stays on AWS in every phase below, per <a class="xref" href="#s3">&sect;3</a>/<a class="xref" href="#s4">&sect;4</a>.</p>
 
 <h3><span class="chip">A</span> Auto-Dispatch</h3>
-<p class="s11-src">Adapted from <b>system-design.html &sect;11 Onboarding Plan</b> and &sect;12 Fault
-Tolerance.</p>
 
 <h4 style="font-size:14.5px;font-weight:700;margin:0 0 10px;">Onboarding</h4>
 <div class="s11-phase card">
@@ -48,7 +46,7 @@ Tolerance.</p>
 <ul>
 <li><b>Azure Cache for Redis</b> cluster up, and <b>create the consumer group</b>
 (<code>XGROUP CREATE dispatch:stream &hellip;</code>) &mdash; workers cannot read the stream until it
-exists (&sect;7 Data &amp; Schema &middot; Azure Cache for Redis structures).</li>
+exists (<a class="xref" href="#s7">&sect;7</a> Data &amp; Schema &middot; Azure Cache for Redis structures).</li>
 <li><b>Azure Container Apps</b> ready: worker image pushed to the registry, container app definition
 (1&nbsp;vCPU&nbsp;/&nbsp;2&nbsp;GB), scale 0&#8596;N policy.</li>
 <li><b>Azure Notification Hubs</b> registrations created &mdash; one APNs (Apple <code>.p8</code> key),
@@ -78,7 +76,7 @@ populated; ranking silently breaks on missing data.</li>
 <p>Push is new to the platform, but signed-up technicians already exist on iOS/Android with no push
 token yet. Notification Hubs can only ring a technician once a <code>deviceInstallationId</code>
 exists &mdash; the per-device registration Notification Hubs returns when you register a push token
-(&sect;8 API Reference); you send to that installation id, not the raw token. Onboarding must create it
+(<a class="xref" href="#s8">&sect;8</a> API Reference); you send to that installation id, not the raw token. Onboarding must create it
 for both cohorts with no one-off migration job.</p>
 <div class="s11-two">
 <div class="s11-mini"><h5><span class="s11-ico" style="background:var(--primary-light);color:var(--primary);">&#43;</span>New technician</h5>
@@ -113,7 +111,7 @@ unchanged and out of scope for this project.</div>
 <div class="s11-phase green card">
 <h4>Phase 3 &mdash; Go-live sequencing</h4>
 <ul>
-<li><b>Monitoring/alerting live first</b> (Azure Monitor, &sect;9) &mdash; push-adoption %, stream lag,
+<li><b>Monitoring/alerting live first</b> (Azure Monitor, <a class="xref" href="#s9">&sect;9</a>) &mdash; push-adoption %, stream lag,
 lock-hold time, BLPOP-timeout rate.</li>
 <li><b>Pilot one division</b> &mdash; flip a single division ON, validate exactly-once assignment and the
 escalation path end-to-end.</li>
@@ -132,7 +130,7 @@ no shared state across environments, so a staging run can never touch live techn
 <li><b>CI/CD &mdash; client's existing pipeline.</b> Auto-Dispatch is a <b>one-time change</b> to an
 existing platform, not a new service, so it introduces no new pipeline. Build, test, deploy, and
 rollback of the worker image and the .NET Server&nbsp;A/B changes all follow the <b>client's established
-deployment strategy</b> on the shared Azure VM host (&sect;3); rollback is whatever that pipeline
+deployment strategy</b> on the shared Azure VM host (<a class="xref" href="#s3">&sect;3</a>); rollback is whatever that pipeline
 already provides (e.g. redeploy the previous image/revision).</li>
 </ul>
 </div>
@@ -141,7 +139,7 @@ already provides (e.g. redeploy the previous image/revision).</li>
 <div class="s11-phase red card">
 <h4>How a crashed or slow worker is handled</h4>
 <p>A dispatch request is handed to one worker to process. The system tracks that the request is
-"handed out but not yet finished" (&sect;7 Data &amp; Schema &middot; Azure Cache for Redis structures). When the worker finishes, it marks
+"handed out but not yet finished" (<a class="xref" href="#s7">&sect;7</a> Data &amp; Schema &middot; Azure Cache for Redis structures). When the worker finishes, it marks
 the request done and the request clears. The goal: never lose a request if a worker dies, and never
 process the same request twice.</p>
 <ol>
@@ -165,8 +163,6 @@ worker dies, and no request is ever processed twice even if a worker is slow. No
 duplicated.</div>
 
 <h3 style="margin-top:38px"><span class="chip">B</span> Job Summarisation</h3>
-<p class="s11-src">Adapted from <b>usecase-b-architecture.html &sect;14 Onboarding Plan</b> and &sect;15
-Fault Tolerance.</p>
 
 <h4 style="font-size:14.5px;font-weight:700;margin:0 0 10px;">Onboarding</h4>
 <div class="s11-phase card">
@@ -175,14 +171,14 @@ Fault Tolerance.</p>
 <li><b>Network:</b> private subnet and an internal load balancer (idle timeout &ge; 120s); the AI
 service gets no public URL.</li>
 <li><b>Container hosting</b> ready: FastAPI image built and pushed to the registry, always-on service
-at min 2 instances on <b>Azure Container Apps</b> &mdash; the shared central AI service (&sect;3) that
+at min 2 instances on <b>Azure Container Apps</b> &mdash; the shared central AI service (<a class="xref" href="#s3">&sect;3</a>) that
 also serves C.</li>
 <li><b>LLM connectivity</b>: network path and API key for the client's private gateway, which serves
 both self-hosted models (qwen3-vl for generation, nomic-embed for embeddings) unchanged by the
 migration.</li>
 <li><b>Secrets</b>: the gateway key, the internal proxy API key, and the FieldJetX API token
 (<code>FJX_API_TOKEN</code>, open client item) in <b>Azure Key Vault</b>; nothing in code or images.</li>
-<li><b>.NET proxy route</b> deployed on the Microservices API (shared Azure VM host, &sect;3): this is
+<li><b>.NET proxy route</b> deployed on the Microservices API (shared Azure VM host, <a class="xref" href="#s3">&sect;3</a>): this is
 client-owned code, so it must be scheduled with their team, not ours.</li>
 </ul>
 </div>
@@ -219,7 +215,7 @@ for their branch.</li>
 <li><b>Decide the assignment trigger</b> (open client item): poll for new assignments vs a .NET hook,
 needed for briefings to start in the background.</li>
 <li><b>Technician expectations</b>: brief the pilot cohort that the AI drafts and they stay
-accountable: review, edit, then submit. Their edits train the eval set (&sect;9), so editing is
+accountable: review, edit, then submit. Their edits train the eval set (<a class="xref" href="#s9">&sect;9</a>), so editing is
 contributing, not correcting a failure.</li>
 </ul>
 </div>
@@ -229,11 +225,11 @@ contributing, not correcting a failure.</li>
 <ul>
 <li><b>Monitoring/alerting live first</b>: LLM latency and error rate, parse-failure rate, proxy timeout
 rate, and the edit-rate dashboard, all straight from <code>ai.llm_calls</code> /
-<code>ai.summary_edits</code> (&sect;9 Observability &amp; Evals).</li>
+<code>ai.summary_edits</code> (<a class="xref" href="#s9">&sect;9</a> Observability &amp; Evals).</li>
 <li><b>Pilot one customer/branch</b>: validate briefing usefulness, ticket quality, and the gap-check
 loop end to end on real dispatches.</li>
 <li><b>Baseline, then expand</b>: capture the pilot's edit-rate and call-back baseline; roll out branch
-by branch once stable. Any prompt/model change after baseline must pass the eval set (&sect;9).</li>
+by branch once stable. Any prompt/model change after baseline must pass the eval set (<a class="xref" href="#s9">&sect;9</a>).</li>
 </ul>
 </div>
 
@@ -281,9 +277,6 @@ The AI tier only ever adds rows to its own <code>ai.*</code> schema; job write-b
 <code>mobile-post</code> path, so an AI failure can never corrupt or block business data.</div>
 
 <h3 style="margin-top:38px"><span class="chip">C</span> Parts Finder</h3>
-<p class="s11-src">Adapted from <b>usecase-C-system-design.html &sect;12 Deployment &amp; Rollout</b> and
-&sect;14 Fault Tolerance &amp; Reliability &mdash; the closest equivalents C's source design has to A/B's
-dedicated onboarding and fault-tolerance sections.</p>
 
 <h4 style="font-size:14.5px;font-weight:700;margin:0 0 10px;">Onboarding</h4>
 <div class="s11-phase card">
@@ -296,7 +289,7 @@ embedding model and LLM configured and health-checked.</li>
 <li>Network path + credentials to AWS SQL Server (reads + the new <code>ai.*</code> schema), the .NET
 Legacy API, and the United CP Gateway.</li>
 <li><code>ai.*</code> schema migration applied to SQL Server; AI proxy route deployed on the .NET
-Microservices API &mdash; the same shared route B uses (&sect;3).</li>
+Microservices API &mdash; the same shared route B uses (<a class="xref" href="#s3">&sect;3</a>).</li>
 </ul>
 </div>
 
@@ -317,7 +310,7 @@ from the platform's own dispatch history before the first technician sees a pred
 <li>Ship the "Add Parts with AI" / sourcing experience in the mobile app behind a <b>feature flag</b>,
 enabled per branch/division.</li>
 <li>Pilot with a small technician cohort; watch acceptance rate and source mix (truck / warehouse /
-vendor, &sect;6 Core Logic).</li>
+vendor, <a class="xref" href="#s6">&sect;6</a> Core Logic).</li>
 </ul>
 </div>
 
@@ -327,7 +320,7 @@ vendor, &sect;6 Core Logic).</li>
 <li>Expand the flag division-by-division.</li>
 <li>Wire the <b>on-completion re-embed</b> pipeline so the index grows automatically as dispatches
 close &mdash; the self-learning loop keeps improving suggestions without a separate retraining job
-(&sect;6 Core Logic).</li>
+(<a class="xref" href="#s6">&sect;6</a> Core Logic).</li>
 </ul>
 </div>
 

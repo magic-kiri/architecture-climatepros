@@ -5,8 +5,7 @@
    identical; kept namespaced rather than folded into _style.css because no earlier section needed
    exactly this 3-column layout at once (§1's .uc-row is the closest cousin but is a summary card,
    not a bordered non-goal list).
-   s12-pii-list: the PII inventory itself is a bulleted list in its source (usecase-C-system-design.html
-   §13), not a table — kept as a list here to lift it verbatim rather than force it into a table shape.
+   s12-pii-list: the PII inventory is kept as a bulleted list here rather than forced into a table shape.
    .callout.good reuses the existing --green tokens (matches source's .callout.good, which used a
    --green-fill var this shared sheet doesn't define) so no new custom property is introduced. -- */
 .s12-ng{display:grid;grid-template-columns:repeat(3,1fr);gap:16px;margin:14px 0 20px;}
@@ -29,15 +28,12 @@
 <section id="s12">
 <h2>12. Non-goals &amp; PII</h2>
 <p>Two boundaries, drawn once for all three use cases instead of three times: what each use case
-deliberately does <b>not</b> do (&sect;2 Problem &amp; Goals in each source design draws this line
-explicitly, not as an omission), and what personal data this project touches. C&rsquo;s source design
+deliberately does <b>not</b> do, and what personal data this project touches. C&rsquo;s source design
 carries the only dedicated PII inventory of the three &mdash; lifted at full fidelity below &mdash; and
 A&rsquo;s one new piece of personal data (the device push token) was already catalogued in full where it
-is introduced, &sect;11 Onboarding &amp; Fault Tolerance.</p>
+is introduced, <a class="xref" href="#s11">&sect;11</a> Onboarding &amp; Fault Tolerance.</p>
 
 <h3>Non-goals</h3>
-<p class="s12-src">Consolidated from problem-statement.html and each per-use-case design&rsquo;s own
-&ldquo;Non-goals&rdquo; callout/section.</p>
 <div class="s12-ng">
 <div class="s12-ng-card a">
 <h4><span class="chip">A</span> Auto-Dispatch</h4>
@@ -56,10 +52,10 @@ exactly as today.</li>
 <h4><span class="chip">B</span> Job Summarisation</h4>
 <ul>
 <li><b>Never fabricates.</b> The ticket is generated from what is actually available &mdash; a missing
-block degrades to a <code>MISSING</code> placeholder, never an invented one (&sect;6 Core Logic,
-&sect;8 API Reference).</li>
+block degrades to a <code>MISSING</code> placeholder, never an invented one (<a class="xref" href="#s6">&sect;6</a> Core Logic,
+<a class="xref" href="#s8">&sect;8</a> API Reference).</li>
 <li><b>Never blocks Save.</b> Every failure mode &mdash; malformed output, gateway outage, saturation
-&mdash; degrades to the manual recap; submission is never gated on the AI tier (&sect;11 Fault
+&mdash; degrades to the manual recap; submission is never gated on the AI tier (<a class="xref" href="#s11">&sect;11</a> Fault
 Tolerance).</li>
 <li><b>Completeness over prose.</b> The headline isn&rsquo;t prettier writing &mdash; that&rsquo;s table
 stakes &mdash; it&rsquo;s cross-checking the note against parts, time and photos actually logged and
@@ -85,9 +81,8 @@ management</b> &mdash; stock levels stay owned by the system of record.</li>
 
 <h4 style="font-size:14.5px;font-weight:700;margin:0 0 10px;"><span class="chip">C</span> PII inventory
 &amp; security controls</h4>
-<p class="s12-src">Lifted verbatim from <b>usecase-C-system-design.html &sect;13 Security &amp;
-PII</b> &mdash; the only dedicated PII inventory across the three source designs. AWS-specific terms are
-reconciled to their Azure equivalents per &sect;3/&sect;4 (private <b>Azure VNet</b> in place of AWS VPC,
+<p class="s12-src">AWS-specific terms are
+reconciled to their Azure equivalents per <a class="xref" href="#s3">&sect;3</a>/<a class="xref" href="#s4">&sect;4</a> (private <b>Azure VNet</b> in place of AWS VPC,
 <b>Azure Key Vault</b> in place of AWS Secrets Manager/SSM Parameter Store); <b>AWS SQL Server</b> and the
 self-hosted embedding/LLM layer are unchanged.</p>
 <div class="cl-table-wrap"><table class="cl-table">
@@ -103,7 +98,7 @@ store, and the customer-hosted models) can reach it.</td></tr>
 customer hardware</b> &mdash; dispatch text and parts history are never sent to a third-party AI
 provider.</td></tr>
 <tr><td>Supplier gateway</td><td>United calls carry the <code>Ocp-Apim-Subscription-Key</code> header; the
-key is held <b>server-side only</b> and never reaches the mobile client (&sect;8 API Reference &middot;
+key is held <b>server-side only</b> and never reaches the mobile client (<a class="xref" href="#s8">&sect;8</a> API Reference &middot;
 Contract notes).</td></tr>
 <tr><td>Secrets management</td><td>All credentials (gateway key, DB, model endpoints) resolved from a
 secret store &mdash; <b>Azure Key Vault</b> &mdash; with rotation. No secrets in source or images.</td></tr>
@@ -117,22 +112,22 @@ calls).</td></tr>
 
 <ul class="s12-pii-list">
 <li><b>Dispatch &amp; customer detail</b> (name, address, phone) &mdash; served to the authenticated
-technician only; excluded from log bodies (&sect;9 Observability &amp; Evals).</li>
+technician only; excluded from log bodies (<a class="xref" href="#s9">&sect;9</a> Observability &amp; Evals).</li>
 <li><b>Van / warehouse locations</b> &mdash; used transiently for distance ordering; not persisted beyond
 short-lived caching.</li>
 <li><b>The vector store holds no direct customer PII</b> &mdash; only dispatch reason text and used part
-numbers &mdash; reducing the sensitivity of the derived index (&sect;7 Data &amp; Schema).</li>
+numbers &mdash; reducing the sensitivity of the derived index (<a class="xref" href="#s7">&sect;7</a> Data &amp; Schema).</li>
 </ul>
 <div class="callout good"><b>&#128274; Derived and rebuildable:</b> because the Azure-hosted vector store is derived from
 SQL Server rather than an independent source of truth, it can be re-seeded at any time &mdash; supporting
 deletion and data-retention requests handled at the SQL Server layer.</div>
 
 <h4 style="font-size:14.5px;font-weight:700;margin:26px 0 10px;"><span class="chip">A</span> Device push
-token &mdash; see &sect;11</h4>
+token &mdash; see <a class="xref" href="#s11">&sect;11</a></h4>
 <p>Auto-Dispatch&rsquo;s one new piece of personal data &mdash; the push token and its Notification Hubs
 <code>deviceInstallationId</code> (<code>techId &rarr; deviceInstallationId</code>) &mdash; is catalogued in
 full where it is introduced: encrypted at rest, access-limited to the dispatch backend, retained only while
-the device is active. See the <b>Device token / installation id = PII</b> callout in &sect;11 Onboarding
+the device is active. See the <b>Device token / installation id = PII</b> callout in <a class="xref" href="#s11">&sect;11</a> Onboarding
 &amp; Fault Tolerance &middot; Phase&nbsp;2. Technician location itself is not newly stored by this
 project &mdash; distance/ETA reads the platform&rsquo;s existing location system, unchanged and out of
 scope here.</p>
@@ -143,7 +138,7 @@ class="chip">C</span> The history B and C learn from</h4>
 months alone</b>, and <b>16.3 million</b> note records across the full span. It is messy by the client&rsquo;s
 own admission: <b>~40% of notes are &le;40 characters</b>, and the single most common note in the database
 is literally <b>&ldquo;checked history.&rdquo;</b> That is the problem B and C are solving, so it is also
-the data both inherit &mdash; B&rsquo;s eval set (&sect;9) and C&rsquo;s retrieval index (&sect;6, &sect;7)
+the data both inherit &mdash; B&rsquo;s eval set (<a class="xref" href="#s9">&sect;9</a>) and C&rsquo;s retrieval index (<a class="xref" href="#s6">&sect;6</a>, <a class="xref" href="#s7">&sect;7</a>)
 are both built on it.</p>
 <div class="counts">
 <div class="count"><div class="n">10&ndash;12 yrs</div><div class="l">operational history</div></div>
@@ -154,7 +149,7 @@ are both built on it.</p>
 <div class="callout warn"><b>Not trained on the raw dump.</b> The corpus is <b>de-duplicated down to
 unique cases first</b>, and <b>personally identifiable information is stripped before anything reaches a
 model</b> &mdash; whether that model is B&rsquo;s summarisation/copilot pipeline or C&rsquo;s embedding
-index. This is a data-preparation step upstream of both &sect;6 Core Logic pipelines, not a per-request
+index. This is a data-preparation step upstream of both <a class="xref" href="#s6">&sect;6</a> Core Logic pipelines, not a per-request
 runtime control like the table above.</div>
 
 </section>

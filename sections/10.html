@@ -1,7 +1,7 @@
 <style>
 /* -- §10 Cost Projection: namespaced s10-* additions --
    s10-note: small muted footnote line under a table (source-attribution / asterisk explainer),
-   the same role as system-design.html's inline *-footnote paragraph under its cost table but
+   the same role as an inline *-footnote paragraph under a cost table but
    given a real class since this section repeats the pattern three times.
    s10-shared: thin badge marking a line item whose cost is shared across B and C rather than
    billed twice — local to this section, reuses --green-* tokens already in the palette (matches
@@ -14,7 +14,7 @@
 <section id="s10">
 <h2>10. Cost Projection</h2>
 <p>Every dollar figure below is <strong>lifted as-is from its source design's AWS cost projection</strong>
-&mdash; only the service <em>names</em> are relabeled to their &sect;3 Technology Stack Azure equivalents
+&mdash; only the service <em>names</em> are relabeled to their <a class="xref" href="#s3">&sect;3</a> Technology Stack Azure equivalents
 (Fargate&nbsp;&rarr;&nbsp;Azure Container Apps, ElastiCache&nbsp;&rarr;&nbsp;Azure Cache for Redis,
 SNS&nbsp;&rarr;&nbsp;Azure Notification Hubs, CloudWatch&nbsp;&rarr;&nbsp;Azure Monitor, EC2&nbsp;&rarr;&nbsp;Azure
 VM). No new Azure prices are estimated here: Container Apps' consumption pricing, Azure Cache for Redis
@@ -23,15 +23,13 @@ the three source designs were re-priced against Azure. Treat every figure as <st
 real Azure re-pricing pass</strong> before this becomes a budget commitment.</p>
 
 <div class="callout amber"><b>Pending Azure re-pricing:</b> the numbers in this section are the original AWS
-estimates from <b>system-design.html &sect;13</b> (A) and <b>usecase-C-system-design.html &sect;15</b> (C),
-carried over unchanged. Treat them as a same-order-of-magnitude placeholder, not a quote &mdash; get actual
+estimates for A and C, carried over unchanged. Treat them as a same-order-of-magnitude placeholder, not a quote &mdash; get actual
 Azure Container Apps / Azure Cache for Redis / Notification Hubs / Azure Monitor rates before this section is
 used for a real budget.</div>
 
 <h3><span class="chip">A</span> Auto-Dispatch</h3>
 <p>Only the Container Apps worker pool is a variable cost &mdash; it is the whole point of scale-to-zero.
-Everything else is fixed or effectively free. Adapted from <b>system-design.html &sect;13 Cost
-Projection</b>; source rates were <code>us-east-1</code> AWS Fargate/ElastiCache/SNS list prices &mdash;
+Everything else is fixed or effectively free. Source rates were <code>us-east-1</code> AWS Fargate/ElastiCache/SNS list prices &mdash;
 <strong>verify against actual Azure rates at build time</strong>.</p>
 
 <div class="card">
@@ -71,10 +69,9 @@ $0 &mdash; the 24&times;7 vs Light / 2h day rows differ by <strong>~12&times;</s
 Fixed floor stays ~$23/mo (Azure Cache) regardless.</div>
 
 <h3 style="margin-top:38px"><span class="chip">B</span><span class="chip" style="margin-left:4px;">C</span> Job Summarisation &amp; Parts Finder &mdash; Shared AI Server + Vector Store</h3>
-<p>B and C share one central AI service and one vector store (&sect;3 Technology Stack), so their
-infrastructure cost is <strong>one shared line, not two</strong>. Usecase-b-architecture.html's source
-design carries no cost projection of its own, so the fixed baseline below is lifted entirely from
-<b>usecase-C-system-design.html &sect;15 Cost Projection</b> &mdash; the only one of the three source docs
+<p>B and C share one central AI service and one vector store (<a class="xref" href="#s3">&sect;3</a> Technology Stack), so their
+infrastructure cost is <strong>one shared line, not two</strong>. B carries no cost projection of its own, so
+the fixed baseline below is taken entirely from C's projection &mdash; the only one of the three use cases
 that quantified this tier &mdash; and covers both use cases' traffic against the same Container Apps /
 vector-store instances.</p>
 
@@ -93,7 +90,7 @@ vector-store instances.</p>
 
 <h4 style="font-size:14.5px;font-weight:700;margin:22px 0 10px;">Variable &mdash; per prediction/summary</h4>
 <p>Each call is one embedding pass and one generation/ranking pass on the customer-hosted models (no
-per-token fee, per &sect;3) plus one vector-store similarity query &mdash; source estimate: a small
+per-token fee, per <a class="xref" href="#s3">&sect;3</a>) plus one vector-store similarity query &mdash; source estimate: a small
 fraction of a cent (&lt;&nbsp;<code>$0.001</code>) per call. SQL Server reads/writes are the cross-cloud hop
 covered separately below, not billed per-call here.</p>
 <div class="cl-table-wrap"><table class="cl-table s10-table">
@@ -110,19 +107,19 @@ cheaply on top of it. This scenario table was sized against C's traffic in its s
 against the same shared instances rather than a second bill.</div>
 
 <h3 style="margin-top:38px">Database &amp; Cross-Cloud Egress &mdash; the One AWS Line</h3>
-<p>Per &sect;3/&sect;4, the SQL Server system of record is the one piece of Stream 1 that deliberately stays
+<p>Per <a class="xref" href="#s3">&sect;3</a>/<a class="xref" href="#s4">&sect;4</a>, the SQL Server system of record is the one piece of Stream 1 that deliberately stays
 on AWS instead of moving to Azure. It is its own cost line, not folded into the Azure figures above.</p>
 <div class="cl-table-wrap"><table class="cl-table s10-table">
 <thead><tr><th>Component</th><th>Cloud</th><th>~ Monthly</th></tr></thead>
 <tbody>
-<tr><td>AWS SQL Server (system of record)</td><td><span class="pill aws">AWS</span></td><td>Existing / sunk &mdash; both source designs (system-design.html &sect;13, usecase-C-system-design.html &sect;15) exclude it from their own projections as unchanged by this project. No incremental cost here.</td></tr>
-<tr><td>Cross-cloud egress (Azure&nbsp;&harr;&nbsp;AWS data transfer)</td><td><span class="pill aws">AWS</span> egress</td><td><strong>TBD &mdash; depends on traffic.</strong> No source figure exists for this line in any of the three designs; see &sect;4 Infrastructure.</td></tr>
+<tr><td>AWS SQL Server (system of record)</td><td><span class="pill aws">AWS</span></td><td>Existing / sunk &mdash; excluded from the A and C projections as unchanged by this project. No incremental cost here.</td></tr>
+<tr><td>Cross-cloud egress (Azure&nbsp;&harr;&nbsp;AWS data transfer)</td><td><span class="pill aws">AWS</span> egress</td><td><strong>TBD &mdash; depends on traffic.</strong> No source figure exists for this line in any of the three designs; see <a class="xref" href="#s4">&sect;4</a> Infrastructure.</td></tr>
 </tbody>
 </table></div>
 <div class="callout warn"><b>New cost this project adds:</b> the egress line is a genuinely new cost, not a
 relabeled one &mdash; none of the three single-cloud source designs paid a cross-cloud data-transfer fee,
 because none of them had a cross-cloud hop. Every dispatch read/write (A) and every <code>ai.*</code>
-read/write (B, C) against AWS SQL Server from Azure compute bills AWS egress on the way out, per &sect;4's
+read/write (B, C) against AWS SQL Server from Azure compute bills AWS egress on the way out, per <a class="xref" href="#s4">&sect;4</a>'s
 cross-cloud callout. Sizing this requires a traffic estimate (dispatches/day &times; summaries/day &times;
 parts-lookups/day &times; average payload size) that no source design provides &mdash; get an AWS Data
 Transfer OUT quote once real volume is known, rather than guessing a number here.</div>

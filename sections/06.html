@@ -1,6 +1,6 @@
 <section id="s6">
 <h2>6. Core Logic (per use case)</h2>
-<p>The algorithms and pipelines behind the flows in &sect;5, lifted at full fidelity &mdash; every
+<p>The algorithms and pipelines behind the flows in <a class="xref" href="#s5">&sect;5</a>, lifted at full fidelity &mdash; every
 formula, weight, table and worked example intact, not condensed: how A ranks a shortlist of
 technicians, how B turns wizard answers into a 12-section ticket (plus the deterministic retrieval
 and measured baseline it stands on), and how C predicts parts by retrieval and sources them across
@@ -8,10 +8,9 @@ three tiers.</p>
 
 <h3><span class="chip">A</span> Auto-Dispatch &mdash; Ranking Algorithm</h3>
 <p>This is the detail behind step&nbsp;3 (<em>&ldquo;Rank the technicians&rdquo;</em>) of the
-assignment loop in &sect;5. It turns each candidate's availability, distance, and visit history into
+assignment loop in <a class="xref" href="#s5">&sect;5</a>. It turns each candidate's availability, distance, and visit history into
 a single ordered shortlist. One formula covers every case &mdash; its behavior is tuned by a single
-weight <code>w</code> chosen from the job's dispatch type. Adapted from <b>system-design.html &sect;8
-Ranking Algorithm</b>.</p>
+weight <code>w</code> chosen from the job's dispatch type.</p>
 
 <div class="card">
 <h4>Inputs</h4>
@@ -72,7 +71,7 @@ combined formula &mdash; so <strong>one code path serves all three</strong>.</p>
 <div class="callout azure"><b>One formula, three behaviors:</b> the dispatch type only sets
 <code>w</code>. Emergency (<code>w=1</code>) reduces to pure speed, Medium (<code>w=0</code>) to
 pure familiarity, High blends them &mdash; no separate ranking code per type. The resulting ordered
-shortlist feeds directly into step&nbsp;4 (offer to the top-ranked technician) in &sect;5.</div>
+shortlist feeds directly into step&nbsp;4 (offer to the top-ranked technician) in <a class="xref" href="#s5">&sect;5</a>.</div>
 
 <div class="callout warn"><b>Future factor &mdash; skill gate:</b> when technician skill data is
 available (<code>1 &le; skill<sub>i</sub> &le; 5</code>) and a job carries a minimum required skill,
@@ -83,8 +82,7 @@ reach ranking. The speed/familiarity scoring is untouched; only the candidate se
 
 <h3 style="margin-top:38px"><span class="chip">B</span> Job Summarisation &mdash; Summarise Pipeline &amp; Retrieval</h3>
 <p>The 12-section ticket followed end to end, plus the retrieval mechanics and measured baseline it
-stands on. Adapted from <b>usecase-b-architecture.html &sect;10 The Summarise Pipeline</b> and
-<b>&sect;12 Retrieval, Suggestions &amp; the Measured Baseline</b>.</p>
+stands on.</p>
 
 <h4>The Summarise Pipeline</h4>
 <p>One request followed end to end: what happens between the technician reaching the Review step and
@@ -153,8 +151,7 @@ text feature engineering; training on code columns alone will underperform the b
 <p>Prediction is retrieval-augmented: find the most similar past dispatches, then rank the parts
 those dispatches used, weighting <strong>closeness over raw frequency</strong> so one near-identical
 job outranks several loosely-similar ones. Once parts are identified, the Source API works out where
-to get them from. Adapted from <b>usecase-C-system-design.html &sect;7 RAG Prediction &amp;
-Ranking</b> and <b>&sect;8 Sourcing Algorithm</b>.</p>
+to get them from.</p>
 
 <h4>Pipeline</h4>
 <ol>
@@ -205,7 +202,7 @@ indexed are embedded, so re-runs and restarts are cheap.</li>
 retry-with-backoff on throttling.</li>
 <li><strong>Feedback loop</strong>: when a dispatch is marked complete in SQL Server, its reason and
 used parts are embedded and upserted &mdash; the very next similar job benefits (the dashed
-learning-loop arrow in the architecture diagram in &sect;2).</li>
+learning-loop arrow in the architecture diagram in <a class="xref" href="#s2">&sect;2</a>).</li>
 </ul>
 
 <h4>Source tiers</h4>
@@ -241,7 +238,7 @@ remaining = qtyNeeded
     <span class="cl-k">if</span> remaining == 0: <span class="cl-k">break</span></code></pre>
 <div class="callout warn"><b>Vendor lookup fails &rarr; drop the tier, not the request.</b> If the
 vendor lookup fails, the vendor tier is <strong>dropped</strong> rather than failing the whole
-request &mdash; the technician still sees all own-stock options. See &sect;11 Onboarding &amp; Fault
+request &mdash; the technician still sees all own-stock options. See <a class="xref" href="#s11">&sect;11</a> Onboarding &amp; Fault
 Tolerance.</div>
 
 </section>

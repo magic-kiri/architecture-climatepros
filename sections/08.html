@@ -1,7 +1,7 @@
 <style>
 /* -- §8 API Reference: namespaced s8-* additions --
    s8-method-*: HTTP verb badges used across all three endpoint tables/headers (GET blue / POST green /
-   PUT+PATCH amber). Local to this section — system-design.html and usecase-b-architecture.html each
+   PUT+PATCH amber). Local to this section — the A and B source designs each
    define their own same-named badge-* classes with clashing meanings (e.g. badge-ws = STREAM in one
    doc, GET in another), so nothing from either is reused; this defines one consistent mapping instead,
    themed off the shared CSS vars already declared in _style.css.
@@ -17,7 +17,7 @@
 <h2>8. API Reference</h2>
 <p>The full HTTP surface across all three use cases, lifted at full fidelity from each source design
 &mdash; every endpoint, parameter, and response shape kept intact. Only the caller-facing compute
-labels are updated to match this document's Azure-first infrastructure (&sect;2&ndash;&sect;4) and the
+labels are updated to match this document's Azure-first infrastructure (<a class="xref" href="#s2">&sect;2</a>&ndash;<a class="xref" href="#s4">&sect;4</a>) and the
 service renames already established there. Nothing in the request/response bodies themselves
 changes.</p>
 
@@ -25,8 +25,7 @@ changes.</p>
 <p>New endpoints introduced for Auto-Dispatch. Two callers: the <strong>admin dashboard</strong>
 (control plane &mdash; toggle &amp; config) and the <strong>technician mobile app</strong> (data plane
 &mdash; push registration &amp; replies). All existing endpoints (dispatch ingestion, dispatch status,
-technician location) are unchanged and out of scope here. Adapted from <b>system-design.html &sect;9
-API Reference</b>.</p>
+technician location) are unchanged and out of scope here.</p>
 <div class="cl-table-wrap"><table class="cl-table">
 <thead><tr><th>Method</th><th>Path</th><th>Caller</th><th>Purpose</th></tr></thead>
 <tbody>
@@ -93,8 +92,7 @@ ranked technician. This is the reply the worker is blocked on (<code>BLPOP</code
 
 <h3 style="margin-top:38px"><span class="chip">B</span> Job Summarisation &mdash; API Reference</h3>
 <p>The API surface is plain REST with Pydantic models (the earlier prototype's GraphQL layer is
-refactored away). The service is reachable only through the .NET proxy; there is no public endpoint.
-Adapted from <b>usecase-b-architecture.html &sect;11 API Reference</b>.</p>
+refactored away). The service is reachable only through the .NET proxy; there is no public endpoint.</p>
 <div class="cl-table-wrap"><table class="cl-table">
 <thead><tr><th>Method</th><th>Route</th><th>Purpose</th><th>Typical latency</th></tr></thead>
 <tbody>
@@ -116,7 +114,7 @@ Reference</h3>
 <p>The FastAPI AI Server exposes a deliberately small HTTP surface, reached by FJX&nbsp;2.2 through the
 .NET Microservices API's <strong>AI proxy route</strong> &mdash; the mobile app never calls the AI
 layer directly, and the proxy forwards exactly the two control endpoints (<code>/parts/predict</code>,
-<code>/parts/source</code>). Adapted from <b>usecase-C-system-design.html &sect;9 API Reference</b>.</p>
+<code>/parts/source</code>).</p>
 <div class="cl-table-wrap"><table class="cl-table">
 <thead><tr><th>Endpoint</th><th>Purpose</th></tr></thead>
 <tbody>
@@ -188,7 +186,7 @@ own shape, so the integration is a drop-in and the subscription key never leaves
 <tbody>
 <tr><td>Auth</td><td>Bearer token from the FJX&nbsp;2.2 session, validated at the .NET Microservices
 API before the AI proxy route forwards the call; the AI server is reachable only from inside the
-VNet. Supplier gateway calls use a subscription key held server-side (see &sect;12 Non-goals &amp;
+VNet. Supplier gateway calls use a subscription key held server-side (see <a class="xref" href="#s12">&sect;12</a> Non-goals &amp;
 PII).</td></tr>
 <tr><td>Errors</td><td><code>400</code> validation &middot; <code>404</code> dispatch not found
 &middot; <code>502</code> upstream failure &middot; <code>503</code> prediction unavailable.</td></tr>

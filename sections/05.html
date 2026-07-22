@@ -4,15 +4,14 @@
 cascade with a hard timeout and human escalation; B is a technician-facing UX flow, shown both before
 and after the copilot, plus the background flywheel that feeds each visit's data into the next; C is
 the ordered, multi-source parts search that backs the mobile app's "source &amp; allocate" step.
-Companion to &sect;2 Architecture and &sect;3 Technology Stack &mdash; component-level detail (Redis
+Companion to <a class="xref" href="#s2">&sect;2</a> Architecture and <a class="xref" href="#s3">&sect;3</a> Technology Stack &mdash; component-level detail (Redis
 Streams, division locks, Container Apps task walkthroughs) lives there; this section is the process
 view.</p>
 
 <h3><span class="chip">A</span> Auto-Dispatch &mdash; Assignment Loop</h3>
 <p>One dispatch, start to finish: a new job only enters the queue for divisions with auto-dispatch
 turned on, then works down a ranked shortlist until a technician accepts or the shortlist runs out.
-Adapted from <b>system-design.html &sect;7 Operational Flows</b> and <b>&sect;8 Ranking Algorithm</b>;
-the admin Enable/Disable toggle is covered by the scale ON/OFF walkthrough in &sect;2.</p>
+The admin Enable/Disable toggle is covered by the scale ON/OFF walkthrough in <a class="xref" href="#s2">&sect;2</a>.</p>
 
 <div class="opsflow-cards opsflow-solo">
 <div class="opsflow-card">
@@ -34,7 +33,7 @@ the admin Enable/Disable toggle is covered by the scale ON/OFF walkthrough in &s
 </div>
 
 <div class="opsflow-conn"><svg width="18" height="24"><path d="M9 0v16M3 12l6 6 6-6" fill="none" stroke="#d97706" stroke-width="2"/></svg></div>
-<div class="opsflow-node amber"><div class="opsflow-body"><span class="opsflow-step icon">&#128230;</span><span class="opsflow-txt">Azure Container Apps pool picks up the dispatch<small>a task consumes it from the stream (<code>XREADGROUP</code>) after winning the per-division lock &mdash; see &sect;2 for the multi-task walkthrough</small></span></div></div>
+<div class="opsflow-node amber"><div class="opsflow-body"><span class="opsflow-step icon">&#128230;</span><span class="opsflow-txt">Azure Container Apps pool picks up the dispatch<small>a task consumes it from the stream (<code>XREADGROUP</code>) after winning the per-division lock &mdash; see <a class="xref" href="#s2">&sect;2</a> for the multi-task walkthrough</small></span></div></div>
 <div class="opsflow-conn"><svg width="18" height="24"><path d="M9 0v16M3 12l6 6 6-6" fill="none" stroke="#7c3aed" stroke-width="2"/></svg></div>
 
 <div class="opsflow-node violet"><div class="opsflow-body"><span class="opsflow-step" style="background:var(--purple)">1</span><span class="opsflow-txt">Get nearby technicians<small>build the candidate list + each tech's distance from the jobsite</small></span></div></div>
@@ -74,7 +73,7 @@ division lock is never lost mid-flight.</div>
 
 <h4>Notification Hubs round-trip</h4>
 <p style="font-size:13.5px;color:var(--text-muted);margin:0 0 4px">The mechanics behind step&nbsp;4's
-push &mdash; fire-and-forget out, a different path back in. Component-level diagram: &sect;2 &middot;
+push &mdash; fire-and-forget out, a different path back in. Component-level diagram: <a class="xref" href="#s2">&sect;2</a> &middot;
 Use Case A &middot; step&nbsp;3.</p>
 <div class="flow-step"><div class="flow-num">1</div><div class="flow-content"><h4>Worker publishes the offer</h4><p>The winning Container Apps worker calls Azure Notification Hubs Send with the technician's device installation id and the offer payload <code>{dispatchId, techId, job}</code>.</p></div></div>
 <div class="flow-step"><div class="flow-num">2</div><div class="flow-content"><h4>Push is delivered</h4><p>Notification Hubs fans the message out through APNs (iOS) or FCM (Android) straight to the technician's phone.</p></div></div>
@@ -85,8 +84,7 @@ Use Case A &middot; step&nbsp;3.</p>
 <h3 style="margin-top:38px"><span class="chip">B</span> Job Summarisation &mdash; Technician Flow</h3>
 <p>The same close-out visit, shown twice: the manual process technicians use today, and the same steps
 with the copilot layered on top &mdash; plus the background flywheel that turns every clean ticket into
-better history for the next technician. Adapted from <b>usecase-b-architecture.html &sect;4</b>,
-<b>&sect;5</b> and <b>&sect;7</b>.</p>
+better history for the next technician.</p>
 
 <h4>Today &middot; without AI</h4>
 <p style="font-size:13.5px;color:var(--text-muted);margin:0 0 10px">How a service visit works in the
@@ -376,8 +374,7 @@ ticket makes the next technician's briefing better.</div>
 <p>For every requested part, the Source API returns every place it can be gathered &mdash; ordered so
 the technician takes the free stock first and only pays for the vendor tier when nothing else has it.
 This is the operational flow behind the mobile app's &ldquo;source &amp; allocate&rdquo; step
-(&sect;2 &middot; Use Case C already traces the Predict/RAG path that runs before it, steps 1&ndash;6).
-Adapted from <b>usecase-C-system-design.html &sect;8 Sourcing Algorithm</b>.</p>
+(<a class="xref" href="#s2">&sect;2</a> &middot; Use Case C already traces the Predict/RAG path that runs before it, steps 1&ndash;6).</p>
 
 <div class="opsflow-cards opsflow-solo">
 <div class="opsflow-card">
@@ -410,7 +407,7 @@ technician-facing flow above still reads as four distinct sources.</div>
 
 <div class="callout warn"><b>Vendor lookup fails &rarr; drop the tier, not the request.</b> If the
 United Refrigeration lookup fails, the vendor tier is dropped rather than failing the whole request
-&mdash; the technician still sees every own-stock option (truck + warehouse). See &sect;11 Onboarding
+&mdash; the technician still sees every own-stock option (truck + warehouse). See <a class="xref" href="#s11">&sect;11</a> Onboarding
 &amp; Fault Tolerance.</div>
 
 </section>

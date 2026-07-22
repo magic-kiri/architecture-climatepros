@@ -1,6 +1,6 @@
 
  :root {
-   /* -- base palette (from unified-hld.html) -- */
+   /* -- base palette -- */
    --primary:#1a56db; --primary-light:#e8effc; --primary-dark:#0f3a8e;
    --bg:#f8fafc; --surface:#ffffff; --border:#e2e8f0;
    --text:#1e293b; --text-muted:#64748b;
@@ -8,7 +8,7 @@
    --green:#059669; --green-dark:#047857; --purple:#7c3aed; --purple-dark:#5b21b6;
    --red:#dc2626;
 
-   /* -- soft+line pairs (from problem-statement.html), so lifted fragments render -- */
+   /* -- soft+line pairs, so lifted fragments render -- */
    --blue-soft:#eff4ff; --blue-line:#bfdbfe;
    --amber-soft:#fff7ed; --amber-line:#fed7aa;
    --green-soft:#ecfdf5; --green-line:#a7f3d0;
@@ -26,13 +26,17 @@
  section{margin-bottom:44px;}
  h2{font-size:22px;font-weight:700;color:var(--primary-dark);margin-bottom:16px;padding-bottom:9px;border-bottom:2px solid var(--primary-light);}
 
- /* -- chip: use-case letter badge (A/B/C), from problem-statement.html -- */
+ /* -- xref: in-page section cross-reference link (§N -> #sN) -- */
+ .xref{color:var(--primary);font-weight:650;text-decoration:none;border-bottom:1px dotted var(--primary);}
+ .xref:hover{border-bottom-style:solid;}
+
+ /* -- chip: use-case letter badge (A/B/C) -- */
  .chip{font-size:11px;font-weight:800;letter-spacing:.06em;padding:4px 10px;border-radius:999px;background:var(--blue);color:#fff;}
 
- /* -- card: generic content card, from system-design.html -- */
+ /* -- card: generic content card -- */
  .card{background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:24px;margin-bottom:20px;}
 
- /* -- inventory grid (What We Have vs What We Introduce), from unified-hld.html -- */
+ /* -- inventory grid (What We Have vs What We Introduce) -- */
  .inv{display:grid;grid-template-columns:1fr 1fr;gap:18px;}
  @media(max-width:860px){.inv{grid-template-columns:1fr;}}
  .inv-card{border-radius:14px;padding:20px 22px;border:1.5px solid var(--border);background:var(--surface);}
@@ -47,13 +51,13 @@
  .inv-card li:first-of-type{border-top:none;}
  .inv-card li b{font-weight:700;}
 
- /* -- pill: small tag badge, from unified-hld.html -- */
+ /* -- pill: small tag badge -- */
  .pill{display:inline-block;font-size:10px;font-weight:800;padding:2px 8px;border-radius:999px;margin-left:auto;white-space:nowrap;}
  .pill.aws{background:var(--primary-light);color:var(--primary-dark);}
  .pill.ecs{background:#fff7ed;color:var(--amber-dark);}
  .pill.office{background:#f3e8ff;color:var(--purple-dark);}
 
- /* -- count: stat tile row, from unified-hld.html -- */
+ /* -- count: stat tile row -- */
  .counts{display:flex;gap:14px;flex-wrap:wrap;margin-top:16px;}
  .count{flex:1;min-width:150px;background:var(--surface);border:1.5px dashed var(--amber);border-radius:12px;padding:14px 16px;}
  .count .n{font-size:26px;font-weight:800;color:var(--amber-dark);line-height:1;}
@@ -62,21 +66,21 @@
  /* -- diagram-frame: wrapper chrome for lifted SVG/HTML diagrams (marker class only in source docs; defined here for reuse) -- */
  .diagram-frame{width:100%;overflow-x:auto;background:#fff;border:1px solid var(--border);border-radius:12px;padding:12px 8px;}
 
- /* -- flow-step: numbered data/operational flow step, from system-design.html -- */
+ /* -- flow-step: numbered data/operational flow step -- */
  .flow-step{display:flex;align-items:flex-start;gap:20px;margin:20px 0;padding:20px;background:var(--surface);border:1px solid var(--border);border-radius:12px;border-left:4px solid var(--primary);}
  .flow-num{min-width:36px;height:36px;border-radius:50%;background:var(--primary);color:#fff;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:16px;}
  .flow-content h4{margin:0 0 6px;}
  .flow-content p{margin:0;font-size:14px;color:var(--text-muted);}
 
- /* -- §1 Overview: kind badge (algorithm vs AI), from problem-statement.html -- */
+ /* -- §1 Overview: kind badge (algorithm vs AI) -- */
  .kind{font-size:10px;font-weight:800;letter-spacing:.07em;text-transform:uppercase;padding:3px 9px;border-radius:999px;border:1px solid;}
  .kind.algo{background:var(--green-soft);color:var(--green);border-color:var(--green-line);}
  .kind.ai{background:var(--purple-soft);color:var(--purple);border-color:var(--purple-line);}
 
- /* -- §1 Overview: where badge (surface · actor), from problem-statement.html -- */
+ /* -- §1 Overview: where badge (surface · actor) -- */
  .where{display:inline-block;font-size:11px;font-weight:650;color:var(--text-muted);padding:3px 9px;background:#f1f5f9;border:1px solid var(--border);border-radius:999px;}
 
- /* -- §1 Overview: compact 3-up use-case row (condensed from problem-statement.html's full flow cards) -- */
+ /* -- §1 Overview: compact 3-up use-case row -- */
  .uc-row{display:grid;grid-template-columns:repeat(3,1fr);gap:18px;margin-top:20px;}
  @media(max-width:900px){.uc-row{grid-template-columns:1fr;}}
  .uc-mini{background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:18px 20px;display:flex;flex-direction:column;gap:9px;}
@@ -99,10 +103,19 @@
  h3:first-child{margin-top:0;}
  .diagram-note{margin-top:10px;font-size:12.5px;color:var(--text-muted);}
  .diagram-note b{color:var(--text);font-weight:700;}
- .uc-adds{font-size:13.5px;color:var(--text-muted);margin:0 0 10px;display:flex;align-items:center;gap:9px;}
- .uc-adds b{color:var(--text);font-weight:700;}
+ /* -- "X adds:" callout: new-this-project work above each detailed diagram -- */
+ .uc-adds{font-size:13.5px;line-height:1.55;color:var(--text);margin:0 0 12px;
+   display:grid;grid-template-columns:auto 1fr;align-items:center;gap:5px 15px;
+   background:var(--amber-soft);border:1px solid var(--amber-line);border-left:4px solid var(--amber);
+   border-radius:12px;padding:15px 18px;}
+ .uc-adds .uc-adds__badges{display:flex;gap:6px;}
+ .uc-adds .chip{width:27px;height:27px;padding:0;font-size:12px;border-radius:50%;background:var(--amber);
+   display:inline-flex;align-items:center;justify-content:center;letter-spacing:0;
+   box-shadow:0 1px 2px rgba(180,83,9,.28);}
+ .uc-adds__body{grid-column:2;}
+ .uc-adds b{color:var(--amber-dark);font-weight:800;}
 
- /* -- §2b: Use Case A architecture (HTML/CSS diagram, adapted from system-design.html §4 / frag-architecture.html), --
+ /* -- §2b: Use Case A architecture (HTML/CSS diagram), --
     namespaced under .uca-diagram so its class names never leak onto/collide with the rest of this document -- */
  .uca-diagram{--ink:var(--text);--muted:var(--text-muted);--line:var(--border);--card:var(--surface);--vio:var(--purple);--vio-soft:var(--purple-soft);--shadow:0 1px 2px rgba(15,23,42,.06),0 8px 24px rgba(15,23,42,.06);font-family:inherit;color:var(--ink);min-width:880px;}
  .uca-diagram .uca-legend{display:flex;gap:20px;flex-wrap:wrap;margin:0 0 22px;padding:14px 18px;background:var(--card);border:1px solid var(--line);border-radius:12px;box-shadow:var(--shadow);}
@@ -232,7 +245,8 @@
  .stack-table thead th .chip{margin-right:7px;}
  .stack-table tbody tr:last-child td{border-bottom:none;}
  .stack-table tbody tr:nth-child(even){background:#fafbfd;}
- .stack-table .layer-name{display:flex;align-items:center;gap:8px;flex-wrap:wrap;font-weight:700;color:var(--text);}
+ .stack-table .layer-name{display:flex;flex-direction:column;align-items:flex-start;gap:6px;font-weight:700;color:var(--text);}
+ .stack-table .layer-name .pill{margin-left:0;}
  .stack-table td.unified{background:#f8fafc;}
  .stack-table td.na{color:var(--text-muted);font-style:italic;text-align:center;}
  .stack-table .role{display:block;margin-top:4px;font-size:11.5px;font-weight:500;color:var(--text-muted);font-style:normal;}

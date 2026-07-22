@@ -17,55 +17,55 @@ AI service, an Azure-hosted vector store, and the same self-hosted model stack.<
 </thead>
 <tbody>
 <tr>
-  <td><div class="layer-name">Client<span class="pill shared">shared</span></div></td>
-  <td>FieldJetX Web App <span class="tag exist">existing</span><span class="role">Office / dispatcher console</span></td>
+  <td><div class="layer-name">Client</div></td>
+  <td>FieldJetX Web App (Angular) <span class="tag exist">existing</span> + Mobile App (Flutter) <span class="tag exist">existing</span><span class="role">Dispatcher console (web) + technician accept/decline offers (mobile)</span></td>
   <td>FieldJetX Mobile App (Flutter) <span class="tag exist">existing</span><span class="role">Technician close-out wizard</span></td>
   <td>FieldJetX Mobile App (Flutter) <span class="tag exist">existing</span><span class="role">Technician on-site search</span></td>
 </tr>
 <tr>
-  <td><div class="layer-name">App / API host<span class="pill shared">shared</span></div></td>
+  <td><div class="layer-name">App / API host</div></td>
   <td colspan="3" class="unified">.NET Legacy API + .NET Microservices API on <b>Azure VM</b> <span class="tag exist">existing</span><span class="role">One shared application host across all three use cases. The Microservices API gains a new AI-proxy route (B, C) and a new Container Apps scale-monitor route (A).</span></td>
 </tr>
 <tr>
-  <td><div class="layer-name">Central AI service<span class="pill only-bc">B &middot; C</span></div></td>
+  <td><div class="layer-name">Central AI service</div></td>
   <td class="na">N/A<span class="role">deterministic — no LLM</span></td>
   <td colspan="2" class="unified">FastAPI on <b>Azure Container Apps</b> <span class="tag new">new</span><span class="role">Single entry point for both B and C; stateless, horizontally scalable containers; the only path to the models.</span></td>
 </tr>
 <tr>
-  <td><div class="layer-name">Workers<span class="pill only-a">A</span></div></td>
+  <td><div class="layer-name">Workers</div></td>
   <td><b>Azure Container Apps</b> <span class="tag new">new</span><span class="role">Async worker pool &middot; scales 0&ndash;1 on toggle &middot; 20 concurrent dispatches per task</span></td>
   <td class="na">N/A</td>
   <td class="na">N/A</td>
 </tr>
 <tr>
-  <td><div class="layer-name">Queue<span class="pill only-a">A</span></div></td>
+  <td><div class="layer-name">Queue</div></td>
   <td><b>Azure Cache for Redis</b> <span class="tag new">new</span><span class="role">Streams (XREADGROUP / XACK / XCLAIM) &middot; division locks &middot; per-technician reply BLPOP</span></td>
   <td class="na">N/A</td>
   <td class="na">N/A</td>
 </tr>
 <tr>
-  <td><div class="layer-name">Vector store<span class="pill only-bc">B &middot; C</span></div></td>
+  <td><div class="layer-name">Vector store</div></td>
   <td class="na">N/A</td>
-  <td><b>Azure-hosted vector store</b> <span class="tag future">optional &middot; future</span><span class="role">Criteria-gated cross-site similar-incident retrieval; built only if evals show the deterministic baseline needs it.</span></td>
-  <td><b>Azure-hosted vector store</b> <span class="tag new">new</span><span class="role">Embedded dispatch-parts history index &middot; cosine similarity search</span></td>
+  <td><b>Azure-hosted vector store</b> <span class="tag future">experimental</span><span class="role">Cross-site similar-incident retrieval. Built only if the dataset proves it beats the deterministic baseline &mdash; decided from the data.</span></td>
+  <td><b>Azure-hosted vector store</b> <span class="tag future">experimental</span><span class="role">Fuzzy part-number matching via embedded dispatch-parts history + cosine similarity. Built only if the dataset proves it beats exact/keyword lookup &mdash; decided from the data.</span></td>
 </tr>
 <tr>
-  <td><div class="layer-name">Push<span class="pill only-a">A</span></div></td>
+  <td><div class="layer-name">Push</div></td>
   <td><b>Azure Notification Hubs</b> <span class="tag new">new</span><span class="role">APNs (iOS) + FCM (Android) &middot; one Publish call per device endpoint</span></td>
   <td class="na">N/A</td>
   <td class="na">N/A</td>
 </tr>
 <tr class="db-row">
-  <td><div class="layer-name">Database<span class="pill shared">shared</span></div></td>
-  <td colspan="3" class="unified"><b>AWS SQL Server</b> <span class="pill aws">AWS</span><span class="role">System of record. A reads/writes dispatch &amp; assignment tables; B and C each add an isolated <code>ai.*</code> schema — zero mixing with business tables. The one deliberate cross-cloud dependency in Stream 1 (see &sect;1 cloud placement).</span></td>
+  <td><div class="layer-name">Database</div></td>
+  <td colspan="3" class="unified"><b>AWS SQL Server</b> <span class="pill aws">AWS</span><span class="role">System of record. A reads/writes dispatch &amp; assignment tables; B and C each add an isolated <code>ai.*</code> schema — zero mixing with business tables. The one deliberate cross-cloud dependency in Stream 1 (see <a class="xref" href="#s2">&sect;2</a> cloud placement).</span></td>
 </tr>
 <tr>
-  <td><div class="layer-name">Models<span class="pill only-bc">B &middot; C</span></div></td>
+  <td><div class="layer-name">Models</div></td>
   <td class="na">N/A<span class="role">no LLM in this use case</span></td>
   <td colspan="2" class="unified"><b>LiteLLM gateway</b> (routing &middot; primary + fallback) &middot; self-hosted <b>qwen3-vl-moe</b> (vLLM) generation &middot; <b>bge-m3</b> embedding &middot; <b>Gemini</b> fallback <span class="tag onprem">on-prem &middot; unchanged</span><span class="role">Client's private hardware; dispatch/job text and images never leave client infrastructure. Any model or provider change must pass the eval set first.</span></td>
 </tr>
 <tr>
-  <td><div class="layer-name">Observability<span class="pill shared">shared</span></div></td>
+  <td><div class="layer-name">Observability</div></td>
   <td colspan="3" class="unified">OpenTelemetry + <b>Azure Monitor</b> <span class="tag new">new</span><span class="role">Every service — Azure VM host, Container Apps, Redis-fed workers, vector store calls — emits traces and logs to one place.</span></td>
 </tr>
 </tbody>
