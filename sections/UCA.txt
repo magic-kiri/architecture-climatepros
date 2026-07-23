@@ -1,0 +1,34 @@
+I want to come up with some architecture. Our API server will get dispatch requests.
+WE need to process dispatch request. Daily there could be 1K dispatch request through out the country. 
+
+We have a few entities. Technician mobile app(flutter), .net backend, SQL Server DB.
+
+Now to process each dispatch request we need to do a few steps. 
+Steps to process each dispatch:
+Stage A:
+1. Get nearest TECHNICIAN LIST withing 10mile redius. We have api + functions already. Just need to call it.
+2. Get metadata from DB for each TECHNICIAN. 
+3. Send PUSH Notification into mobile app using AWS SNS to get ETA from EACH technician. 
+4. Technician will submit into mobile app and the mobile app will send the information to the .NET server. 
+
+Our system will wait for maximum X seconds for technicians response. If all replies before X seconds or X second passed we will move to Stage B. 
+
+Stage B:
+1. We filter & sort the technician list based on the metadata and other staff(no need to focus on here, we have own algorithm to rank).
+2. considering the rank list in Stage-B, step 1, Send accept/reject request to 1st Technicians mobile. 
+3. If first tech dont respond within K seconds then send accept/reject request to 2nd Technicians mobile where 1st technician will still have the capability to accept/reject.
+4. If any technician accepts then other technician accept/reject window will gone. 
+5. If no technician explicitly accepts then we will move the dispatch request to escelated column.
+
+Same technician might be in common between multiple dispatch request. On that case, technican may have multiple accept/reject offer. 
+Once he accept any, other jobs should be rejected. 
+We cant process each dispatch one by one because to resolve a request, it can take 5-10min. We need to think about parallel processing.
+
+This is our business problem. we dont want to handle everything over our .net server. So we need to define architecture for it. 
+I want a possible solution where we can tackle the situation easily. Also good for cost and scalability.
+
+
+
+Dont tell me API contracts. Highest you may mention necessery api's for understanding. 
+
+I just want to understand the solution in high level, what will be the entities. 

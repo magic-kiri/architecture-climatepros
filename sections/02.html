@@ -2,8 +2,8 @@
 <h2>2. High-Level Architecture</h2>
 
 <h3>2a &middot; Unified system diagram</h3>
-<iframe class="s2-embed" src="sections/diagram-2a.html" title="Unified system diagram" loading="lazy" style="width:100%;height:1040px;border:1px solid var(--border);border-radius:12px;background:#fff;display:block;"></iframe>
-<p class="diagram-note">All components <b>Azure</b> except the SQL Server system of record <b>(AWS)</b> &mdash; the single cross-cloud dependency.</p>
+<iframe class="s2-embed" src="sections/diagram-2a.html" title="Unified system diagram" loading="lazy" style="width:100%;height:1240px;border:1px solid var(--border);border-radius:12px;background:#fff;display:block;"></iframe>
+<p class="diagram-note">Everything runs on <b>AWS</b> alongside the existing FieldJetX platform &mdash; <b>except the AI stack</b> (FastAPI AI server, its own MongoDB, vector DB), which runs on <b>Azure</b>. The AI server is the single cross-cloud hop, and it holds <b>no SQL Server connection</b>: it owns its own datastore.</p>
 
 <style>
  .s2-flow-intro{font-size:14px;color:var(--text);margin:20px 0 14px;line-height:1.55;}
@@ -27,32 +27,32 @@
  .s2-flow p.s2-desc b{font-weight:700;}
 </style>
 
-<p class="s2-flow-intro">The diagram groups the system into five zones &mdash; <b>clients</b>, the <b>existing FieldJetX platform</b>, the <b>new Azure infrastructure</b>, the <b>private on-prem models</b>, and a cross-cutting <b>observability</b> layer. What follows is the overall flow: which entity talks to which, and why. Per-use-case wiring (queues, locks, schemas, ranking, scoring) is detailed in <a class="xref" href="#s2">&sect;2b</a> &mdash; this section stays deliberately high-level.</p>
+<p class="s2-flow-intro">The diagram groups the system into six zones &mdash; <b>clients</b>, the <b>existing FieldJetX platform (AWS)</b>, the <b>new AWS infrastructure</b> (queue, workers, push), the <b>new Azure AI stack</b> (AI server + its own datastore + vector DB), the <b>private on-prem models</b>, and a cross-cutting <b>observability</b> layer. What follows is the overall flow: which entity talks to which, and why. Per-use-case wiring (queues, locks, schemas, ranking, scoring) is detailed in <a class="xref" href="#s2">&sect;2b</a> &mdash; this section stays deliberately high-level.</p>
 
 <div class="s2-flow-grid">
 
  <div class="s2-flow s2-flow--entry">
   <h4>Entry &middot; single front door</h4>
-  <p class="s2-hop">Web App &nbsp;+&nbsp; Mobile App &rarr; Azure VM (.NET APIs)</p>
-  <p class="s2-desc">Both clients speak <b>only</b> to the existing .NET APIs on the Azure VM over HTTPS. Neither the new infrastructure nor the models are ever reached directly &mdash; the legacy platform stays the single entry point and gains just two new additions: an <b>AI proxy route</b> and a <b>Container-scale controller</b> (spins workers up/down).</p>
+  <p class="s2-hop">Web App &nbsp;+&nbsp; Mobile App &rarr; AWS EC2 (.NET APIs)</p>
+  <p class="s2-desc">Both clients speak <b>only</b> to the existing .NET APIs on the EC2 application host over HTTPS. Neither the new infrastructure nor the models are ever reached directly &mdash; the legacy platform stays the single entry point and gains just two new additions: an <b>AI proxy route</b> and an <b>ECS task-scale controller</b> (spins workers up/down).</p>
  </div>
 
  <div class="s2-flow s2-flow--data">
-  <h4>Data &middot; shared system of record</h4>
-  <p class="s2-hop">Azure VM &nbsp;&harr;&nbsp; SQL Server (AWS) &nbsp;&harr;&nbsp; Container Apps / FastAPI</p>
-  <p class="s2-desc">The <b>SQL Server DB</b> is the one AWS component and the shared source of truth for all three use cases. The Azure VM reads/writes it directly; the new workers and the AI server also read/write it (job data, part stock, AI outputs). This Azure&rarr;AWS hop is the <b>sole cross-cloud dependency</b>.</p>
+  <h4>Data &middot; two stores, cleanly split</h4>
+  <p class="s2-hop">EC2 &nbsp;&harr;&nbsp; SQL Server (AWS) &nbsp;&harr;&nbsp; ECS workers &nbsp;&nbsp;|&nbsp;&nbsp; FastAPI &harr; MongoDB (Azure)</p>
+  <p class="s2-desc"><b>SQL Server</b> stays the system of record for <b>business data</b> &mdash; the EC2 .NET APIs and the new ECS dispatch workers read/write it directly, all inside AWS. The <b>FastAPI AI server never connects to SQL Server</b>: it owns a separate <b>MongoDB</b> (Azure Cosmos DB for MongoDB) for summaries, part-search results, <code>llm_calls</code> traces and eval data. Any business context it needs arrives <b>in the request payload</b> from the .NET AI proxy.</p>
  </div>
 
  <div class="s2-flow s2-flow--dispatch">
   <h4>Dispatch &middot; Use Case A &middot; no LLM</h4>
-  <p class="s2-hop">.NET &rarr; Redis &rarr; Container Apps &rarr; Notification Hubs &rarr; Mobile</p>
-  <p class="s2-desc">When auto-dispatch is on, the .NET API <b>publishes</b> the job to Azure Cache for Redis and the scale monitor spins Container Apps workers <b>0&rarr;1</b>. Workers <b>consume</b> the stream, rank technicians, and push accept/decline offers out through Azure Notification Hubs (APNs/FCM) to the technician's phone. The reply path returns via the .NET API. <b>Deterministic &mdash; no model involved.</b></p>
+  <p class="s2-hop">.NET &rarr; ElastiCache &rarr; ECS Fargate &rarr; SNS &rarr; Mobile</p>
+  <p class="s2-desc">When auto-dispatch is on, the .NET API <b>publishes</b> the job to ElastiCache for Redis and the scale monitor spins ECS Fargate workers <b>0&rarr;1</b>. Workers <b>consume</b> the stream, rank technicians, and push accept/decline offers out through Amazon SNS (APNs/FCM) to the technician's phone. <b>Entirely on AWS &mdash; no cross-cloud hop.</b> The reply path returns via the .NET API. <b>Deterministic &mdash; no model involved.</b></p>
  </div>
 
  <div class="s2-flow s2-flow--ai">
   <h4>AI &middot; Use Cases B &amp; C</h4>
-  <p class="s2-hop">.NET &rarr; FastAPI AI Server &rarr; Vector DB &nbsp;/&nbsp; SQL</p>
-  <p class="s2-desc">For summarisation (B) and parts finding (C), the .NET AI proxy forwards the request to the <b>FastAPI AI Server</b> &mdash; the single central AI service and the <b>only path to the models</b>. It queries/upserts the <b>Vector DB</b> for historical retrieval and reads/writes SQL to persist outputs.</p>
+  <p class="s2-hop">.NET (AWS) &rarr; FastAPI AI Server (Azure) &rarr; Vector DB &nbsp;/&nbsp; MongoDB</p>
+  <p class="s2-desc">For summarisation (B) and parts finding (C), the .NET AI proxy forwards the request &mdash; with the job context in the payload &mdash; across to the <b>FastAPI AI Server on Azure</b>, the single central AI service and the <b>only path to the models</b>. It queries/upserts the <b>Vector DB</b> for historical retrieval and persists its outputs to its <b>own MongoDB</b>. This AWS&rarr;Azure call is the <b>sole cross-cloud dependency</b>; the AI stack is self-contained behind it.</p>
  </div>
 
  <div class="s2-flow s2-flow--model">
@@ -63,8 +63,8 @@
 
  <div class="s2-flow s2-flow--obs">
   <h4>Observability &middot; cross-cutting</h4>
-  <p class="s2-hop">all services &rarr; OpenTelemetry / Azure Monitor</p>
-  <p class="s2-desc">Every service emits traces and logs to a shared observability layer (OpenTelemetry &middot; Azure Monitor).</p>
+  <p class="s2-hop">all services &rarr; OpenTelemetry / CloudWatch + Azure Monitor</p>
+  <p class="s2-desc">Every service emits traces and logs to a shared observability layer (OpenTelemetry) &mdash; CloudWatch on the AWS side, Azure Monitor for the AI stack.</p>
  </div>
 
 </div>
