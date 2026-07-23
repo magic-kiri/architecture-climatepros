@@ -10,9 +10,11 @@
 <body>
 <!--
   Single source of truth for the unified system diagram (§2a), embedded via <iframe>.
-  Cloud split: existing FieldJetX platform + new non-AI infra (ElastiCache, ECS Fargate,
-  SNS) stay on AWS, aligned with FieldJetX. Only the AI stack (FastAPI AI server, its own
-  MongoDB, vector DB) runs on Azure. Models stay on-prem.
+  Cloud split: existing FieldJetX platform + new non-AI infra (message broker, ECS Fargate,
+  SNS) stay on AWS, aligned with FieldJetX. Broker is abstract — Redis Streams / Amazon MQ /
+  SQS are candidate implementations; contract is publish / consume with consumer groups.
+  Only the AI stack (FastAPI AI server, its own MongoDB, vector DB) runs on Azure.
+  Models stay on-prem.
   The FastAPI AI server has NO connection to SQL Server — it owns its own MongoDB.
   Reports its height to the host via postMessage.
 -->
@@ -77,10 +79,12 @@
  <text x="840" y="141" text-anchor="middle" font-size="12" font-weight="700" fill="#b45309">&#128227; Amazon SNS</text>
  <text x="840" y="159" text-anchor="middle" font-size="9.5" fill="#64748b">APNs / FCM &middot; push to device</text>
 
- <rect x="700" y="223" width="280" height="64" rx="12" fill="#fff" stroke="#d97706" stroke-width="1.8" stroke-dasharray="6 4"/>
- <rect x="922" y="215" width="40" height="16" rx="8" fill="#d97706"/><text x="942" y="227" text-anchor="middle" font-size="9" font-weight="800" fill="#fff">NEW</text>
- <text x="840" y="251" text-anchor="middle" font-size="12" font-weight="700" fill="#b45309">&#128260; ElastiCache for Redis</text>
- <text x="840" y="270" text-anchor="middle" font-size="9.5" fill="#64748b">durable job stream &middot; consumer groups</text>
+ <rect x="700" y="219" width="280" height="80" rx="12" fill="#fff" stroke="#d97706" stroke-width="1.8" stroke-dasharray="6 4"/>
+ <rect x="922" y="211" width="40" height="16" rx="8" fill="#d97706"/><text x="942" y="223" text-anchor="middle" font-size="9" font-weight="800" fill="#fff">NEW</text>
+ <text x="840" y="243" text-anchor="middle" font-size="12" font-weight="700" fill="#b45309">&#128236; Message Broker</text>
+ <text x="840" y="261" text-anchor="middle" font-size="9.5" fill="#64748b">durable job queue &middot; consumer groups &middot; replay</text>
+ <text x="840" y="278" text-anchor="middle" font-size="9" font-weight="700" fill="#94a3b8">Redis Streams / Amazon MQ / Amazon SQS</text>
+ <text x="840" y="291" text-anchor="middle" font-size="8" font-style="italic" fill="#94a3b8">implementation TBD &middot; interface is publish / consume</text>
 
  <rect x="700" y="330" width="280" height="80" rx="12" fill="#fff" stroke="#d97706" stroke-width="2"/>
  <rect x="922" y="322" width="40" height="16" rx="8" fill="#d97706"/><text x="942" y="334" text-anchor="middle" font-size="9" font-weight="800" fill="#fff">NEW</text>
@@ -154,7 +158,7 @@
  <path d="M300 408 V486" fill="none" stroke="#2563eb" stroke-width="2.4" marker-end="url(#b)" marker-start="url(#b-r)"/>
  <text x="288" y="450" text-anchor="middle" font-size="10" font-weight="700" fill="#2563eb" stroke="#fff" stroke-width="4" paint-order="stroke" transform="rotate(-90 288 450)">reads / writes</text>
 
- <!-- .NET -> ElastiCache (publish) -->
+ <!-- .NET -> Message Broker (publish) -->
  <path d="M534 310 H627 Q634 310 634 303 V262 Q634 255 641 255 H700" fill="none" stroke="#d97706" stroke-width="2.4" marker-end="url(#a)"/>
  <text x="588" y="303" text-anchor="middle" font-size="10" font-weight="700" fill="#b45309" stroke="#fff" stroke-width="4" paint-order="stroke">publish</text>
 
@@ -167,9 +171,9 @@
  <text x="560" y="469" text-anchor="middle" font-size="10" font-weight="700" fill="#b45309" stroke="#fff" stroke-width="4" paint-order="stroke">AI request &middot; job context in payload</text>
  <text x="560" y="483" text-anchor="middle" font-size="8.5" font-style="italic" fill="#94a3b8" stroke="#fff" stroke-width="3.5" paint-order="stroke">cross-cloud AWS &#8594; Azure (only AI hop)</text>
 
- <!-- ElastiCache -> ECS -->
- <path d="M840 287 V330" fill="none" stroke="#d97706" stroke-width="2.4" marker-end="url(#a)"/>
- <text x="854" y="313" font-size="10" font-weight="700" fill="#b45309" stroke="#fff" stroke-width="4" paint-order="stroke">consume</text>
+ <!-- Message Broker -> ECS -->
+ <path d="M840 299 V330" fill="none" stroke="#d97706" stroke-width="2.4" marker-end="url(#a)"/>
+ <text x="854" y="319" font-size="10" font-weight="700" fill="#b45309" stroke="#fff" stroke-width="4" paint-order="stroke">consume</text>
 
  <!-- ECS -> SNS (outbound: Publish) -->
  <path d="M980 380 H1008 Q1015 380 1015 373 V152 Q1015 145 1008 145 H980" fill="none" stroke="#d97706" stroke-width="2.4" marker-end="url(#a)"/>

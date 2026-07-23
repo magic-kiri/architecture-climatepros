@@ -7,8 +7,9 @@
 <h2>4. Infrastructure</h2>
 
 <p>What Stream 1 already has vs. what it introduces &mdash; the same <a class="xref" href="#s3">&sect;3</a> layers,
-regrouped by existing-platform vs. new-build and cloud-transformed to Azure. One deliberate exception
-stays on AWS: see the callout below.</p>
+regrouped by existing-platform vs. new-build. The existing platform and all new non-AI plumbing stay on
+<b>AWS</b>, aligned with FieldJetX; only the <b>AI stack</b> (FastAPI AI server + its own datastores) runs on
+<b>Azure</b>, with the models on-prem. See the callout below.</p>
 
 <div class="inv">
 
@@ -18,10 +19,10 @@ stays on AWS: see the callout below.</p>
   <ul>
    <li><b>Mobile App</b> — FieldJetX (Flutter) &middot; technician-facing (B, C)</li>
    <li><b>FieldJetX Web App</b> — admin / dispatcher console (A)</li>
-   <li><b>Azure VM</b> — one host running both .NET services <span class="pill ecs">Azure</span></li>
-   <li><b>.NET Legacy API</b> — existing service on the Azure VM <span class="pill ecs">Azure</span></li>
-   <li><b>.NET Microservices API</b> — existing service on the Azure VM; gains new routes for A/B/C <span class="pill ecs">Azure</span></li>
-   <li><b>AWS SQL Server</b> — system of record <span class="pill aws">AWS</span></li>
+   <li><b>AWS EC2</b> — one host running both .NET services <span class="pill aws">AWS</span></li>
+   <li><b>.NET Legacy API</b> — existing service on the EC2 host <span class="pill aws">AWS EC2</span></li>
+   <li><b>.NET Microservices API</b> — existing service on the EC2 host; gains new routes for A/B/C <span class="pill aws">AWS EC2</span></li>
+   <li><b>AWS SQL Server</b> — system of record &middot; business data only <span class="pill aws">AWS</span></li>
   </ul>
  </div>
 
@@ -29,23 +30,37 @@ stays on AWS: see the callout below.</p>
   <div class="cap">New &middot; introduced by this project</div>
   <h3>&#9889; Auto-Dispatch tier + central AI server</h3>
   <ul>
-   <li><b>Azure Cache for Redis</b> — durable dispatch queue for Auto-Dispatch (A) <span class="pill ecs">Azure</span></li>
-   <li><b>Azure Container Apps — Auto-Dispatch workers</b> — scale 0&ndash;1 on toggle; consume queued dispatches, read/write SQL Server <span class="pill ecs">Azure</span></li>
-   <li><b>Azure Container Apps — AI Server (FastAPI)</b> — central AI service for B &amp; C; only component that reaches the models <span class="pill ecs">Azure</span></li>
-   <li><b>Azure-hosted vector store</b> — embedded dispatch-parts history index (C) &middot; optional future similar-incident index (B) <span class="pill ecs">Azure</span></li>
-   <li><b>Azure Notification Hubs</b> — outbound push to technician phones (APNs / FCM); worker &rarr; Notification Hubs &rarr; Mobile App <span class="pill ecs">Azure</span></li>
-   <li><b>.NET additions</b> — AI-proxy route (B, C) + Container Apps scale-monitor route (A) on the existing Microservices API <span class="pill ecs">Azure</span></li>
-   <li><b>LiteLLM Gateway + self-hosted LLM + embedding</b> — private model infra, client hardware <span class="pill office">on-prem</span></li>
+   <li><b>Message Broker</b> — durable dispatch queue for Auto-Dispatch (A) &middot; consumer groups + replay. Implementation TBD: Redis Streams / Amazon MQ / Amazon SQS <span class="pill aws">AWS</span></li>
+   <li><b>ECS Fargate — Auto-Dispatch workers</b> — scale 0&ndash;1 on toggle; consume queued dispatches, read/write SQL Server <span class="pill aws">AWS ECS</span></li>
+   <li><b>Amazon SNS</b> — outbound push to technician phones (APNs / FCM); worker &rarr; SNS &rarr; Mobile App <span class="pill aws">AWS</span></li>
+   <li>
+    <div class="inv-body">
+     <b>Azure Container Apps — AI Server (FastAPI)</b> — central AI service for B &amp; C; the only component that reaches the models. Two subsystems ride inside it:
+     <ul class="inv-sub">
+      <li><b>Observability &amp; Evals</b> — every LLM call &rarr; <code>llm_calls</code> &middot; technician edits &rarr; eval set &middot; dashboard served here, viewed via the .NET proxy</li>
+      <li><b>Suggestion engine</b> — lightweight LSTM / classical ML &middot; root cause &rarr; parts + relevant dispatch</li>
+     </ul>
+    </div>
+    <span class="pill ecs">Azure</span>
+   </li>
+   <li>
+    <div class="inv-body"><b>MongoDB</b> — AI-owned datastore: summaries &middot; part results &middot; <code>llm_calls</code> &middot; evals. No SQL Server coupling.</div>
+    <span class="pill ecs">Azure Cosmos DB (vCore)</span>
+   </li>
+   <li><b>Vector store</b> — embedded dispatch-parts history index (C) &middot; optional future similar-incident index (B) &middot; only if evals demand it <span class="pill ecs">Azure AI Search / Pinecone</span></li>
+   <li><b>.NET additions</b> — AI-proxy route (B, C) + ECS task scale-monitor route (A) on the existing Microservices API <span class="pill aws">AWS EC2</span></li>
+   <li><b>LiteLLM Gateway + self-hosted LLM (qwen3-vl-moe / vLLM) + embedding (bge-m3)</b> — private model infra, client hardware <span class="pill office">on-prem</span></li>
    <li><b>Google Gemini</b> — managed fallback only, not primary <span class="pill office">external</span></li>
-   <li><b>Observability &amp; Tracing</b> — OpenTelemetry traces + logs into Azure Monitor <span class="pill ecs">Azure</span></li>
+   <li><b>Observability &amp; Tracing</b> — OpenTelemetry traces + logs &rarr; CloudWatch (AWS) + Azure Monitor (AI stack) <span class="pill ecs">abstract</span></li>
   </ul>
  </div>
 
 </div>
 
 <div class="counts">
- <div class="count"><div class="n">2</div><div class="l">new compute servers<br>Container Apps workers (0&ndash;1) + Container Apps AI server</div></div>
- <div class="count"><div class="n">2</div><div class="l">new data stores<br>Azure Cache for Redis + Azure-hosted vector store</div></div>
+ <div class="count"><div class="n">2</div><div class="l">new compute tiers<br>ECS Fargate workers (0&ndash;1) + Container Apps AI server</div></div>
+ <div class="count"><div class="n">1</div><div class="l">new message broker<br>Redis Streams / Amazon MQ / SQS (TBD)</div></div>
+ <div class="count"><div class="n">2</div><div class="l">new data stores<br>MongoDB + vector store (conditional)</div></div>
  <div class="count"><div class="n">3</div><div class="l">off-cloud model entities<br>LiteLLM + self-hosted LLM + embedding</div></div>
  <div class="count"><div class="n">1</div><div class="l">external backup<br>Google Gemini (fallback only)</div></div>
 </div>
