@@ -82,6 +82,81 @@ window.addEventListener("message",function(e){
 </script>
 </section>
 
+<section id="changelog-section">
+<style>
+ #changelog-section .chg-lede{font-size:14px;color:var(--text);margin-bottom:18px;line-height:1.6;}
+ #changelog-section .chg-grid{display:grid;grid-template-columns:1fr 1fr;gap:14px;}
+ @media(max-width:860px){#changelog-section .chg-grid{grid-template-columns:1fr;}}
+ #changelog-section .chg{border:1.5px solid var(--border);border-left:4px solid var(--amber);border-radius:12px;background:var(--surface);padding:15px 17px;}
+ #changelog-section .chg h4{font-size:14px;font-weight:700;color:var(--amber-dark);margin-bottom:7px;}
+ #changelog-section .chg p{font-size:13px;color:var(--text);line-height:1.55;}
+ #changelog-section code{font-size:11.5px;background:rgba(217,119,6,.10);border-radius:4px;padding:1px 4px;}
+ #changelog-section .chg .ba{display:flex;flex-wrap:wrap;align-items:baseline;gap:6px;font-size:12px;margin-top:9px;padding-top:9px;border-top:1px dashed var(--border);}
+ #changelog-section .chg .was{color:var(--text-muted);}
+ #changelog-section .chg .arw{color:var(--amber);font-weight:800;}
+ #changelog-section .chg .now{color:var(--primary-dark);font-weight:700;}
+ #changelog-section .chg-todo{display:flex;gap:14px;align-items:flex-start;margin-top:16px;border:1.5px dashed var(--amber);border-radius:12px;background:#fffaf3;padding:15px 18px;}
+ #changelog-section .chg-todo-tag{flex:0 0 auto;font-size:10px;font-weight:800;letter-spacing:.6px;text-transform:uppercase;color:#fff;background:var(--amber);border-radius:999px;padding:3px 10px;margin-top:2px;white-space:nowrap;}
+ #changelog-section .chg-todo h4{font-size:14px;font-weight:700;color:var(--amber-dark);margin-bottom:6px;}
+ #changelog-section .chg-todo p{font-size:13px;color:var(--text);line-height:1.6;}
+</style>
+<h2>What Changed Since the Walkthrough</h2>
+
+<p class="chg-lede">The diagram above is <b>revision 2</b>. It reflects the feedback the ClimatePros team gave after the
+<b>22 Jul walkthrough</b>; the changes below all landed on <b>23 Jul</b>. The biggest one: the new dispatch tier no
+longer sits on a second cloud &mdash; it sits next to the platform it serves. The inventory below and its counts
+were rebuilt to match.</p>
+
+<div class="chg-grid">
+
+ <div class="chg">
+  <h4>1 &middot; The dispatch tier moved to AWS</h4>
+  <p>The queue, the workers and push all now run in the <b>same cloud as FieldJetX</b>, beside the existing
+  application host and the SQL Server system of record. The Auto-Dispatch path no longer crosses a cloud
+  boundary at any point.</p>
+  <div class="ba"><span class="was">Container Apps &middot; Azure Cache for Redis &middot; Notification Hubs</span> <span class="arw">&rarr;</span> <span class="now">ECS Fargate &middot; message broker &middot; Amazon SNS</span></div>
+ </div>
+
+ <div class="chg">
+  <h4>2 &middot; The AI server no longer touches SQL Server</h4>
+  <p>It owns its <b>own MongoDB</b> for summaries, part-search results, <code>llm_calls</code> traces and eval
+  data. Whatever business context a request needs travels <b>in the request payload</b> from the .NET AI proxy.
+  Nothing in the AI stack holds a connection to the system of record.</p>
+  <div class="ba"><span class="was">AI server reads / writes SQL Server</span> <span class="arw">&rarr;</span> <span class="now">separate store &middot; context passed in</span></div>
+ </div>
+
+ <div class="chg">
+  <h4>3 &middot; One cross-cloud hop, and it is drawn</h4>
+  <p>Only the <b>AI stack</b> stays on Azure &mdash; AI server, its MongoDB and the vector DB, with the models
+  on-prem behind it. The single seam is the .NET AI proxy calling the AI server; everything else stays inside
+  its own cloud.</p>
+  <div class="ba"><span class="was">every Azure tier &rarr; AWS SQL Server</span> <span class="arw">&rarr;</span> <span class="now">one hop: .NET (AWS) &rarr; AI server (Azure)</span></div>
+ </div>
+
+ <div class="chg">
+  <h4>4 &middot; The existing platform is restated correctly</h4>
+  <p>The application host running both .NET services is shown as <b>AWS EC2</b>, and the two additions to the
+  Microservices API are named for what they now control: an <b>AI proxy route</b> and an <b>ECS task scale
+  monitor</b> (workers 0&rarr;1 on the Auto-Dispatch toggle).</p>
+  <div class="ba"><span class="was">Azure VM &middot; Container scale monitor</span> <span class="arw">&rarr;</span> <span class="now">AWS EC2 &middot; ECS task scale monitor</span></div>
+ </div>
+
+</div>
+
+<div class="chg-todo">
+ <div class="chg-todo-tag">Decision needed</div>
+ <div>
+  <h4>Which message broker do we standardise on?</h4>
+  <p>The diagram deliberately shows an abstract <b>message broker</b> for the dispatch queue &mdash; the contract
+  it has to meet is <b>publish / consume with consumer groups and replay</b>, and more than one managed service
+  meets it: <b>Redis Streams</b>, <b>Amazon MQ</b> or <b>Amazon SQS</b>. Each carries different operational and
+  cost trade-offs, so <b>ClimatePros and Techjays need to agree on one before build starts</b> &mdash; it is the
+  one piece of the dispatch tier still unresolved.</p>
+ </div>
+</div>
+
+</section>
+
 <section id="inventory-section">
 <h2>What We Have vs What We Introduce</h2>
 <div class="inv">
