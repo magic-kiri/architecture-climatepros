@@ -1,4 +1,14 @@
 <section id="s3">
+<style>
+.s3-rt-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:14px;margin-top:14px}
+.s3-rt-card{border:1px solid var(--blue-line);border-radius:10px;padding:14px 16px;background:var(--blue-soft)}
+.s3-rt-head{display:flex;align-items:center;gap:8px;font-weight:600;margin-bottom:8px;font-size:.95rem}
+.s3-rt-num{display:inline-flex;align-items:center;justify-content:center;width:22px;height:22px;border-radius:6px;background:var(--blue);color:#fff;font-size:.78rem;font-weight:700;flex:0 0 auto}
+.s3-rt-card ul{margin:0;padding-left:18px}
+.s3-rt-card li{margin:4px 0;font-size:.88rem;line-height:1.45}
+.s3-rt-card code{background:rgba(0,0,0,.06);padding:1px 5px;border-radius:4px;font-size:.83em}
+.s3-rt-note{font-size:.82rem;color:var(--text-muted,#666);margin-top:2px}
+</style>
 <h2>3. Technology Stack</h2>
 <p>Ten layers, three use cases. The existing platform pieces — client apps, the .NET API host, SQL
 Server, observability — are <b>shared</b>: reused as-is, not rebuilt. New AI-specific infrastructure
@@ -75,5 +85,80 @@ AI service, an Azure-hosted vector store, and the same self-hosted model stack.<
 per-use-case source specs — mobile push fan-out, the async worker/queue tier, the app compute host,
 and the vector store — is translated to its Azure equivalent above. <b>AWS SQL Server</b> is the one
 deliberate exception, staying on AWS as Stream 1's sole cross-cloud dependency.</p>
+
+<h3 id="s3a" style="margin-top:34px">Dispatch Worker Stack <span class="chip">A</span></h3>
+<p>Library-level detail for the Auto-Dispatch async worker (the <b>Workers</b> / <b>Queue</b> / <b>Push</b>
+rows above). Fully async top-to-bottom — no thread pools, no blocking calls in the event loop.</p>
+<div class="s3-rt-grid">
+
+<div class="s3-rt-card">
+  <div class="s3-rt-head"><span class="s3-rt-num">1</span>Core Runtime</div>
+  <ul>
+    <li>Python 3.11+</li>
+    <li><code>asyncio</code> event loop drives all worker tasks</li>
+    <li><code>asyncio.Semaphore</code> for concurrency control</li>
+  </ul>
+</div>
+
+<div class="s3-rt-card">
+  <div class="s3-rt-head"><span class="s3-rt-num">2</span>Push &mdash; Azure Notification Hubs</div>
+  <ul>
+    <li><code>httpx</code> async client against the Notification Hubs REST API</li>
+    <li>Direct SAS-token generation</li>
+    <li>Avoids thread-blocking of the legacy synchronous SDK wrappers</li>
+  </ul>
+</div>
+
+<div class="s3-rt-card">
+  <div class="s3-rt-head"><span class="s3-rt-num">3</span>Messaging &amp; Sync &mdash; Redis</div>
+  <ul>
+    <li><code>redis.asyncio</code> client</li>
+    <li>Input: consumes job tasks via Redis Streams (<code>XREADGROUP</code>)</li>
+    <li>Wait-state: unblocked via Pub/Sub or a secondary stream when the mobile app's HTTP reply reaches the API host</li>
+  </ul>
+</div>
+
+<div class="s3-rt-card">
+  <div class="s3-rt-head"><span class="s3-rt-num">4</span>External Requests</div>
+  <ul>
+    <li><code>httpx</code> with built-in async connection pooling for 3rd-party API calls</li>
+  </ul>
+</div>
+
+</div>
+
+<h3 id="s3b" style="margin-top:34px">Central AI Service Stack <span class="chip">B</span><span class="chip" style="margin-left:6px">C</span></h3>
+<p>Library-level detail for the shared FastAPI AI service (the <b>Central AI service</b> row above) &mdash;
+the single entry point for both B and C, and the only path to the models.</p>
+<div class="s3-rt-grid">
+
+<div class="s3-rt-card">
+  <div class="s3-rt-head"><span class="s3-rt-num">1</span>Core Runtime</div>
+  <ul>
+    <li>Python 3.11+</li>
+    <li><code>FastAPI</code> async framework · <code>Uvicorn</code> ASGI server</li>
+    <li><code>pydantic</code> request/response schemas</li>
+  </ul>
+</div>
+
+<div class="s3-rt-card">
+  <div class="s3-rt-head"><span class="s3-rt-num">2</span>Model Access</div>
+  <ul>
+    <li><code>httpx</code> async client to the <b>LiteLLM</b> gateway</li>
+    <li>Generation via <b>qwen3-vl-moe</b> (vLLM) · embeddings via <b>bge-m3</b></li>
+    <li>Gateway handles primary + fallback routing (Gemini fallback)</li>
+  </ul>
+</div>
+
+<div class="s3-rt-card">
+  <div class="s3-rt-head"><span class="s3-rt-num">3</span>Retrieval <span class="tag future" style="margin-left:6px">experimental</span></div>
+  <ul>
+    <li>Async client to the Azure-hosted vector store</li>
+    <li>Cosine-similarity search over <code>bge-m3</code> embeddings</li>
+    <li>Built only if it beats the deterministic baseline &mdash; decided from the data</li>
+  </ul>
+</div>
+
+</div>
 </section>
 
