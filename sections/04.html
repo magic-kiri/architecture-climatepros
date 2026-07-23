@@ -1,4 +1,9 @@
 <section id="s4">
+<style>
+ #s4 .s4-h{margin:30px 0 10px;font-size:16px;font-weight:700;color:var(--primary-dark);}
+ #s4 .stack-table .layer-name{flex-direction:row;flex-wrap:wrap;align-items:center;gap:5px 8px;}
+ #s4 .stack-table td.layer-name,#s4 .stack-table th:first-child{min-width:260px;}
+</style>
 <h2>4. Infrastructure</h2>
 
 <p>What Stream 1 already has vs. what it introduces &mdash; the same <a class="xref" href="#s3">&sect;3</a> layers,
@@ -44,6 +49,101 @@ stays on AWS: see the callout below.</p>
  <div class="count"><div class="n">3</div><div class="l">off-cloud model entities<br>LiteLLM + self-hosted LLM + embedding</div></div>
  <div class="count"><div class="n">1</div><div class="l">external backup<br>Google Gemini (fallback only)</div></div>
 </div>
+
+<h3 class="s4-h">Environments</h3>
+<p>ClimatePros already runs <b>Dev / Staging / Prod</b>. Stream 1 mirrors whichever of those they ask
+for &mdash; <b>Staging + Prod are the minimum</b>; a Dev tier is provisioned only if requested. New
+Azure tiers (Container Apps, Redis, vector store) and the on-prem model link are stood up per
+environment; the <b>AWS SQL Server</b> system of record is shared &mdash; lower environments point at a
+snapshot or a restricted replica, never live prod data (see <a class="xref" href="#s12">&sect;12</a> PII).</p>
+
+<div class="stack-wrap">
+<table class="stack-table">
+<thead>
+ <tr>
+  <th>Environment</th>
+  <th>Purpose</th>
+  <th>What differs from Prod</th>
+ </tr>
+</thead>
+<tbody>
+ <tr>
+  <td class="layer-name">Dev <span class="tag future">optional</span></td>
+  <td>Integration &amp; feature work<span class="role">provisioned only if ClimatePros asks</span></td>
+  <td>Lowest replica caps; Gemini-only models (no on-prem link); points at a SQL snapshot</td>
+ </tr>
+ <tr>
+  <td class="layer-name">Staging <span class="tag new">min</span></td>
+  <td>Pre-prod validation &amp; evals<span class="role">mirrors Prod topology</span></td>
+  <td>Smaller replica ranges; restricted SQL replica; full model stack for eval fidelity</td>
+ </tr>
+ <tr>
+  <td class="layer-name">Prod <span class="tag new">min</span></td>
+  <td>Live &mdash; 900&ndash;1,000 technicians, 46 branches<span class="role">full scale + HA</span></td>
+  <td>&mdash;</td>
+ </tr>
+</tbody>
+</table>
+</div>
+
+<h3 class="s4-h">Compute sizing</h3>
+<p>New Azure Container Apps tiers run small and scale horizontally &mdash; not vertically. Baseline
+instance is <b>0.5 vCPU / 1 GB RAM</b>, which handles <b>60+ concurrent dispatch operations per
+instance</b> comfortably; load is met by adding replicas, not bigger boxes.</p>
+
+<div class="stack-wrap">
+<table class="stack-table">
+<thead>
+ <tr>
+  <th>Component</th>
+  <th>Instance size</th>
+  <th>Scaling</th>
+  <th>Notes</th>
+ </tr>
+</thead>
+<tbody>
+ <tr>
+  <td class="layer-name">Dispatch workers <span class="pill ecs">Azure</span></td>
+  <td>0.5 vCPU / 1 GB</td>
+  <td>Scale 0&ndash;1 on Auto-Dispatch toggle</td>
+  <td>60+ concurrent dispatches per instance; one instance covers current volume</td>
+ </tr>
+ <tr>
+  <td class="layer-name">AI server (FastAPI) <span class="pill ecs">Azure</span></td>
+  <td>0.5 vCPU / 1 GB</td>
+  <td>Scale 1&ndash;N on request concurrency</td>
+  <td>Central B &amp; C service; min 1 replica avoids cold-start on the model path</td>
+ </tr>
+ <tr>
+  <td class="layer-name">Azure Cache for Redis <span class="pill ecs">Azure</span></td>
+  <td>Managed tier</td>
+  <td>Fixed; sized to queue depth</td>
+  <td>Dispatch queue must <b>not</b> evict &mdash; persistence on, no-eviction policy</td>
+ </tr>
+ <tr>
+  <td class="layer-name">Vector store <span class="pill ecs">Azure</span></td>
+  <td>Managed / index-sized</td>
+  <td>Grows with parts-history corpus</td>
+  <td>Embedded dispatch-parts index (C); optional similar-incident index (B)</td>
+ </tr>
+</tbody>
+</table>
+</div>
+
+<h3 class="s4-h">Network topology</h3>
+<p>All Azure compute and data tiers sit inside a single <b>Azure VNet</b>, subnet-segmented: Container
+Apps (AI server + dispatch workers) in an apps subnet, and Redis and the vector store reached over
+<b>private endpoints</b> in a data subnet &mdash; those two never expose a public IP, so all
+worker&harr;queue and AI&harr;vector traffic stays inside the VNet. The <b>only public entry point</b>
+is the .NET API, fronted by Azure Front Door / Application Gateway where WAF filtering and TLS
+termination happen; the mobile app (B, C) and web console (A) reach the API, and the API calls the AI
+server over <b>internal ingress only</b> &mdash; technician phones never hit the AI server directly.</p>
+<p>Two private egress paths leave the VNet: the AI server reaches the <b>on-prem model stack</b>
+(LiteLLM + self-hosted models) over a VPN / private link to the ClimatePros datacenter, and falls back
+to <b>Google Gemini</b> over outbound HTTPS. The one cross-cloud path &mdash; every Azure tier to the
+<b>AWS SQL Server</b> &mdash; is the seam detailed below. That gives three trust boundaries to enforce:
+Internet&rarr;Azure (Front Door / WAF), Azure&rarr;AWS (VPN/peering, or public endpoint + IP
+allow-list as fallback), and Azure&rarr;on-prem (VPN / private link).</p>
 
 <div class="callout azure">
   <b>Cross-cloud dependency:</b> the Azure VM (.NET API host) and both new Azure Container Apps
