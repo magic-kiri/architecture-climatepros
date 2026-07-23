@@ -1,0 +1,413 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ClimatePros · Architectural Trade-offs</title>
+<style>
+ :root {
+   --primary:#1a56db; --primary-light:#e8effc; --primary-dark:#0f3a8e;
+   --bg:#f8fafc; --surface:#ffffff; --border:#e2e8f0;
+   --text:#1e293b; --text-muted:#64748b;
+   --blue:#2563eb; --amber:#d97706; --amber-dark:#b45309;
+   --green:#059669; --green-dark:#047857; --purple:#7c3aed; --purple-dark:#5b21b6;
+   --red:#dc2626; --red-dark:#b91c1c;
+ }
+ *{margin:0;padding:0;box-sizing:border-box;}
+ body{font-family:'Segoe UI',system-ui,-apple-system,sans-serif;background:var(--bg);color:var(--text);line-height:1.6;}
+ .main{max-width:1000px;margin:0 auto;padding:40px 40px 80px;}
+ .hero{background:linear-gradient(135deg,var(--primary) 0%,var(--primary-dark) 100%);color:#fff;padding:34px 42px;border-radius:16px;margin-bottom:30px;}
+ .hero h1{font-size:29px;font-weight:800;margin-bottom:6px;}
+ .hero .subtitle{font-size:15.5px;opacity:.9;}
+ .lede{font-size:13.5px;color:var(--text-muted);margin-bottom:26px;line-height:1.6;}
+ .lede b{color:var(--text);}
+ code{font-size:11.5px;background:rgba(217,119,6,.10);border-radius:4px;padding:1px 5px;}
+
+ /* ---- one decision = one card, scannable in ~30s ---- */
+ .dec{background:var(--surface);border:1.5px solid var(--border);border-radius:14px;overflow:hidden;margin-bottom:22px;}
+ .dec-head{display:flex;align-items:center;gap:11px;flex-wrap:wrap;padding:15px 22px;background:#f5f9ff;border-bottom:1.5px solid var(--border);}
+ .dec-num{font-size:11px;font-weight:800;letter-spacing:.8px;text-transform:uppercase;color:#fff;background:var(--primary);border-radius:999px;padding:3px 11px;}
+ .dec-head h3{font-size:17px;font-weight:700;color:var(--primary-dark);}
+ .dec-body{padding:20px 22px 22px;}
+
+ /* the one-line answer, read first */
+ .tldr{font-size:14.5px;line-height:1.55;border-left:4px solid var(--green);background:#f0fdf9;border-radius:0 10px 10px 0;padding:12px 16px;margin-bottom:18px;}
+ .tldr b{color:var(--green-dark);}
+
+ .row{display:grid;grid-template-columns:88px 1fr;gap:14px;align-items:start;padding:10px 0;border-top:1px solid var(--border);}
+ .row .lbl{font-size:10.5px;font-weight:800;letter-spacing:.9px;text-transform:uppercase;color:var(--text-muted);padding-top:3px;}
+ .row p{font-size:13.5px;line-height:1.55;}
+ @media(max-width:640px){.row{grid-template-columns:1fr;gap:4px;}}
+
+ .why{list-style:none;}
+ .why li{font-size:13.5px;line-height:1.5;padding:3px 0 3px 15px;position:relative;}
+ .why li:before{content:"";position:absolute;left:2px;top:11px;width:4.5px;height:4.5px;border-radius:50%;background:var(--green);}
+ .why b{font-weight:700;}
+
+ .alts{display:flex;flex-direction:column;gap:6px;}
+ .alt{display:flex;gap:10px;align-items:baseline;font-size:13px;line-height:1.5;}
+ .alt .tag{flex:0 0 auto;font-size:10px;font-weight:800;letter-spacing:.4px;text-transform:uppercase;border-radius:999px;padding:2px 9px;white-space:nowrap;}
+ .alt .tag.no{background:#fef2f2;color:var(--red-dark);}
+ .alt .tag.ok{background:#fffaf3;color:var(--amber-dark);}
+ .alt .txt b{font-weight:700;}
+
+ .rw{display:grid;grid-template-columns:1fr 1fr;gap:12px;}
+ @media(max-width:640px){.rw{grid-template-columns:1fr;}}
+ .rw-col{border:1.5px solid var(--border);border-radius:10px;padding:12px 15px;background:#f8fbff;}
+ .rw-col h5{font-size:12.5px;font-weight:800;letter-spacing:.3px;color:var(--primary-dark);margin-bottom:6px;}
+ .rw-col p{font-size:12.5px;line-height:1.55;color:var(--text);}
+ .rw-col .ex{display:block;margin-top:7px;font-size:11.5px;color:var(--text-muted);font-style:italic;}
+
+ .row.cost .lbl{color:var(--amber-dark);}
+ .row.cost p{color:var(--text);}
+
+ .flex{display:flex;gap:12px;align-items:flex-start;margin-top:16px;border:1.5px dashed var(--amber);border-radius:11px;background:#fffaf3;padding:12px 16px;}
+ .flex-tag{flex:0 0 auto;font-size:10px;font-weight:800;letter-spacing:.6px;text-transform:uppercase;color:#fff;background:var(--amber);border-radius:999px;padding:3px 10px;margin-top:2px;white-space:nowrap;}
+ .flex p{font-size:13px;line-height:1.55;}
+
+ .next{font-size:13px;color:var(--text-muted);background:var(--surface);border:1.5px dashed var(--border);border-radius:12px;padding:14px 18px;}
+ .next b{color:var(--text);}
+
+
+ /* ---- the three hard requirements, stated before the options ---- */
+ .reqs{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:18px;}
+ @media(max-width:760px){.reqs{grid-template-columns:1fr;}}
+ .req{border:1.5px solid var(--border);border-left:4px solid var(--primary);border-radius:10px;background:#f8fbff;padding:11px 14px;}
+ .req h5{font-size:12.5px;font-weight:800;color:var(--primary-dark);margin-bottom:4px;}
+ .req p{font-size:12px;line-height:1.5;color:var(--text-muted);}
+
+ /* ---- option-vs-requirement matrix ---- */
+ .mx-wrap{overflow-x:auto;border:1.5px solid var(--border);border-radius:10px;}
+ .mx{width:100%;border-collapse:collapse;font-size:12.5px;min-width:640px;}
+ .mx th,.mx td{border-bottom:1px solid var(--border);border-right:1px solid var(--border);padding:9px 12px;text-align:left;vertical-align:top;}
+ .mx tr:last-child th,.mx tr:last-child td{border-bottom:none;}
+ .mx th:last-child,.mx td:last-child{border-right:none;}
+ .mx thead th{background:#f5f9ff;color:var(--primary-dark);font-size:10.5px;letter-spacing:.6px;text-transform:uppercase;font-weight:800;}
+ .mx thead th.win{background:#ecfdf5;color:var(--green-dark);}
+ .mx tbody th{background:#fafbfc;font-weight:700;font-size:12px;color:var(--text);width:158px;}
+ .mx td.win{background:#f7fefb;}
+ .mx .y{color:var(--green-dark);font-weight:800;}
+ .mx .n{color:var(--red-dark);font-weight:800;}
+ .mx .p{color:var(--amber-dark);font-weight:800;}
+ .mx .d{display:block;color:var(--text-muted);font-size:11.5px;line-height:1.45;margin-top:2px;}
+ .mx-note{font-size:11.5px;color:var(--text-muted);margin-top:8px;line-height:1.5;}
+
+ /* ---- the SQS note that carries the decision ---- */
+ .tag.warn{background:#fff4e6;color:var(--amber-dark);}
+ .sqs{margin-top:14px;border:1.5px dashed var(--amber);border-radius:11px;background:#fffaf3;padding:14px 17px;}
+ .sqs h4{font-size:13.5px;font-weight:800;color:var(--amber-dark);margin-bottom:6px;}
+ .sqs>p{font-size:13px;line-height:1.55;}
+ .sqs .why{margin-top:10px;}
+ .sqs .why li{font-size:13px;}
+ .sqs .why li:before{background:var(--amber);}
+
+ .pp{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin:12px 0 2px;}
+ @media(max-width:640px){.pp{grid-template-columns:1fr;}}
+ .pp-col{border:1.5px solid var(--border);border-radius:10px;padding:12px 15px;background:var(--surface);}
+ .pp-col.push{border-color:#a7f3d0;background:#f0fdf9;}
+ .pp-col.poll{border-color:#fcd9a5;background:#fffaf3;}
+ .pp-col h5{font-size:12px;font-weight:800;letter-spacing:.3px;margin-bottom:6px;}
+ .pp-col.push h5{color:var(--green-dark);}
+ .pp-col.poll h5{color:var(--amber-dark);}
+ .pp-col p{font-size:12.5px;line-height:1.6;color:var(--text);}
+ .pp-col .ar{font-weight:800;opacity:.55;padding:0 2px;}
+ .pp-col .ex{display:block;margin-top:8px;font-size:11.5px;color:var(--text-muted);font-style:italic;}
+</style>
+</head>
+<body>
+<div class="main">
+
+<div class="hero">
+  <h1>ClimatePros · Architectural Trade-offs</h1>
+  <div class="subtitle">The decisions behind the revision-2 architecture &middot; what else was on the table &middot; what each choice costs</div>
+</div>
+
+<p class="lede">One card per decision. Each states the <b>call</b>, the <b>reasons</b>, the <b>alternatives</b>, the
+<b>cost</b>, and whether it can be changed later.</p>
+
+<div class="dec">
+ <div class="dec-head">
+  <span class="dec-num">Decision 1</span>
+  <h3>MongoDB for the AI server&rsquo;s datastore</h3>
+ </div>
+
+ <div class="dec-body">
+
+  <div class="tldr">The AI server gets its <b>own database, isolated from SQL Server</b>. Its data is an
+  <b>audit trail</b> &mdash; unstructured, unrelated, write-heavy &mdash; so a document store fits it better than a
+  relational one.</div>
+
+  <div class="row">
+   <div class="lbl">Why</div>
+   <div>
+    <ul class="why">
+     <li><b>Isolation was requested</b> &mdash; Paul asked for a separate DB, so a second store exists either way. Only the engine was open.</li>
+     <li><b>No relations, no joins</b> &mdash; summaries, part results and <code>llm_calls</code> traces never reference each other.</li>
+     <li><b>Unstructured</b> &mdash; LLM payloads change shape whenever prompts change. Columns would mean a migration each time.</li>
+     <li><b>Write-heavy</b> &mdash; used for auditing: append a record per call, read back rarely. That is the document-store profile.</li>
+     <li><b>No ACID needed</b> &mdash; nothing here is a transaction. Records are independent appends, not money or job state, so strict transactional guarantees buy us nothing.</li>
+    </ul>
+   </div>
+  </div>
+
+  <div class="row">
+   <div class="lbl">Instead of</div>
+   <div class="alts">
+    <div class="alt"><span class="tag no">Ruled out</span><span class="txt"><b>Reuse SQL Server</b> &mdash; re-creates the coupling we were asked to remove.</span></div>
+    <div class="alt"><span class="tag ok">Workable</span><span class="txt"><b>PostgreSQL with <code>JSONB</code></b> &mdash; works, but if the payload sits in <code>JSONB</code> anyway we pay for a relational engine and use none of it.</span></div>
+   </div>
+  </div>
+
+  <div class="row cost">
+   <div class="lbl">Cost</div>
+   <p>One more datastore to run and back up &middot; no engine-enforced schema, so the app validates &middot; joining
+   AI data to business data needs an export, not a query.</p>
+  </div>
+
+  <div class="flex">
+   <div class="flex-tag">Flexible</div>
+   <p>The hard requirement is <b>isolation</b>, not MongoDB. If ClimatePros prefers to standardise on SQL, a
+   <b>separate relational instance works too</b> &mdash; the AI server talks to its store through one repository
+   layer, so the swap is contained.</p>
+  </div>
+
+ </div>
+</div>
+
+<div class="dec">
+ <div class="dec-head">
+  <span class="dec-num">Decision 2</span>
+  <h3>Dispatch workers read SQL Server directly</h3>
+ </div>
+
+ <div class="dec-body">
+
+  <div class="tldr">The ECS Fargate workers query <b>SQL Server directly</b> for dispatch and technician data.
+  They do <b>not</b> call back into the .NET Microservices API for it. .NET publishes the dispatch event and is
+  then out of the loop until a technician responds &mdash; which is the point, because everything .NET runs sits
+  on <b>a single EC2 machine</b> we are trying to take work off.</div>
+
+  <div class="row">
+   <div class="lbl">Why</div>
+   <div>
+    <ul class="why">
+     <li><b>It defeats the purpose</b> &mdash; both .NET services run on <b>one EC2 machine</b>, shared with the legacy API. The worker exists to move dispatch load off that machine. Asking .NET for every read puts the load straight back on it.</li>
+     <li><b>Every read takes a detour</b> &mdash; the same rows are read either way, but through .NET each read costs two network hops instead of one and holds a .NET thread while it runs. Existing endpoints are per-record, so a technician list becomes one call each.</li>
+    </ul>
+   </div>
+  </div>
+
+  <div class="row">
+   <div class="lbl">How</div>
+   <div class="rw">
+    <div class="rw-col">
+     <h5>Existing records &mdash; read only</h5>
+     <p>The worker <b>reads</b> dispatch and technician data and never changes it. <b>.NET stays the owner</b> of
+     that information &mdash; every write to an existing FieldJetX record still goes through .NET, so business
+     rules and audit stay in one place.</p>
+     <span class="ex">worker reads it &middot; only .NET writes it</span>
+    </div>
+    <div class="rw-col">
+     <h5>New records &mdash; the worker&rsquo;s own tables</h5>
+     <p>Auto-Dispatch needs its own state: offers sent, cascade position, responses, claims. That goes in a
+     <b>few new tables</b> the worker owns. They sit in the <b>existing SQL Server</b> &mdash; no new database.
+     If the scope grows later, moving them out is a migration, not a redesign.</p>
+     <span class="ex">new tables, same database &middot; migrate later only if needed</span>
+    </div>
+   </div>
+  </div>
+
+  <div class="row">
+   <div class="lbl">Instead of</div>
+   <div class="alts">
+    <div class="alt"><span class="tag no">Ruled out</span><span class="txt"><b>Worker asks .NET for the data</b> &mdash; puts the shared EC2 host back in the path of every step of the cascade, which is the load the worker was built to remove.</span></div>
+   </div>
+  </div>
+
+  <div class="row cost">
+   <div class="lbl">Cost</div>
+   <p>Two codebases now read one schema, so changes to the tables the worker reads need both sides checked
+   &middot; the new dispatch tables share the platform database&rsquo;s capacity and backups &middot; a second
+   connection pool on the database.</p>
+  </div>
+
+  <div class="flex">
+   <div class="flex-tag">Scope</div>
+   <p>Direct access is for the <b>dispatch path only</b>. Inbound technician responses still arrive through
+   .NET from the mobile app, and anything that must run existing business rules stays a .NET call.</p>
+  </div>
+
+ </div>
+</div>
+
+<div class="dec">
+ <div class="dec-head">
+  <span class="dec-num">Decision 3</span>
+  <h3>Redis Streams as the dispatch message broker</h3>
+ </div>
+
+ <div class="dec-body">
+
+  <div class="tldr">The dispatch queue runs on <b>Redis Streams</b>. The real comparison is against <b>Amazon
+  SQS</b> &mdash; the option ClimatePros put forward, and the one the team already runs. SQS clears two of the three
+  requirements and misses the first: <b>it is polled</b>, and Auto-Dispatch runs on a clock.</div>
+
+  <div class="row">
+   <div class="lbl">Must meet</div>
+   <div>
+    <div class="reqs">
+     <div class="req">
+      <h5>1 &middot; Push-based delivery</h5>
+      <p>Workers never poll. An event reaches an active worker the moment it arrives.</p>
+     </div>
+     <div class="req">
+      <h5>2 &middot; Strict capacity cap</h5>
+      <p>One Fargate worker never holds more than its configured number of dispatches at a time.</p>
+     </div>
+     <div class="req">
+      <h5>3 &middot; FIFO queueing</h5>
+      <p>Events are handed out in arrival order; anything over the cap waits in line.</p>
+     </div>
+    </div>
+   </div>
+  </div>
+
+  <div class="row">
+   <div class="lbl">Compared</div>
+   <div>
+    <div class="mx-wrap">
+    <table class="mx">
+     <thead>
+      <tr>
+       <th></th>
+       <th class="win">Redis Streams</th>
+       <th>Amazon MQ</th>
+       <th>Amazon SQS</th>
+      </tr>
+     </thead>
+     <tbody>
+      <tr>
+       <th>Push-based delivery</th>
+       <td class="win"><span class="y">Yes</span><span class="d">The worker is handed the event as it lands.</span></td>
+       <td><span class="y">Yes</span><span class="d">A real broker; pushes to its consumers.</span></td>
+       <td><span class="n">No</span><span class="d">The worker has to ask before it learns an event arrived.</span></td>
+      </tr>
+      <tr>
+       <th>Strict capacity cap</th>
+       <td class="win"><span class="y">Yes</span></td>
+       <td><span class="y">Yes</span></td>
+       <td><span class="y">Yes</span></td>
+      </tr>
+      <tr>
+       <th>FIFO ordering</th>
+       <td class="win"><span class="y">Yes</span></td>
+       <td><span class="y">Yes</span></td>
+       <td><span class="y">Yes</span><span class="d">On a FIFO queue.</span></td>
+      </tr>
+      <tr>
+       <th>Can also run the timers</th>
+       <td class="win"><span class="y">Yes</span><span class="d">&ldquo;Wake me at 10:00:30&rdquo; entries live beside the queue &mdash; and can be cancelled the moment a technician accepts early.</span></td>
+       <td><span class="n">No</span><span class="d">A queue delivers what arrives; timed wake-ups need a second component.</span></td>
+       <td><span class="n">No</span><span class="d">Same gap.</span></td>
+      </tr>
+      <tr>
+       <th>Useful beyond dispatch</th>
+       <td class="win"><span class="y">Yes</span><span class="d">Caching, rate limiting, deduplication &mdash; the ramp buys more than a queue.</span></td>
+       <td><span class="p">Limited</span></td>
+       <td><span class="p">Limited</span></td>
+      </tr>
+      <tr>
+       <th>Team familiarity</th>
+       <td class="win"><span class="p">New</span></td>
+       <td><span class="p">New</span></td>
+       <td><span class="y">Already in use</span></td>
+      </tr>
+     </tbody>
+    </table>
+    </div>
+    <p class="mx-note">Volume is not the discriminator &mdash; roughly 1,000 dispatches a day is small for all three.
+    The discriminator is <b>how the event reaches the worker</b>.</p>
+   </div>
+  </div>
+
+  <div class="row">
+   <div class="lbl">Why Redis</div>
+   <div>
+    <ul class="why">
+     <li><b>It delivers, the worker does not collect</b> &mdash; the offer moves down the ranked technician list on
+     the schedule the algorithm sets, not on a polling rhythm.</li>
+     <li><b>It runs the timers as well as the queue</b> &mdash; the flow is full of timed moments: act at the end of
+     the ETA wait, move on at the end of an offer window, drop that wake-up if the technician accepts early. Those
+     entries sit beside the queue instead of in a second system.</li>
+     <li><b>It earns its keep beyond dispatch</b> &mdash; the same component is there for <b>Stream&nbsp;2</b> and
+     whatever comes after it &mdash; caching, rate limiting, deduplication &mdash; so the ramp buys more than one
+     queue.</li>
+    </ul>
+   </div>
+  </div>
+
+  <div class="row">
+   <div class="lbl">Instead of</div>
+   <div>
+    <div class="alts">
+     <div class="alt"><span class="tag ok">Workable</span><span class="txt"><b>Amazon MQ</b> &mdash; a real broker, so
+     it meets the three requirements. Not chosen because it is a queue and nothing more: the timed wake-ups still
+     need a second component beside it, and it bills an always-on broker to move a few hundred messages a day.</span></div>
+     <div class="alt"><span class="tag warn">Not recommended</span><span class="txt"><b>Amazon SQS</b> &mdash; the team
+     already runs it and it is the cheapest of the three, so on adoption it wins. But it is <b>polled</b>: the worker
+     has to ask before it learns an event arrived.</span></div>
+    </div>
+
+    <div class="sqs">
+     <h4>Why polling gets in the way</h4>
+     <p>Auto-Dispatch is a timing problem, not a throughput one. Every stage is a timed event &mdash; wait X seconds
+     for ETAs, wait K seconds before the offer moves to the next technician. The queue is what makes those moments
+     happen on time.</p>
+
+     <div class="pp">
+      <div class="pp-col push">
+       <h5>Pushed &mdash; the event arrives</h5>
+       <p>Offer window on technician&nbsp;1 expires <span class="ar">&rarr;</span> technician&nbsp;2&rsquo;s phone
+       rings.</p>
+      </div>
+      <div class="pp-col poll">
+       <h5>Polled &mdash; the event waits to be collected</h5>
+       <p>Offer window expires <span class="ar">&rarr;</span> <b>nothing happens until the worker next asks</b>
+       <span class="ar">&rarr;</span> technician&nbsp;2&rsquo;s phone rings.</p>
+      </div>
+     </div>
+
+     <ul class="why">
+      <li><b>The delay repeats at every step</b> &mdash; the dispatch waits for a poll, then the move from
+      technician&nbsp;1 to 2 waits for a poll, then 2 to 3. Four technicians in, the job has waited four times.</li>
+      <li><b>Windows stop meaning what they say</b> &mdash; a 30-second offer becomes 30 seconds plus the gap, so two
+      technicians can hold the same live offer longer than intended.</li>
+      <li><b>Polling faster only shrinks it</b> &mdash; never removes it, and the worker still has to finish waiting
+      before it can pick up a newer, more urgent dispatch.</li>
+     </ul>
+    </div>
+   </div>
+  </div>
+
+  <div class="row cost">
+   <div class="lbl">Cost</div>
+   <p>A component the team does not run today, so there is a learning curve and one more managed service to watch
+   &middot; a queue is not a system of record, so dispatch state must stay recoverable from SQL Server if it is
+   ever lost.</p>
+  </div>
+
+  <div class="flex">
+   <div class="flex-tag">Product call</div>
+   <p><b>If a dispatch is allowed to take longer to process, SQS is a perfectly good answer.</b>
+   That is a business decision, not a technical one: how quickly should a technician&rsquo;s phone ring? If dispatch
+   has to feel instant, the event must be pushed and SQS is out. If some delay is acceptable, SQS wins on familiarity
+   &mdash; with one cost attached either way: the timed wake-ups still need a due-time table in SQL Server and
+   something checking it.</p>
+  </div>
+
+ </div>
+</div>
+
+</div>
+</body>
+</html>
