@@ -34,9 +34,9 @@
 production environment to live technician traffic (<b>Onboarding</b>), and how does it behave when a
 dependency it relies on fails (<b>Fault Tolerance</b>)? A's dispatch queue, B's copilot, and C's parts
 predictor each have their own rollout phases and their own failure modes &mdash; only the underlying
-Azure services they run on (<a class="xref" href="#s3">&sect;3</a> Technology Stack, <a class="xref" href="#s4">&sect;4</a> Infrastructure) are shared. AWS service
-names in the two source designs are transformed to their Azure equivalents throughout; <b>AWS SQL
-Server</b> stays on AWS in every phase below, per <a class="xref" href="#s3">&sect;3</a>/<a class="xref" href="#s4">&sect;4</a>.</p>
+AWS/Azure infrastructure split they run on (<a class="xref" href="#s3">&sect;3</a> Technology Stack, <a class="xref" href="#s4">&sect;4</a> Infrastructure) is
+shared. Auto-Dispatch (A) runs on real AWS infrastructure throughout; B and C's shared AI tier runs on
+Azure; <b>AWS SQL Server</b> stays on AWS in every phase below, per <a class="xref" href="#s3">&sect;3</a>/<a class="xref" href="#s4">&sect;4</a>.</p>
 
 <h3><span class="chip">A</span> Auto-Dispatch</h3>
 
@@ -44,16 +44,15 @@ Server</b> stays on AWS in every phase below, per <a class="xref" href="#s3">&se
 <div class="s11-phase card">
 <h4>Phase 0 &mdash; Infrastructure provisioning <span class="s11-tag">(one-time)</span></h4>
 <ul>
-<li><b>Azure Cache for Redis</b> cluster up, and <b>create the consumer group</b>
+<li><b>Amazon ElastiCache for Redis</b> cluster up, and <b>create the consumer group</b>
 (<code>XGROUP CREATE dispatch:stream &hellip;</code>) &mdash; workers cannot read the stream until it
-exists (<a class="xref" href="#s7">&sect;7</a> Data &amp; Schema &middot; Azure Cache for Redis structures).</li>
-<li><b>Azure Container Apps</b> ready: worker image pushed to the registry, container app definition
+exists (<a class="xref" href="#s7">&sect;7</a> Data &amp; Schema &middot; ElastiCache for Redis structures).</li>
+<li><b>AWS ECS Fargate</b> ready: worker image pushed to the registry, task definition
 (1&nbsp;vCPU&nbsp;/&nbsp;2&nbsp;GB), scale 0&#8596;N policy.</li>
-<li><b>Azure Notification Hubs</b> registrations created &mdash; one APNs (Apple <code>.p8</code> key),
+<li><b>Amazon SNS</b> platform applications created &mdash; one APNs (Apple <code>.p8</code> key),
 one FCM (Google key). Hard precondition for <code>/devices/register</code>: no device registration can
 exist until these are live.</li>
-<li><b>Azure RBAC roles</b>: Notification Hubs Send, Container Apps scale control, Cache for Redis
-access.</li>
+<li><b>AWS IAM roles</b>: SNS Publish, ECS Fargate scale control, ElastiCache access.</li>
 </ul>
 </div>
 
@@ -72,18 +71,18 @@ populated; ranking silently breaks on missing data.</li>
 </div>
 
 <div class="s11-phase amber card">
-<h4>Phase 2 &mdash; Client rollout &amp; Notification Hubs push onboarding</h4>
+<h4>Phase 2 &mdash; Client rollout &amp; SNS push onboarding</h4>
 <p>Push is new to the platform, but signed-up technicians already exist on iOS/Android with no push
-token yet. Notification Hubs can only ring a technician once a <code>deviceInstallationId</code>
-exists &mdash; the per-device registration Notification Hubs returns when you register a push token
-(<a class="xref" href="#s8">&sect;8</a> API Reference); you send to that installation id, not the raw token. Onboarding must create it
+token yet. SNS can only ring a technician once a <code>platformEndpointArn</code>
+exists &mdash; the per-device endpoint SNS returns when you register a push token
+(<a class="xref" href="#s8">&sect;8</a> API Reference); you publish to that endpoint ARN, not the raw token. Onboarding must create it
 for both cohorts with no one-off migration job.</p>
 <div class="s11-two">
 <div class="s11-mini"><h5><span class="s11-ico" style="background:var(--primary-light);color:var(--primary);">&#43;</span>New technician</h5>
 <p>Signs up on a push-enabled build &rarr; grants permission &rarr; <code>POST /devices/register</code>
-fires at once. Installation id exists before first dispatch. <b>No gap.</b></p></div>
+fires at once. Endpoint ARN exists before first dispatch. <b>No gap.</b></p></div>
 <div class="s11-mini"><h5><span class="s11-ico" style="background:var(--amber-soft);color:var(--amber-dark);">&#8635;</span>Existing technician</h5>
-<p>Account exists but <b>no token, no installation id</b> &mdash; unreachable until they update the
+<p>Account exists but <b>no token, no endpoint ARN</b> &mdash; unreachable until they update the
 app, open it, and grant permission. The one cohort with a temporary gap.</p></div>
 </div>
 <ul>
@@ -93,16 +92,16 @@ is reachable.</li>
 it (reinstall/restore), and on a periodic (e.g. daily) refresh. Tokens stay valid for months, so this is
 a few calls per technician, not one per launch.</li>
 <li><b>Backend upsert on <code>(techId, token)</code></b> &mdash; first call creates the registration,
-unchanged token no-ops, rotated token updates the installation id.</li>
-<li><b>Fallback if unreachable</b> &mdash; a tech with no installation id (or one Notification Hubs
+unchanged token no-ops, rotated token updates the endpoint ARN.</li>
+<li><b>Fallback if unreachable</b> &mdash; a tech with no endpoint ARN (or one SNS
 reports dead) is skipped to manual/escalation; the dispatch never hard-fails, and the tech re-registers
 on its next refresh.</li>
 </ul>
-<div class="callout amber" style="margin-top:12px;"><b>Device token / installation id = PII.</b> The
-push token and its Notification Hubs <code>deviceInstallationId</code> are the one new piece of personal
-data this project stores (<code>techId &rarr; deviceInstallationId</code>). They are treated as
+<div class="callout amber" style="margin-top:12px;"><b>Device token / endpoint ARN = PII.</b> The
+push token and its SNS <code>platformEndpointArn</code> are the one new piece of personal
+data this project stores (<code>techId &rarr; platformEndpointArn</code>). They are treated as
 sensitive: encrypted at rest, access-limited to the dispatch backend, and kept only while the device is
-active &mdash; a rotated token overwrites the old id (upsert) and a dead id is cleaned up, so stale
+active &mdash; a rotated token overwrites the old ARN (upsert) and a dead endpoint is cleaned up, so stale
 tokens do not accumulate. <b>Technician location is not newly stored here</b> &mdash; distance/ETA comes
 from the platform's existing location system, which auto-dispatch only reads, so its retention is
 unchanged and out of scope for this project.</div>
@@ -111,12 +110,12 @@ unchanged and out of scope for this project.</div>
 <div class="s11-phase green card">
 <h4>Phase 3 &mdash; Go-live sequencing</h4>
 <ul>
-<li><b>Monitoring/alerting live first</b> (Azure Monitor, <a class="xref" href="#s9">&sect;9</a>) &mdash; push-adoption %, stream lag,
+<li><b>Monitoring/alerting live first</b> (CloudWatch, <a class="xref" href="#s9">&sect;9</a>) &mdash; push-adoption %, stream lag,
 lock-hold time, BLPOP-timeout rate.</li>
 <li><b>Pilot one division</b> &mdash; flip a single division ON, validate exactly-once assignment and the
 escalation path end-to-end.</li>
 <li><b>Expand division-by-division</b> &mdash; enable the rest once the pilot is clean; drop the manual
-fallback as installation-id adoption nears 100%.</li>
+fallback as endpoint-ARN adoption nears 100%.</li>
 </ul>
 </div>
 
@@ -125,12 +124,12 @@ fallback as installation-id adoption nears 100%.</li>
 <ul>
 <li><b>Staging before prod</b> &mdash; the change is validated in a <b>staging environment</b> first,
 then promoted to production. Staging and production each get their <b>own isolated instances</b>
-(separate Azure Cache for Redis, isolated SQL Server database, separate Container Apps service) &mdash;
+(separate ElastiCache for Redis, isolated SQL Server database, separate ECS Fargate service) &mdash;
 no shared state across environments, so a staging run can never touch live technician data.</li>
 <li><b>CI/CD &mdash; client's existing pipeline.</b> Auto-Dispatch is a <b>one-time change</b> to an
 existing platform, not a new service, so it introduces no new pipeline. Build, test, deploy, and
 rollback of the worker image and the .NET Server&nbsp;A/B changes all follow the <b>client's established
-deployment strategy</b> on the shared Azure VM host (<a class="xref" href="#s3">&sect;3</a>); rollback is whatever that pipeline
+deployment strategy</b> on the shared AWS EC2 host (<a class="xref" href="#s3">&sect;3</a>); rollback is whatever that pipeline
 already provides (e.g. redeploy the previous image/revision).</li>
 </ul>
 </div>
@@ -139,7 +138,7 @@ already provides (e.g. redeploy the previous image/revision).</li>
 <div class="s11-phase red card">
 <h4>How a crashed or slow worker is handled</h4>
 <p>A dispatch request is handed to one worker to process. The system tracks that the request is
-"handed out but not yet finished" (<a class="xref" href="#s7">&sect;7</a> Data &amp; Schema &middot; Azure Cache for Redis structures). When the worker finishes, it marks
+"handed out but not yet finished" (<a class="xref" href="#s7">&sect;7</a> Data &amp; Schema &middot; ElastiCache for Redis structures). When the worker finishes, it marks
 the request done and the request clears. The goal: never lose a request if a worker dies, and never
 process the same request twice.</p>
 <ol>
@@ -178,7 +177,7 @@ both self-hosted models (qwen3-vl for generation, nomic-embed for embeddings) un
 migration.</li>
 <li><b>Secrets</b>: the gateway key, the internal proxy API key, and the FieldJetX API token
 (<code>FJX_API_TOKEN</code>, open client item) in <b>Azure Key Vault</b>; nothing in code or images.</li>
-<li><b>.NET proxy route</b> deployed on the Microservices API (shared Azure VM host, <a class="xref" href="#s3">&sect;3</a>): this is
+<li><b>.NET proxy route</b> deployed on the Microservices API (shared AWS EC2 host, <a class="xref" href="#s3">&sect;3</a>): this is
 client-owned code, so it must be scheduled with their team, not ours.</li>
 </ul>
 </div>
@@ -241,7 +240,7 @@ Container Apps service and its own <code>ai.*</code> schema), then promoted. No 
 environments, so staging can never touch live customer data.</li>
 <li><b>CI/CD</b>: the FastAPI service ships from its own repo pipeline (build image &rarr; push to the
 container registry &rarr; rolling deploy on Container Apps; rollback = redeploy the previous image). The
-one .NET proxy route rides the client's existing deployment pipeline on the shared Azure VM host, as
+one .NET proxy route rides the client's existing deployment pipeline on the shared AWS EC2 host, as
 their strategy dictates.</li>
 </ul>
 </div>

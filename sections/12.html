@@ -124,10 +124,10 @@ deletion and data-retention requests handled at the SQL Server layer.</div>
 
 <h4 style="font-size:14.5px;font-weight:700;margin:26px 0 10px;"><span class="chip">A</span> Device push
 token &mdash; see <a class="xref" href="#s11">&sect;11</a></h4>
-<p>Auto-Dispatch&rsquo;s one new piece of personal data &mdash; the push token and its Notification Hubs
-<code>deviceInstallationId</code> (<code>techId &rarr; deviceInstallationId</code>) &mdash; is catalogued in
+<p>Auto-Dispatch&rsquo;s one new piece of personal data &mdash; the push token and its Amazon SNS
+<code>platformEndpointArn</code> (<code>techId &rarr; platformEndpointArn</code>) &mdash; is catalogued in
 full where it is introduced: encrypted at rest, access-limited to the dispatch backend, retained only while
-the device is active. See the <b>Device token / installation id = PII</b> callout in <a class="xref" href="#s11">&sect;11</a> Onboarding
+the device is active. See the <b>Device token / endpoint ARN = PII</b> callout in <a class="xref" href="#s11">&sect;11</a> Onboarding
 &amp; Fault Tolerance &middot; Phase&nbsp;2. Technician location itself is not newly stored by this
 project &mdash; distance/ETA reads the platform&rsquo;s existing location system, unchanged and out of
 scope here.</p>

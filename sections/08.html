@@ -17,7 +17,7 @@
 <h2>8. API Reference</h2>
 <p>The full HTTP surface across all three use cases, lifted at full fidelity from each source design
 &mdash; every endpoint, parameter, and response shape kept intact. Only the caller-facing compute
-labels are updated to match this document's Azure-first infrastructure (<a class="xref" href="#s2">&sect;2</a>&ndash;<a class="xref" href="#s4">&sect;4</a>) and the
+labels are updated to match this document's AWS-hosted non-AI / Azure-hosted AI infrastructure split (<a class="xref" href="#s2">&sect;2</a>&ndash;<a class="xref" href="#s4">&sect;4</a>) and the
 service renames already established there. Nothing in the request/response bodies themselves
 changes.</p>
 
@@ -29,12 +29,12 @@ technician location) are unchanged and out of scope here.</p>
 <div class="cl-table-wrap"><table class="cl-table">
 <thead><tr><th>Method</th><th>Path</th><th>Caller</th><th>Purpose</th></tr></thead>
 <tbody>
-<tr><td><span class="s8-method post">POST</span></td><td><code>/divisions/{id}/toggle</code></td><td>Dashboard &rarr; Azure VM</td><td>Turn auto-dispatch ON/OFF for one division. Body <code>{ enabled: bool }</code>. On <em>enable</em>: pull pending requests into the stream and scale the Container Apps pool up; on <em>disable</em>: drain and scale to zero (idle = $0).</td></tr>
-<tr><td><span class="s8-method put">PUT</span></td><td><code>/divisions/{id}/config</code></td><td>Dashboard &rarr; Azure VM</td><td>Update per-division ranking weights &mdash; distance, familiarity, priority, availability window. Body <code>{ weights: {...} }</code>. Applied to the next assignment loop; no restart needed.</td></tr>
-<tr><td><span class="s8-method get">GET</span></td><td><code>/divisions/{id}/config</code></td><td>Dashboard &rarr; Azure VM</td><td>Read current toggle state + weights so the admin UI can render the switch position and weight sliders. Paired read for the two writes above.</td></tr>
-<tr><td><span class="s8-method post">POST</span></td><td><code>/devices/register</code></td><td>Mobile &rarr; Azure VM</td><td>Register/refresh a device push token. Body <code>{ techId, platform: ios|android, token }</code>. Azure VM registers the device with Notification Hubs and stores <code>techId &rarr; deviceInstallationId</code>. Re-posted whenever the OS rotates the token, so pushes never silently die.</td></tr>
-<tr><td><span class="s8-method post">POST</span></td><td><code>/technicians/{id}/availability</code></td><td>Mobile &rarr; Azure VM</td><td>Technician reports <em>when</em> they will be free. Body <code>{ availableAt }</code>. <strong>Not tied to any dispatch</strong> &mdash; it updates the technician's general availability state, which the ranking loop reads for whichever request is being processed.</td></tr>
-<tr><td><span class="s8-method post">POST</span></td><td><code>/dispatches/{id}/respond</code></td><td>Mobile &rarr; Azure VM</td><td>Technician accepts/rejects a <em>specific</em> offer. Body <code>{ accept: bool }</code>. Deduped via <code>SETNX</code>, then <code>LPUSH</code>ed to <code>resp:{dispatchId}:{techId}</code>; the worker's <code>BLPOP</code> wakes instantly.</td></tr>
+<tr><td><span class="s8-method post">POST</span></td><td><code>/divisions/{id}/toggle</code></td><td>Dashboard &rarr; AWS EC2</td><td>Turn auto-dispatch ON/OFF for one division. Body <code>{ enabled: bool }</code>. On <em>enable</em>: pull pending requests into the stream and scale the ECS Fargate pool up; on <em>disable</em>: drain and scale to zero (idle = $0).</td></tr>
+<tr><td><span class="s8-method put">PUT</span></td><td><code>/divisions/{id}/config</code></td><td>Dashboard &rarr; AWS EC2</td><td>Update per-division ranking weights &mdash; distance, familiarity, priority, availability window. Body <code>{ weights: {...} }</code>. Applied to the next assignment loop; no restart needed.</td></tr>
+<tr><td><span class="s8-method get">GET</span></td><td><code>/divisions/{id}/config</code></td><td>Dashboard &rarr; AWS EC2</td><td>Read current toggle state + weights so the admin UI can render the switch position and weight sliders. Paired read for the two writes above.</td></tr>
+<tr><td><span class="s8-method post">POST</span></td><td><code>/devices/register</code></td><td>Mobile &rarr; AWS EC2</td><td>Register/refresh a device push token. Body <code>{ techId, platform: ios|android, token }</code>. AWS EC2 registers the device with Amazon SNS and stores <code>techId &rarr; platformEndpointArn</code>. Re-posted whenever the OS rotates the token, so pushes never silently die.</td></tr>
+<tr><td><span class="s8-method post">POST</span></td><td><code>/technicians/{id}/availability</code></td><td>Mobile &rarr; AWS EC2</td><td>Technician reports <em>when</em> they will be free. Body <code>{ availableAt }</code>. <strong>Not tied to any dispatch</strong> &mdash; it updates the technician's general availability state, which the ranking loop reads for whichever request is being processed.</td></tr>
+<tr><td><span class="s8-method post">POST</span></td><td><code>/dispatches/{id}/respond</code></td><td>Mobile &rarr; AWS EC2</td><td>Technician accepts/rejects a <em>specific</em> offer. Body <code>{ accept: bool }</code>. Deduped via <code>SETNX</code>, then <code>LPUSH</code>ed to <code>resp:{dispatchId}:{techId}</code>; the worker's <code>BLPOP</code> wakes instantly.</td></tr>
 </tbody>
 </table></div>
 

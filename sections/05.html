@@ -5,7 +5,7 @@ cascade with a hard timeout and human escalation; B is a technician-facing UX fl
 and after the copilot, plus the background flywheel that feeds each visit's data into the next; C is
 the ordered, multi-source parts search that backs the mobile app's "source &amp; allocate" step.
 Companion to <a class="xref" href="#s2">&sect;2</a> Architecture and <a class="xref" href="#s3">&sect;3</a> Technology Stack &mdash; component-level detail (Redis
-Streams, division locks, Container Apps task walkthroughs) lives there; this section is the process
+Streams, division locks, ECS Fargate task walkthroughs) lives there; this section is the process
 view.</p>
 
 <h3><span class="chip">A</span> Auto-Dispatch &mdash; Assignment Loop</h3>
@@ -19,7 +19,7 @@ The admin Enable/Disable toggle is covered by the scale ON/OFF walkthrough in <a
 <span class="opsflow-trigger blue">Trigger &middot; dispatch created</span>
 <div class="opsflow-chain">
 
-<div class="opsflow-node blue"><div class="opsflow-body"><span class="opsflow-step">1</span><span class="opsflow-txt">New dispatch appears<small>request hits .NET Legacy API on the Azure VM</small></span></div></div>
+<div class="opsflow-node blue"><div class="opsflow-body"><span class="opsflow-step">1</span><span class="opsflow-txt">New dispatch appears<small>request hits .NET Legacy API on the AWS EC2 host</small></span></div></div>
 <div class="opsflow-conn"><svg width="18" height="24"><path d="M9 0v16M3 12l6 6 6-6" fill="none" stroke="#2563eb" stroke-width="2"/></svg></div>
 
 <div class="opsflow-decision"><div class="opsflow-decision-inner">Division has<br>auto-dispatch<br>enabled?</div></div>
@@ -33,7 +33,7 @@ The admin Enable/Disable toggle is covered by the scale ON/OFF walkthrough in <a
 </div>
 
 <div class="opsflow-conn"><svg width="18" height="24"><path d="M9 0v16M3 12l6 6 6-6" fill="none" stroke="#d97706" stroke-width="2"/></svg></div>
-<div class="opsflow-node amber"><div class="opsflow-body"><span class="opsflow-step icon">&#128230;</span><span class="opsflow-txt">Azure Container Apps pool picks up the dispatch<small>a task consumes it from the stream (<code>XREADGROUP</code>) after winning the per-division lock &mdash; see <a class="xref" href="#s2">&sect;2</a> for the multi-task walkthrough</small></span></div></div>
+<div class="opsflow-node amber"><div class="opsflow-body"><span class="opsflow-step icon">&#128230;</span><span class="opsflow-txt">AWS ECS Fargate pool picks up the dispatch<small>a task consumes it from the stream (<code>XREADGROUP</code>) after winning the per-division lock &mdash; see <a class="xref" href="#s2">&sect;2</a> for the multi-task walkthrough</small></span></div></div>
 <div class="opsflow-conn"><svg width="18" height="24"><path d="M9 0v16M3 12l6 6 6-6" fill="none" stroke="#7c3aed" stroke-width="2"/></svg></div>
 
 <div class="opsflow-node violet"><div class="opsflow-body"><span class="opsflow-step" style="background:var(--purple)">1</span><span class="opsflow-txt">Get nearby technicians<small>build the candidate list + each tech's distance from the jobsite</small></span></div></div>
@@ -47,7 +47,7 @@ The admin Enable/Disable toggle is covered by the scale ON/OFF walkthrough in <a
 
 <div class="opsflow-loop">
 <span class="opsflow-loop-tag">&#8635; retry</span>
-<div class="opsflow-node violet"><div class="opsflow-body"><span class="opsflow-step" style="background:var(--purple)">4</span><span class="opsflow-txt">Offer to the top-ranked technician<span class="opsflow-tag blue">30s to respond</span><small>push the offer to the current #1 on the shortlist via Azure Notification Hubs</small></span></div></div>
+<div class="opsflow-node violet"><div class="opsflow-body"><span class="opsflow-step" style="background:var(--purple)">4</span><span class="opsflow-txt">Offer to the top-ranked technician<span class="opsflow-tag blue">30s to respond</span><small>push the offer to the current #1 on the shortlist via Amazon SNS</small></span></div></div>
 <div class="opsflow-conn"><svg width="18" height="24"><path d="M9 0v16M3 12l6 6 6-6" fill="none" stroke="#7c3aed" stroke-width="2"/></svg></div>
 <div class="opsflow-decision violet"><div class="opsflow-decision-inner">Accepts<br>within 30s?</div></div>
 <div class="opsflow-branch-arms">
@@ -71,13 +71,13 @@ The admin Enable/Disable toggle is covered by the scale ON/OFF walkthrough in <a
 division lock's TTL. On timeout the worker escalates to the next technician on the shortlist; the
 division lock is never lost mid-flight.</div>
 
-<h4>Notification Hubs round-trip</h4>
+<h4>SNS round-trip</h4>
 <p style="font-size:13.5px;color:var(--text-muted);margin:0 0 4px">The mechanics behind step&nbsp;4's
 push &mdash; fire-and-forget out, a different path back in. Component-level diagram: <a class="xref" href="#s2">&sect;2</a> &middot;
 Use Case A &middot; step&nbsp;3.</p>
-<div class="flow-step"><div class="flow-num">1</div><div class="flow-content"><h4>Worker publishes the offer</h4><p>The winning Container Apps worker calls Azure Notification Hubs Send with the technician's device installation id and the offer payload <code>{dispatchId, techId, job}</code>.</p></div></div>
-<div class="flow-step"><div class="flow-num">2</div><div class="flow-content"><h4>Push is delivered</h4><p>Notification Hubs fans the message out through APNs (iOS) or FCM (Android) straight to the technician's phone.</p></div></div>
-<div class="flow-step"><div class="flow-num">3</div><div class="flow-content"><h4>Technician responds</h4><p>Tapping Accept/Reject in the FieldJetX app POSTs the reply to the Azure VM API, which de-dupes with <code>SETNX resp:done</code> and <code>LPUSH</code>es it onto a per-technician Redis reply list.</p></div></div>
+<div class="flow-step"><div class="flow-num">1</div><div class="flow-content"><h4>Worker publishes the offer</h4><p>The winning ECS Fargate worker calls Amazon SNS <code>Publish</code> with the technician's platform endpoint ARN and the offer payload <code>{dispatchId, techId, job}</code>.</p></div></div>
+<div class="flow-step"><div class="flow-num">2</div><div class="flow-content"><h4>Push is delivered</h4><p>SNS fans the message out through APNs (iOS) or FCM (Android) straight to the technician's phone.</p></div></div>
+<div class="flow-step"><div class="flow-num">3</div><div class="flow-content"><h4>Technician responds</h4><p>Tapping Accept/Reject in the FieldJetX app POSTs the reply to the .NET API on AWS EC2, which de-dupes with <code>SETNX resp:done</code> and <code>LPUSH</code>es it onto a per-technician Redis reply list.</p></div></div>
 <div class="flow-step"><div class="flow-num">4</div><div class="flow-content"><h4>Worker wakes instantly</h4><p>The same worker that sent the offer is already blocked on <code>BLPOP</code> for that key &mdash; no polling, no delay.</p></div></div>
 <div class="flow-step"><div class="flow-num">5</div><div class="flow-content"><h4>Rank &amp; assign</h4><p>On Accept the worker writes the assignment to SQL Server, releases the division lock, and <code>XACK</code>s the stream message &mdash; closing the loop.</p></div></div>
 

@@ -26,19 +26,19 @@
 <section id="s7">
 <h2>7. Data &amp; Schema</h2>
 <p>Three data footprints, one per use case, lifted at full fidelity from each source design. A
-coordinates purely through ephemeral <b>Azure Cache for Redis</b> structures &mdash; no data model of
+coordinates purely through ephemeral <b>Amazon ElastiCache for Redis</b> structures &mdash; no data model of
 its own. B and C each persist AI output into their own isolated <code>ai.*</code> schema inside the
 shared <b>AWS SQL Server</b>, zero mixing with business tables (<a class="xref" href="#s3">&sect;3</a>). C additionally maintains a
 semantic vector index over historical dispatches for retrieval.</p>
 
-<h3><span class="chip">A</span> Auto-Dispatch &mdash; Azure Cache for Redis Data Structures</h3>
-<p>The three Redis structures that coordinate dispatch across the Container Apps worker pool.</p>
+<h3><span class="chip">A</span> Auto-Dispatch &mdash; Amazon ElastiCache for Redis Data Structures</h3>
+<p>The three Redis structures that coordinate dispatch across the ECS Fargate worker pool.</p>
 <div class="cl-table-wrap"><table class="cl-table">
 <thead><tr><th>Structure</th><th>Key</th><th>Purpose</th></tr></thead>
 <tbody>
-<tr><td><span class="s7-badge purple">STREAM</span></td><td><code>dispatch:stream</code></td><td>Durable buffer of incoming dispatch requests between .NET Legacy API and the Container Apps workers. Consumed via a consumer group (<code>XREADGROUP</code>) &mdash; all N workers compete; each message goes to exactly one worker.</td></tr>
+<tr><td><span class="s7-badge purple">STREAM</span></td><td><code>dispatch:stream</code></td><td>Durable buffer of incoming dispatch requests between .NET Legacy API and the ECS Fargate workers. Consumed via a consumer group (<code>XREADGROUP</code>) &mdash; all N workers compete; each message goes to exactly one worker.</td></tr>
 <tr><td><span class="s7-badge amber">MUTEX</span></td><td><code>lock:tech:{techId}</code></td><td>Per-technician distributed lock. A request acquires locks on <em>its candidate technicians</em> before offering, in a fixed order (e.g. ascending <code>techId</code>) to avoid deadlock between overlapping requests. Requests with disjoint candidates run in parallel &mdash; even in the same division; requests sharing a technician serialize on that lock, so a tech is never double-offered. TTL self-releases on a crashed worker.</td></tr>
-<tr><td><span class="s7-badge green">LIST</span></td><td><code>resp:{dispatchId}:{techId}</code></td><td>Per-technician reply channel. The Azure VM API <code>LPUSH</code>es the Accept/Reject; the worker <code>BLPOP</code>s it &mdash; instant wake, no polling. <code>EXPIRE 60s</code> self-cleans.</td></tr>
+<tr><td><span class="s7-badge green">LIST</span></td><td><code>resp:{dispatchId}:{techId}</code></td><td>Per-technician reply channel. The .NET API on AWS EC2 <code>LPUSH</code>es the Accept/Reject; the worker <code>BLPOP</code>s it &mdash; instant wake, no polling. <code>EXPIRE 60s</code> self-cleans.</td></tr>
 </tbody>
 </table></div>
 <div class="callout azure"><b>Concurrency:</b> a worker processes up to <strong>20 dispatches

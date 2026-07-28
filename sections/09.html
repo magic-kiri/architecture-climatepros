@@ -29,23 +29,26 @@ retrieval quality on a held-out set of recent dispatches and does not yet have B
 correction-based feedback loop &mdash; closing that gap is future work, not part of this
 architecture.</p>
 
-<h3>Unified Observability &mdash; OpenTelemetry Tracing + Azure Monitor Logs</h3>
-<p>Every service in the new AI tier &mdash; the Azure VM host running both .NET APIs, both Azure
-Container Apps pools (Auto-Dispatch workers and the FastAPI AI server), the Redis-fed worker loop, and
-every vector-store call &mdash; emits <b>OpenTelemetry</b> traces and structured logs into a single
-<b>Azure Monitor</b> workspace (<a class="xref" href="#s3">&sect;3</a>, <a class="xref" href="#s4">&sect;4</a>). This was an abstract, &ldquo;not yet
-designed&rdquo; placeholder in the source design; here it is the one piece of infrastructure every use
-case shares, so it is specified once instead of three times.</p>
+<h3>Unified Observability &mdash; OpenTelemetry Tracing + CloudWatch (AWS) / Azure Monitor (AI)</h3>
+<p>Observability splits along the same AWS/Azure line as compute (<a class="xref" href="#s4">&sect;4</a> Infrastructure): the
+<b>AWS EC2</b> host running both .NET APIs, the <b>AWS ECS Fargate</b> Auto-Dispatch worker pool, and the
+ElastiCache-fed worker loop emit <b>OpenTelemetry</b> traces and structured logs to <b>CloudWatch</b>; the
+<b>Azure Container Apps</b> FastAPI AI server and every vector-store call emit to a separate <b>Azure
+Monitor</b> workspace (<a class="xref" href="#s3">&sect;3</a>, <a class="xref" href="#s4">&sect;4</a>). This was an abstract, &ldquo;not yet
+designed&rdquo; placeholder in the source design; here both halves are specified once instead of three
+times, with the AI-request hop as the one place a trace crosses from one backend to the other.</p>
 
 <div class="s9-otel">
 <div class="s9-otel-item"><h5>&#128225; Distributed traces</h5><p>One trace per request, spanning every
-hop it takes &mdash; .NET proxy &rarr; Container Apps &rarr; AI server &rarr; LiteLLM &rarr; model, or
-.NET &rarr; Redis Stream &rarr; worker &rarr; SQL Server. The cross-cloud hop to <b>AWS SQL
-Server</b> (<a class="xref" href="#s4">&sect;4</a>) is a span like any other, so the added round-trip is visible, not hidden.</p></div>
-<div class="s9-otel-item"><h5>&#128203; Structured logs</h5><p>Every service logs to Azure Monitor in
-one schema. Each entry carries the same <code>requestId</code> issued in the error envelope (<a class="xref" href="#s8">&sect;8</a> API
-Reference), so a failed call traces from the client-visible error code back through every hop it
-touched.</p></div>
+hop it takes &mdash; .NET proxy (AWS) &rarr; AI server (Azure) &rarr; LiteLLM &rarr; model, or .NET
+&rarr; Redis Stream &rarr; ECS Fargate worker &rarr; SQL Server, staying inside AWS throughout. The
+cross-cloud hop &mdash; AWS .NET proxy &rarr; Azure AI server, and the AI server's <b>AWS SQL
+Server</b> (<a class="xref" href="#s4">&sect;4</a>) reads/writes &mdash; is a span like any other, so the added round-trip is
+visible, not hidden.</p></div>
+<div class="s9-otel-item"><h5>&#128203; Structured logs</h5><p>Every AWS-side service (EC2 host, ECS
+Fargate workers) logs to CloudWatch; the Azure AI server logs to Azure Monitor. Each entry carries the
+same <code>requestId</code> issued in the error envelope (<a class="xref" href="#s8">&sect;8</a> API Reference), so a failed call traces
+from the client-visible error code back through every hop it touched, across both backends.</p></div>
 <div class="s9-otel-item"><h5>&#128260; Correlation</h5><p><code>requestId</code> is the join key across
 traces, logs, and the AI-specific tables in <a class="xref" href="#s7">&sect;7</a> Data &amp; Schema
 (<code>ai.llm_calls</code>, <code>ai.summary_edits</code>) &mdash; so a slow trace, a log line, and an
@@ -53,14 +56,16 @@ eval finding for the same request all resolve to one id.</p></div>
 </div>
 
 <div class="callout amber"><b>P95 targets &mdash; open item:</b> <a class="xref" href="#s4">&sect;4</a> Infrastructure flags that
-cross-cloud AWS SQL Server round-trips must be budgeted into per-flow P95 targets, especially the
-Auto-Dispatch worker&rsquo;s per-request SQL calls. No formal SLOs exist yet in any of the three source
-designs; the inputs this document already establishes are the ~1&nbsp;min technician-availability
-window and BLPOP reply-wait timeout (A, <a class="xref" href="#s5">&sect;5</a> Operational Flows), the ~6&ndash;7s LLM-bound
-<code>/summarise</code> / <code>/analyse</code> calls (B, <a class="xref" href="#s8">&sect;8</a>), and the &lt;200ms / &lt;50ms
-deterministic endpoints (B/C, <a class="xref" href="#s8">&sect;8</a>). Setting numeric P95 targets per flow, inclusive of the
-cross-cloud SQL leg, is follow-up work once Azure Monitor is live and has real traffic to baseline
-against &mdash; not something any source design specified.</div>
+cross-cloud AWS SQL Server round-trips &mdash; the Azure AI server's <code>ai.*</code> reads/writes (B,
+C) &mdash; must be budgeted into per-flow P95 targets. Auto-Dispatch's SQL calls (A) stay inside AWS
+(EC2/ECS Fargate &rarr; SQL Server) and carry no cross-cloud penalty. No formal SLOs exist yet in any of
+the three source designs; the inputs this document already establishes are the ~1&nbsp;min
+technician-availability window and BLPOP reply-wait timeout (A, <a class="xref" href="#s5">&sect;5</a> Operational Flows), the
+~6&ndash;7s LLM-bound <code>/summarise</code> / <code>/analyse</code> calls (B, <a class="xref" href="#s8">&sect;8</a>), and the
+&lt;200ms / &lt;50ms deterministic endpoints (B/C, <a class="xref" href="#s8">&sect;8</a>). Setting numeric P95 targets per flow,
+inclusive of the cross-cloud SQL leg on B/C, is follow-up work once CloudWatch and Azure Monitor are
+both live and have real traffic to baseline against &mdash; not something any source design
+specified.</div>
 
 <h3 style="margin-top:38px"><span class="chip">B</span> Evals &mdash; the Feedback Loop</h3>
 <p>Every AI interaction is persisted in the client&rsquo;s own database, so quality is measured from

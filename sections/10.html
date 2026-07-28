@@ -13,60 +13,61 @@
 </style>
 <section id="s10">
 <h2>10. Cost Projection</h2>
-<p>Every dollar figure below is <strong>lifted as-is from its source design's AWS cost projection</strong>
-&mdash; only the service <em>names</em> are relabeled to their <a class="xref" href="#s3">&sect;3</a> Technology Stack Azure equivalents
-(Fargate&nbsp;&rarr;&nbsp;Azure Container Apps, ElastiCache&nbsp;&rarr;&nbsp;Azure Cache for Redis,
-SNS&nbsp;&rarr;&nbsp;Azure Notification Hubs, CloudWatch&nbsp;&rarr;&nbsp;Azure Monitor, EC2&nbsp;&rarr;&nbsp;Azure
-VM). No new Azure prices are estimated here: Container Apps' consumption pricing, Azure Cache for Redis
-tiers, and Notification Hubs' push pricing all differ from their AWS counterparts' rate cards, and none of
-the three source designs were re-priced against Azure. Treat every figure as <strong>directional, pending a
-real Azure re-pricing pass</strong> before this becomes a budget commitment.</p>
+<p>Every dollar figure below is <strong>lifted as-is from its source design's AWS cost projection</strong>.
+Auto-Dispatch (A) deploys on real AWS infrastructure (<a class="xref" href="#s3">&sect;3</a>/<a class="xref" href="#s4">&sect;4</a>), so its figures need
+<strong>no relabeling</strong> &mdash; the original AWS Fargate / ElastiCache / SNS / CloudWatch / EC2 rate cards
+apply directly. Only B and C's shared AI tier runs on Azure, so <em>its</em> service names are relabeled to
+their <a class="xref" href="#s3">&sect;3</a> Technology Stack Azure equivalents (Fargate&nbsp;&rarr;&nbsp;Azure Container Apps,
+CloudWatch&nbsp;&rarr;&nbsp;Azure Monitor). No new Azure prices are estimated here: Container Apps'
+consumption pricing and Azure Monitor's rates differ from their AWS counterparts' rate cards, and the source
+design quantifying this tier was never re-priced against Azure. Treat the B/C figures as
+<strong>directional, pending a real Azure re-pricing pass</strong> before they become a budget commitment.</p>
 
-<div class="callout amber"><b>Pending Azure re-pricing:</b> the numbers in this section are the original AWS
-estimates for A and C, carried over unchanged. Treat them as a same-order-of-magnitude placeholder, not a quote &mdash; get actual
-Azure Container Apps / Azure Cache for Redis / Notification Hubs / Azure Monitor rates before this section is
-used for a real budget.</div>
+<div class="callout amber"><b>Pending Azure re-pricing &mdash; B/C only:</b> the numbers in the shared AI
+server / vector store block below are the original AWS estimates from C's source design, carried over
+unchanged under Azure service names. Treat them as a same-order-of-magnitude placeholder, not a quote
+&mdash; get actual Azure Container Apps / Azure Monitor rates before this section is used for a real
+budget. Auto-Dispatch's (A) figures below need no such caveat: it runs on real AWS.</div>
 
 <h3><span class="chip">A</span> Auto-Dispatch</h3>
-<p>Only the Container Apps worker pool is a variable cost &mdash; it is the whole point of scale-to-zero.
-Everything else is fixed or effectively free. Source rates were <code>us-east-1</code> AWS Fargate/ElastiCache/SNS list prices &mdash;
-<strong>verify against actual Azure rates at build time</strong>.</p>
+<p>Only the ECS Fargate worker pool is a variable cost &mdash; it is the whole point of scale-to-zero.
+Everything else is fixed or effectively free. Rates are <code>us-east-1</code> AWS Fargate/ElastiCache/SNS
+list prices, applied directly &mdash; Auto-Dispatch runs on real AWS, so no re-pricing pass is needed.</p>
 
 <div class="card">
-<h4>Azure Container Apps cost formula <span style="font-weight:500;color:var(--text-muted);font-size:13px;">&mdash; carried from the source Fargate formula</span></h4>
-<p style="margin-bottom:10px;">Task = 1 vCPU / 2&nbsp;GB &rarr; <code>$0.04937</code> per task-hour (source AWS Fargate rate)</p>
+<h4>AWS ECS Fargate cost formula</h4>
+<p style="margin-bottom:10px;">Task = 1 vCPU / 2&nbsp;GB &rarr; <code>$0.04937</code> per task-hour (AWS Fargate rate)</p>
 <pre class="cl-pre"><code>monthly_cost = N x H x 30 x (1 x $0.04048  +  2 x $0.004445)
              = N x H x 30 x $0.04937
 
-N = number of Container Apps tasks (2 assumed; each handles 20 dispatches concurrently)
+N = number of ECS Fargate tasks (2 assumed; each handles 20 dispatches concurrently)
 H = hours the division is ON per day</code></pre>
 </div>
 
 <div class="card">
-<h4>Azure Cache for Redis + Notification Hubs cost <span style="font-weight:500;color:var(--text-muted);font-size:13px;">&mdash; fixed &amp; near-zero</span></h4>
-<pre class="cl-pre"><code>azure_cache = $0.032/hr x 730 hr/mo  =  ~$23.36/mo   (t4g.small-equivalent tier, always on)
+<h4>Amazon ElastiCache for Redis + Amazon SNS cost <span style="font-weight:500;color:var(--text-muted);font-size:13px;">&mdash; fixed &amp; near-zero</span></h4>
+<pre class="cl-pre"><code>elasticache = $0.032/hr x 730 hr/mo  =  ~$23.36/mo   (t4g.small-equivalent tier, always on)
 
-notification_hubs = $0.50 per 1,000,000 pushes   (first 1M/mo free &mdash; source SNS rate)
+sns = $0.50 per 1,000,000 pushes   (first 1M/mo free)
             e.g. 500 dispatches/day x 5 techs x 30 = 75,000 pushes/mo  ->  $0 (within free tier)
             FCM (Android) = $0        APNs (iOS) = $0</code></pre>
 </div>
 
 <div class="cl-table-wrap"><table class="cl-table s10-table">
-<thead><tr><th>Scenario</th><th>N tasks</th><th>Hours ON/day</th><th>Container Apps/mo</th><th>Azure Cache/mo</th><th>Notification Hubs/push</th><th>Total/mo*</th></tr></thead>
+<thead><tr><th>Scenario</th><th>N tasks</th><th>Hours ON/day</th><th>ECS Fargate/mo</th><th>ElastiCache/mo</th><th>SNS/push</th><th>Total/mo*</th></tr></thead>
 <tbody>
 <tr><td>Light / 2h day</td><td>2</td><td>2</td><td>~$5.92</td><td>~$23</td><td>~$0</td><td><strong>~$29</strong></td></tr>
 <tr><td>8h-ON daily</td><td>2</td><td>8</td><td>~$23.70</td><td>~$23</td><td>~$0</td><td><strong>~$47</strong></td></tr>
 <tr><td>24&times;7 always-on</td><td>2</td><td>24</td><td>~$71.09</td><td>~$23</td><td>~$0</td><td><strong>~$94</strong></td></tr>
 </tbody>
 </table></div>
-<p class="s10-note">*Figures are the source AWS estimates carried over unrepriced (see callout above); excludes
-the existing Azure VM app host + AWS SQL Server (sunk &mdash; unchanged by this project, itemized separately
-below). Azure Cache row uses the source's <code>cache.t4g.small</code>-equivalent fixed rate,
-~$0.032/hr.</p>
+<p class="s10-note">*Excludes the existing AWS EC2 app host + AWS SQL Server (sunk &mdash; unchanged by this
+project, itemized separately below). ElastiCache row uses the <code>cache.t4g.small</code>-equivalent fixed
+rate, ~$0.032/hr.</p>
 
-<div class="callout azure"><b>Scale-to-zero payoff:</b> a disabled division drops its Container Apps line to
+<div class="callout azure"><b>Scale-to-zero payoff:</b> a disabled division drops its ECS Fargate line to
 $0 &mdash; the 24&times;7 vs Light / 2h day rows differ by <strong>~12&times;</strong> on the variable cost.
-Fixed floor stays ~$23/mo (Azure Cache) regardless.</div>
+Fixed floor stays ~$23/mo (ElastiCache) regardless.</div>
 
 <h3 style="margin-top:38px"><span class="chip">B</span><span class="chip" style="margin-left:4px;">C</span> Job Summarisation &amp; Parts Finder &mdash; Shared AI Server + Vector Store</h3>
 <p>B and C share one central AI service and one vector store (<a class="xref" href="#s3">&sect;3</a> Technology Stack), so their
@@ -108,7 +109,7 @@ against the same shared instances rather than a second bill.</div>
 
 <h3 style="margin-top:38px">Database &amp; Cross-Cloud Egress &mdash; the One AWS Line</h3>
 <p>Per <a class="xref" href="#s3">&sect;3</a>/<a class="xref" href="#s4">&sect;4</a>, the SQL Server system of record is the one piece of Stream 1 that deliberately stays
-on AWS instead of moving to Azure. It is its own cost line, not folded into the Azure figures above.</p>
+on AWS instead of moving to Azure. It is its own cost line, not folded into the figures above.</p>
 <div class="cl-table-wrap"><table class="cl-table s10-table">
 <thead><tr><th>Component</th><th>Cloud</th><th>~ Monthly</th></tr></thead>
 <tbody>
@@ -118,11 +119,12 @@ on AWS instead of moving to Azure. It is its own cost line, not folded into the 
 </table></div>
 <div class="callout warn"><b>New cost this project adds:</b> the egress line is a genuinely new cost, not a
 relabeled one &mdash; none of the three single-cloud source designs paid a cross-cloud data-transfer fee,
-because none of them had a cross-cloud hop. Every dispatch read/write (A) and every <code>ai.*</code>
-read/write (B, C) against AWS SQL Server from Azure compute bills AWS egress on the way out, per <a class="xref" href="#s4">&sect;4</a>'s
-cross-cloud callout. Sizing this requires a traffic estimate (dispatches/day &times; summaries/day &times;
-parts-lookups/day &times; average payload size) that no source design provides &mdash; get an AWS Data
-Transfer OUT quote once real volume is known, rather than guessing a number here.</div>
+because none of them had a cross-cloud hop. Only every <code>ai.*</code> read/write (B, C) against AWS SQL
+Server from the Azure AI server bills AWS egress on the way out, per <a class="xref" href="#s4">&sect;4</a>'s cross-cloud
+callout &mdash; Auto-Dispatch (A) reads/writes SQL Server from AWS EC2/ECS Fargate, same cloud, no egress.
+Sizing the B/C line requires a traffic estimate (summaries/day &times; parts-lookups/day &times; average
+payload size) that no source design provides &mdash; get an AWS Data Transfer OUT quote once real volume is
+known, rather than guessing a number here.</div>
 
 </section>
 
