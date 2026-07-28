@@ -11,9 +11,10 @@
 </style>
 <h2>3. Technology Stack</h2>
 <p>Ten layers, three use cases. The existing platform pieces — client apps, the .NET API host, SQL
-Server, observability — are <b>shared</b>: reused as-is, not rebuilt. New AI-specific infrastructure
-is scoped per use case: A gets a durable dispatch queue and a worker pool; B and C share a central
-AI service, an Azure-hosted vector store, and the same self-hosted model stack.</p>
+Server, observability — are <b>shared</b>: reused as-is, not rebuilt. A's new tier — durable dispatch
+queue, worker pool, push — stays on <b>AWS</b> alongside the existing platform; B and C's new tier — a
+central AI service and vector store — is the one part of Stream 1 that runs on <b>Azure</b>, reached by
+a single cross-cloud hop from the AWS side.</p>
 
 <div class="stack-wrap">
 <table class="stack-table">
@@ -34,7 +35,7 @@ AI service, an Azure-hosted vector store, and the same self-hosted model stack.<
 </tr>
 <tr>
   <td><div class="layer-name">App / API host</div></td>
-  <td colspan="3" class="unified">.NET Legacy API + .NET Microservices API on <b>Azure VM</b> <span class="tag exist">existing</span><span class="role">One shared application host across all three use cases. The Microservices API gains a new AI-proxy route (B, C) and a new Container Apps scale-monitor route (A).</span></td>
+  <td colspan="3" class="unified">.NET Legacy API + .NET Microservices API on <b>AWS EC2</b> <span class="tag exist">existing</span><span class="role">One shared application host across all three use cases. The Microservices API gains a new AI-proxy route (B, C) and a new ECS Fargate scale-monitor route (A).</span></td>
 </tr>
 <tr>
   <td><div class="layer-name">Central AI service</div></td>
@@ -43,13 +44,13 @@ AI service, an Azure-hosted vector store, and the same self-hosted model stack.<
 </tr>
 <tr>
   <td><div class="layer-name">Workers</div></td>
-  <td><b>Azure Container Apps</b> <span class="tag new">new</span><span class="role">Async worker pool &middot; scales 0&ndash;1 on toggle &middot; 20 concurrent dispatches per task</span></td>
+  <td><b>AWS ECS Fargate</b> <span class="tag new">new</span><span class="role">Async worker pool &middot; scales 0&ndash;1 on toggle &middot; 20 concurrent dispatches per task</span></td>
   <td class="na">N/A</td>
   <td class="na">N/A</td>
 </tr>
 <tr>
-  <td><div class="layer-name">Queue</div></td>
-  <td><b>Azure Cache for Redis</b> <span class="tag new">new</span><span class="role">Streams (XREADGROUP / XACK / XCLAIM) &middot; division locks &middot; per-technician reply BLPOP</span></td>
+  <td><div class="layer-name">Message Broker</div></td>
+  <td><b>Amazon ElastiCache for Redis</b> <span class="tag new">new</span><span class="role">Redis Streams (XREADGROUP / XACK / XCLAIM) &middot; division locks &middot; per-technician reply BLPOP &middot; decided implementation for the durable dispatch queue</span></td>
   <td class="na">N/A</td>
   <td class="na">N/A</td>
 </tr>
@@ -61,13 +62,13 @@ AI service, an Azure-hosted vector store, and the same self-hosted model stack.<
 </tr>
 <tr>
   <td><div class="layer-name">Push</div></td>
-  <td><b>Azure Notification Hubs</b> <span class="tag new">new</span><span class="role">APNs (iOS) + FCM (Android) &middot; one Publish call per device endpoint</span></td>
+  <td><b>Amazon SNS</b> <span class="tag new">new</span><span class="role">APNs (iOS) + FCM (Android) &middot; one Publish call per device endpoint</span></td>
   <td class="na">N/A</td>
   <td class="na">N/A</td>
 </tr>
 <tr class="db-row">
   <td><div class="layer-name">Database</div></td>
-  <td colspan="3" class="unified"><b>AWS SQL Server</b> <span class="pill aws">AWS</span><span class="role">System of record. A reads/writes dispatch &amp; assignment tables; B and C each add an isolated <code>ai.*</code> schema — zero mixing with business tables. The one deliberate cross-cloud dependency in Stream 1 (see <a class="xref" href="#s2">&sect;2</a> cloud placement).</span></td>
+  <td colspan="3" class="unified"><b>AWS SQL Server</b> <span class="pill aws">AWS</span><span class="role">System of record. A reads/writes dispatch &amp; assignment tables directly from AWS EC2 and AWS ECS Fargate — no cross-cloud hop for this data. B and C each add an isolated <code>ai.*</code> schema — zero mixing with business tables. Stream 1's one cross-cloud hop is the AI request itself (AWS &rarr; Azure), not this database (see <a class="xref" href="#s2">&sect;2</a> cloud placement).</span></td>
 </tr>
 <tr>
   <td><div class="layer-name">Models</div></td>
@@ -76,19 +77,21 @@ AI service, an Azure-hosted vector store, and the same self-hosted model stack.<
 </tr>
 <tr>
   <td><div class="layer-name">Observability</div></td>
-  <td colspan="3" class="unified">OpenTelemetry + <b>Azure Monitor</b> <span class="tag new">new</span><span class="role">Every service — Azure VM host, Container Apps, Redis-fed workers, vector store calls — emits traces and logs to one place.</span></td>
+  <td colspan="3" class="unified">OpenTelemetry + <b>CloudWatch</b> (AWS) + <b>Azure Monitor</b> (AI stack) <span class="tag new">new</span><span class="role">Every service — AWS EC2 host, ElastiCache-fed workers, ECS Fargate, the Azure AI server, vector store calls — emits traces and logs via OpenTelemetry, viewed through CloudWatch on the AWS side and Azure Monitor for the AI stack.</span></td>
 </tr>
 </tbody>
 </table>
 </div>
-<p class="diagram-note">Cloud transform applied throughout: every AWS-specific service named in the three
-per-use-case source specs — mobile push fan-out, the async worker/queue tier, the app compute host,
-and the vector store — is translated to its Azure equivalent above. <b>AWS SQL Server</b> is the one
-deliberate exception, staying on AWS as Stream 1's sole cross-cloud dependency.</p>
+<p class="diagram-note">New non-AI infrastructure — the message broker, the worker pool, and push —
+stays on <b>AWS</b>, matching the existing FieldJetX platform. Only the <b>AI stack</b> (the central AI
+service, its MongoDB, and the vector store) runs on <b>Azure</b>; that AI-request hop is Stream 1's sole
+cross-cloud dependency. <b>AWS SQL Server</b> is unaffected either way — it was always AWS and is read
+only by AWS-side compute.</p>
 
 <h3 id="s3a" style="margin-top:34px">Dispatch Worker Stack <span class="chip">A</span></h3>
-<p>Library-level detail for the Auto-Dispatch async worker (the <b>Workers</b> / <b>Queue</b> / <b>Push</b>
-rows above). Fully async top-to-bottom — no thread pools, no blocking calls in the event loop.</p>
+<p>Library-level detail for the Auto-Dispatch async worker (the <b>Workers</b> / <b>Message Broker</b> /
+<b>Push</b> rows above). Fully async top-to-bottom — no thread pools, no blocking calls in the event
+loop.</p>
 <div class="s3-rt-grid">
 
 <div class="s3-rt-card">
@@ -101,18 +104,18 @@ rows above). Fully async top-to-bottom — no thread pools, no blocking calls in
 </div>
 
 <div class="s3-rt-card">
-  <div class="s3-rt-head"><span class="s3-rt-num">2</span>Push &mdash; Azure Notification Hubs</div>
+  <div class="s3-rt-head"><span class="s3-rt-num">2</span>Push &mdash; Amazon SNS</div>
   <ul>
-    <li><code>httpx</code> async client against the Notification Hubs REST API</li>
-    <li>Direct SAS-token generation</li>
-    <li>Avoids thread-blocking of the legacy synchronous SDK wrappers</li>
+    <li><code>aioboto3</code> async client against the SNS <code>Publish</code> API</li>
+    <li>IAM role credentials &mdash; no manual token handling</li>
+    <li>One <code>Publish</code> call per platform endpoint ARN (APNs / FCM)</li>
   </ul>
 </div>
 
 <div class="s3-rt-card">
-  <div class="s3-rt-head"><span class="s3-rt-num">3</span>Messaging &amp; Sync &mdash; Redis</div>
+  <div class="s3-rt-head"><span class="s3-rt-num">3</span>Messaging &amp; Sync &mdash; Amazon ElastiCache for Redis</div>
   <ul>
-    <li><code>redis.asyncio</code> client</li>
+    <li><code>redis.asyncio</code> client against the ElastiCache endpoint</li>
     <li>Input: consumes job tasks via Redis Streams (<code>XREADGROUP</code>)</li>
     <li>Wait-state: unblocked via Pub/Sub or a secondary stream when the mobile app's HTTP reply reaches the API host</li>
   </ul>
