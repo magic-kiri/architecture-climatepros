@@ -103,8 +103,6 @@ staging data (252,615 dispatches). This is what replaced the earlier vector-inde
 <div class="cl-table-wrap"><table class="cl-table">
 <thead><tr><th>Need</th><th>Mechanism</th></tr></thead>
 <tbody>
-<tr><td><strong>Same-site history</strong> (briefing)</td><td>Keyed SQL query: past visit digests for the same customer and site, most recent first.</td></tr>
-<tr><td><strong>Similar past issues</strong> (briefing)</td><td>Deterministic lookup: 2&ndash;3 recent dispatches with the same equipment type and problem code are pulled and handed to the LLM as context. No embeddings, no similarity index.</td></tr>
 <tr><td><strong>Part suggestions</strong></td><td>SQL co-occurrence: a frequency table keyed on (equipment manufacturer type &times; problem code) &rarr; most-used parts, with fallback to equipment type alone, then global top parts. One SQL aggregation, fully explainable.</td></tr>
 <tr><td><strong>Compliance procedures</strong></td><td>Always fetched live from the source system, never cached or embedded: they are compliance-critical and change.</td></tr>
 </tbody>
@@ -143,7 +141,7 @@ text feature engineering; training on code columns alone will underperform the b
 <tbody>
 <tr><td>Is it part of this architecture?</td><td><strong>No.</strong> Decided 2026-07-07: it added infrastructure cost and operational surface without validated benefit.</td></tr>
 <tr><td>When would we add it?</td><td>Only if evals show deterministic retrieval misses relevant history that semantic search over the free-text fields would find, and the gain beats the baseline by enough to pay for the pipeline.</td></tr>
-<tr><td>How would it slot in?</td><td>Behind the existing retrieval abstraction: the briefing builder swaps its SQL lookup for a filtered similarity query; nothing else in the architecture changes. Embeddings can run on the private gateway's nomic-embed model, keeping data in client infrastructure.</td></tr>
+<tr><td>How would it slot in?</td><td>Behind the existing retrieval abstraction: the summarise pipeline swaps its part-suggestion SQL lookup for a filtered similarity query; nothing else in the architecture changes. Embeddings can run on the private gateway's nomic-embed model, keeping data in client infrastructure.</td></tr>
 </tbody>
 </table></div>
 

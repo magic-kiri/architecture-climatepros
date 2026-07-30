@@ -1,0 +1,2221 @@
+<!DOCTYPE html>
+<html><head><meta charset="utf-8"><title>ClimatePros · Stream 1 — Unified Architecture</title><style>body{font-family:Arial,Helvetica,sans-serif;line-height:1.45;font-size:11pt}h1{font-size:26pt}h2{font-size:17pt}h3{font-size:13pt}h4{font-size:11.5pt}h5{font-size:11pt}table{border-collapse:collapse;width:100%}th,td{border:1px solid #999;padding:5px 7px;vertical-align:top;font-size:9.5pt}th{background:#eef2f7;text-align:left}pre{background:#f4f6f8;border:1px solid #d5dbe2;padding:8px;font-family:"Courier New",monospace;font-size:9pt;white-space:pre-wrap}code{font-family:"Courier New",monospace;font-size:9.5pt}blockquote{border-left:3px solid #b9c3cf;margin:10px 0;padding:6px 12px;background:#f7f9fb}</style></head><body>
+<h1 id="climatepros-stream-1-unified-architecture">ClimatePros · Stream 1 — Unified Architecture</h1>
+<p>Version 1.0 — Draft for Client Review</p>
+<p>Use Case A — Auto Dispatch   ·   Use Case B — Closeout Copilot   ·   Use Case C — Parts Finder</p>
+<p><strong>PREPARED FOR</strong></p>
+<p>ClimatePros</p>
+<p><strong>PREPARED BY</strong></p>
+<p>techjays</p>
+<p><strong>ISSUED</strong></p>
+<p>July 28, 2026</p>
+<p><strong>COMPANION TO</strong></p>
+<p>ClimatePros Stream 1 Scope Document v2.0 (July 21, 2026)</p>
+<p><strong>CLASSIFICATION</strong></p>
+<p>Confidential — ClimatePros / techjays</p>
+<hr />
+<p><strong>Document Control</strong></p>
+<table>
+<thead>
+<tr>
+<th>Item</th>
+<th>Detail</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Document</td>
+<td>Stream 1 — Unified Architecture</td>
+</tr>
+<tr>
+<td>Version</td>
+<td>1.0 — Draft for Client Review</td>
+</tr>
+<tr>
+<td>Issued</td>
+<td>July 28, 2026</td>
+</tr>
+<tr>
+<td>Prepared by</td>
+<td>techjays</td>
+</tr>
+<tr>
+<td>Classification</td>
+<td>Confidential — ClimatePros / techjays</td>
+</tr>
+<tr>
+<td>Companion to</td>
+<td>Stream 1 Scope Document v2.0 (July 21, 2026) — that document defines <em>what</em> is in scope; this one defines <em>how</em> it is built.</td>
+</tr>
+<tr>
+<td>Source</td>
+<td>Generated from the <code>stream1-unified-architecture</code> design set (sections 1–12)</td>
+</tr>
+</tbody>
+</table>
+<p><strong>How to Read This Document</strong></p>
+<ul>
+<li>Sections are numbered 1–12 and match the live architecture document one-to-one. Cross-references appear as §N — for example §6 Core Logic.</li>
+<li><strong>Cloud placement rule, applied throughout:</strong> anything AI-specific runs on <strong>Azure</strong> — the FastAPI AI server, its MongoDB, and the vector store. Everything else runs on <strong>AWS</strong>: the .NET APIs on EC2, SQL Server, the ElastiCache for Redis dispatch queue, the ECS Fargate workers, and Amazon SNS push. Models stay <strong>on-prem</strong> on ClimatePros hardware. The single cross-cloud hop is the AI request itself (AWS → Azure).</li>
+<li><strong>Use Case A involves no LLM.</strong> It is a deterministic weighted-sum ranking and must stay explainable. Use Cases B and C are AI-assisted, and in both the technician can always override the output.</li>
+<li>Diagrams appear as <strong>Figure N</strong> placeholders for screenshots from the live HTML document; each carries a caption describing what the figure shows, so the text stands alone without it.</li>
+<li>Formulas, schemas, scoring constants, API parameters and cost line items are reproduced at full fidelity from the source design, not summarised.</li>
+<li>Terminology corrected during conversion is listed in <strong>Appendix A</strong>; open items needing ClimatePros confirmation are listed in <strong>Appendix B</strong>.</li>
+</ul>
+<p><strong>Approval</strong></p>
+<p>Approved for ClimatePros:  ________________________   Date:  ____________</p>
+<p>Approved for techjays:  ___________________________   Date:  ____________</p>
+<hr />
+<p><strong>Table of Contents</strong></p>
+<div class="toc">
+<ul>
+<li><a href="#1-stream-1-overview">1. Stream 1 Overview</a><ul>
+<li><a href="#auto-dispatch-finding-the-right-technician">Auto-Dispatch — finding the right technician</a></li>
+<li><a href="#job-summarisation-copilot-changing-the-job-status">Job Summarisation Copilot — changing the job status</a></li>
+<li><a href="#technician-parts-finder-finding-the-part-that-isnt-on-the-truck">Technician Parts Finder — finding the part that isn't on the truck</a></li>
+</ul>
+</li>
+<li><a href="#2-high-level-architecture">2. High-Level Architecture</a><ul>
+<li><a href="#2a-unified-system-diagram">2a · Unified system diagram</a></li>
+<li><a href="#2b-detailed-architecture-per-use-case">2b · Detailed architecture per use case</a></li>
+</ul>
+</li>
+<li><a href="#3-technology-stack">3. Technology Stack</a><ul>
+<li><a href="#dispatch-worker-stack-a">Dispatch Worker Stack A</a></li>
+<li><a href="#central-ai-service-stack-b-c">Central AI Service Stack B C</a></li>
+</ul>
+</li>
+<li><a href="#4-infrastructure">4. Infrastructure</a><ul>
+<li><a href="#fieldjetx-platform">📱 FieldJetX Platform</a></li>
+<li><a href="#auto-dispatch-tier-central-ai-server">⚡ Auto-Dispatch tier + central AI server</a></li>
+<li><a href="#environments">Environments</a></li>
+<li><a href="#compute-sizing">Compute sizing</a></li>
+<li><a href="#network-topology">Network topology</a></li>
+</ul>
+</li>
+<li><a href="#5-operational-flows">5. Operational Flows</a><ul>
+<li><a href="#a-auto-dispatch-assignment-loop">A Auto-Dispatch — Assignment Loop</a></li>
+<li><a href="#b-job-summarisation-technician-flow">B Job Summarisation — Technician Flow</a></li>
+<li><a href="#c-parts-finder-find-allocate">C Parts Finder — Find &amp; Allocate</a></li>
+</ul>
+</li>
+<li><a href="#6-core-logic-per-use-case">6. Core Logic (per use case)</a><ul>
+<li><a href="#a-auto-dispatch-ranking-algorithm">A Auto-Dispatch — Ranking Algorithm</a></li>
+<li><a href="#b-job-summarisation-summarise-pipeline-retrieval">B Job Summarisation — Summarise Pipeline &amp; Retrieval</a></li>
+<li><a href="#c-parts-finder-matching-sourcing-logic">C Parts Finder — Matching &amp; Sourcing Logic</a></li>
+</ul>
+</li>
+<li><a href="#7-data-schema">7. Data &amp; Schema</a><ul>
+<li><a href="#a-auto-dispatch-amazon-elasticache-for-redis-data-structures">A Auto-Dispatch — Amazon ElastiCache for Redis Data Structures</a></li>
+<li><a href="#b-job-summarisation-the-ai-mongodb-collections">B Job Summarisation — the AI MongoDB Collections</a></li>
+<li><a href="#c-parts-finder-data-model">C Parts Finder — Data Model</a></li>
+</ul>
+</li>
+<li><a href="#8-api-reference">8. API Reference</a><ul>
+<li><a href="#a-auto-dispatch-api-reference">A Auto-Dispatch — API Reference</a></li>
+<li><a href="#b-job-summarisation-api-reference">B Job Summarisation — API Reference</a></li>
+<li><a href="#c-technician-parts-finder-api-reference">C Technician Parts Finder — API Reference</a></li>
+</ul>
+</li>
+<li><a href="#9-observability-evals">9. Observability &amp; Evals</a><ul>
+<li><a href="#unified-observability-opentelemetry-tracing-cloudwatch-azure-monitor-logs">Unified Observability — OpenTelemetry Tracing + CloudWatch / Azure Monitor Logs</a></li>
+<li><a href="#b-evals-the-feedback-loop">B Evals — the Feedback Loop</a></li>
+</ul>
+</li>
+<li><a href="#10-cost-projection">10. Cost Projection</a><ul>
+<li><a href="#a-auto-dispatch">A Auto-Dispatch</a></li>
+<li><a href="#b-c-job-summarisation-parts-finder-shared-ai-server-vector-store">B C Job Summarisation &amp; Parts Finder — Shared AI Server + Vector Store</a></li>
+<li><a href="#database-cross-cloud-egress">Database &amp; Cross-Cloud Egress</a></li>
+</ul>
+</li>
+<li><a href="#11-onboarding-fault-tolerance">11. Onboarding &amp; Fault Tolerance</a><ul>
+<li><a href="#a-auto-dispatch_1">A Auto-Dispatch</a></li>
+<li><a href="#b-job-summarisation">B Job Summarisation</a></li>
+<li><a href="#c-parts-finder">C Parts Finder</a></li>
+</ul>
+</li>
+<li><a href="#12-non-goals-pii">12. Non-goals &amp; PII</a><ul>
+<li><a href="#non-goals">Non-goals</a></li>
+<li><a href="#pii-inventory-data-handling">PII inventory &amp; data handling</a></li>
+</ul>
+</li>
+<li><a href="#appendix-a-corrections-applied-during-conversion">Appendix A — Corrections applied during conversion</a></li>
+<li><a href="#appendix-b-open-items">Appendix B — Open items</a></li>
+</ul>
+</div>
+<hr />
+<h2 id="1-stream-1-overview">1. Stream 1 Overview</h2>
+<p>ClimatePros runs commercial refrigeration &amp; HVAC field service: ~900–1,000 technicians , 46 branches , 10,000+ sites . Work orders arrive automatically. Everything after that still runs on a phone call and a technician's memory . Three use cases, three bottlenecks, one job.
+Where AI sits: Use Case A is a deterministic algorithm — no LLM . It replaces a decision a dispatcher already makes by hand, so it must be explainable and repeatable. Use Cases B and C use AI, and in both the technician can always override it .
+~900–1,000
+Technicians
+46
+Branches
+10,000+
+Sites
+A Algorithm · no LLM</p>
+<h3 id="auto-dispatch-finding-the-right-technician">Auto-Dispatch — finding the right technician</h3>
+<p>Web portal · Dispatcher
+A dispatcher has a job ready and ~40 candidate techs in the region. The four things that decide the right one — how far, how familiar with the site, how soon free, how urgent — are each buried behind separate clicks or held in the dispatcher's head . Confirming one means dialling candidates one at a time , ~2–3 min each; no answer → call the next.
+Why it hurts: two dispatchers per branch are the throughput ceiling — more job volume means more headcount, not faster dispatch.
+We solve: rank on those same four factors; push an accept/decline offer that cascades automatically. No LLM — every assignment explainable.
+B AI · tech overrides</p>
+<h3 id="job-summarisation-copilot-changing-the-job-status">Job Summarisation Copilot — changing the job status</h3>
+<p>Mobile · Technician at end of job
+Every job ends with a mandatory status change , and behind it sits a wall of forms plus two free-text notes — one for the customer, one for the office. Done properly it takes 10–15 min , often in a machine room with no signal where voice dictation is only ~30% accurate .
+Why it hurts: so the tech skimps — ~40% of 16.3M notes are ≤40 chars , the most common note is literally "checked history". Downstream the office can't bill or route ("Replaced motor" — but no motor in the parts list).
+We solve: restructure rough words into a clean customer/office note and suggest form values from similar jobs; flag what's missing. Never fabricates, never blocks Save. Target: 10–15 min → ~15 s .
+C AI · tech overrides</p>
+<h3 id="technician-parts-finder-finding-the-part-that-isnt-on-the-truck">Technician Parts Finder — finding the part that isn't on the truck</h3>
+<p>Mobile · Technician on-site
+On site the tech needs a part. Three sources the app already answers — truck, nearby techs, warehouse. The fourth, a third-party supplier , is a phone call: Google search, 1–3 calls, hope they answer .
+Why it hurts: the same physical part carries a different number at every vendor , and the supplier API matches exact part number only — no fuzzy logic . A human bridges that gap by phone under emergency pressure; miss it and it's a return dispatch — a second truck roll, job can't finish today.
+We solve: AI suggests the likely part; one search shows where it is across all four sources with location and distance. No price ranking, no ordering.
+Work order in → (A) the right tech is offered the job on the web portal → tech arrives on site → (C) the missing part is found on mobile without a phone call → (B) the closeout note writes itself. Full step-by-step diagrams for all three: see §5 Operational Flows .</p>
+<h2 id="2-high-level-architecture">2. High-Level Architecture</h2>
+<h3 id="2a-unified-system-diagram">2a · Unified system diagram</h3>
+<blockquote>
+<p><strong>Figure 1 — Unified system diagram · ClimatePros Stream 1</strong></p>
+<p><em>[Paste screenshot here.]</em> Six zones: clients; the existing FieldJetX platform on AWS; new AWS infrastructure (queue, workers, push); the new Azure AI stack (FastAPI AI server, MongoDB, vector store); the private on-prem model infra; and the cross-cutting observability layer. Live version: <code>stream1-unified-architecture.html</code>.</p>
+</blockquote>
+<p>Everything runs on AWS alongside the existing FieldJetX platform — except the AI stack (FastAPI AI server, its own MongoDB, vector DB), which runs on Azure . The AI server is the single cross-cloud hop, and it holds no SQL Server connection : it owns its own datastore.
+The diagram groups the system into six zones — clients , the existing FieldJetX platform (AWS) , the new AWS infrastructure (queue, workers, push), the new Azure AI stack (AI server + its own datastore + vector DB), the private on-prem models , and a cross-cutting observability layer. What follows is the overall flow: which entity talks to which, and why. Per-use-case wiring (queues, locks, schemas, ranking, scoring) is detailed in §2b — this section stays deliberately high-level.</p>
+<h4 id="entry-single-front-door">Entry · single front door</h4>
+<p>Web App + Mobile App → AWS EC2 (.NET APIs)
+Both clients speak only to the existing .NET APIs on the EC2 application host over HTTPS. Neither the new infrastructure nor the models are ever reached directly — the legacy platform stays the single entry point and gains just two new additions: an AI proxy route and an ECS task-scale controller (spins workers up/down).</p>
+<h4 id="data-two-stores-cleanly-split">Data · two stores, cleanly split</h4>
+<p>EC2 ↔ SQL Server (AWS) ↔ ECS workers | FastAPI ↔ MongoDB (Azure)
+SQL Server stays the system of record for business data — the EC2 .NET APIs and the new ECS dispatch workers read/write it directly, all inside AWS. The FastAPI AI server never connects to SQL Server : it owns a separate MongoDB (Azure Cosmos DB for MongoDB) for summaries, part-search results, llm_calls traces and eval data. Any business context it needs arrives in the request payload from the .NET AI proxy.</p>
+<h4 id="dispatch-use-case-a-no-llm">Dispatch · Use Case A · no LLM</h4>
+<p>.NET → ElastiCache → ECS Fargate → SNS → Mobile
+When auto-dispatch is on, the .NET API publishes the job to ElastiCache for Redis and the scale monitor spins ECS Fargate workers 0→1 . Workers consume the stream, rank technicians, and push accept/decline offers out through Amazon SNS (APNs/FCM) to the technician's phone. Entirely on AWS — no cross-cloud hop. The reply path returns via the .NET API. Deterministic — no model involved.</p>
+<h4 id="ai-use-cases-b-c">AI · Use Cases B &amp; C</h4>
+<p>.NET (AWS) → FastAPI AI Server (Azure) → Vector DB / MongoDB
+For summarisation (B) and parts finding (C), the .NET AI proxy forwards the request — with the job context in the payload — across to the FastAPI AI Server on Azure , the single central AI service and the only path to the models . It queries/upserts the Vector DB for historical retrieval and persists its outputs to its own MongoDB . This AWS→Azure call is the sole cross-cloud dependency ; the AI stack is self-contained behind it.</p>
+<h4 id="models-private-on-prem">Models · private, on-prem</h4>
+<p>FastAPI → LiteLLM Gateway → self-hosted LLM / embedding / Gemini
+All inference goes through the on-prem LiteLLM Gateway , which routes to the self-hosted qwen3-vl-moe (vLLM) and bge-m3 embedding, with Gemini as external fallback . No service calls a model directly — LiteLLM is the sole gate, keeping data inside ClimatePros infra.</p>
+<h4 id="observability-cross-cutting">Observability · cross-cutting</h4>
+<p>all services → OpenTelemetry / CloudWatch + Azure Monitor
+Every service emits traces and logs to a shared observability layer (OpenTelemetry) — CloudWatch on the AWS side, Azure Monitor for the AI stack.</p>
+<h3 id="2b-detailed-architecture-per-use-case">2b · Detailed architecture per use case</h3>
+<blockquote>
+<p><strong>Figure 2 — Use Case A — detailed architecture (Auto-Dispatch)</strong></p>
+<p><em>[Paste screenshot here.]</em> Blue = existing · unchanged; amber dashed = new · this project; purple = toggle/config flow; green = DB read/write. Entirely within AWS. Live version: <code>stream1-unified-architecture.html</code>.</p>
+<p><strong>Figure 3 — Use Cases B &amp; C — detailed architecture (shared AI service)</strong></p>
+<p><em>[Paste screenshot here.]</em> Blue = existing · unchanged; amber dashed = new · this project; purple = LLM/embedding calls (client-hosted, off-cloud); green = persist/read. Grey dashed = optional vector index. Live version: <code>stream1-unified-architecture.html</code>.</p>
+</blockquote>
+<p>A A adds: durable dispatch queue + ECS Fargate worker + push-offer cascade.
+Use Case A architecture: blue = existing · unchanged, amber dashed = new · this project, purple = toggle/config flow, green = DB read/write. All of Use Case A runs on AWS: the .NET Legacy and Microservices APIs on AWS EC2, the dispatch workers on AWS ECS Fargate, the durable queue on Amazon ElastiCache for Redis, push through Amazon SNS, and AWS SQL Server as the system of record. No part of A touches Azure — there is no LLM in this use case.
+B C B &amp; C add: central FastAPI AI server + vector history index. B runs the summarise pipeline; C the four-source part search + fuzzy matching — same wiring, different pipeline.
+One diagram serves both B and C — they share the same detailed architecture (central FastAPI AI server + vector history index, same Azure/on-prem model path). Only the pipeline differs, detailed in §6 . Blue = existing · unchanged, amber dashed = new · this project, purple = LLM/embedding calls (client-hosted, off-cloud), green = persist/read. The vector history index is an optional future add-on (grey dashed), added only if evals demand it. The AI service is a portable Docker container; the existing platform is restated on AWS EC2. The FastAPI AI server and its datastores are the only Azure components in this diagram.
+AI data is self-contained. The FastAPI AI server owns its own MongoDB (Azure Cosmos DB for MongoDB, vCore) and holds no SQL Server connection at all — it persists its own outputs (summaries, part-search results, LLM-call traces and eval data) in its own collections. Any business context it needs arrives in the request payload from the .NET AI proxy, so the AI datastore is never coupled to the legacy relational schema.</p>
+<h2 id="3-technology-stack">3. Technology Stack</h2>
+<p>Ten layers, three use cases. The existing platform pieces — client apps, the .NET API host, SQL Server, observability — are shared : reused as-is, not rebuilt. A's new tier — durable dispatch queue, worker pool, push — stays on AWS alongside the existing platform; B and C's new tier — a central AI service and vector store — is the one part of Stream 1 that runs on Azure , reached by a single cross-cloud hop from the AWS side.</p>
+<table>
+<thead>
+<tr>
+<th>Layer</th>
+<th>A Auto-Dispatch</th>
+<th>B Job Summarisation</th>
+<th>C Parts Finder</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Client</td>
+<td>FieldJetX Web App (Angular) existing + Mobile App (Flutter) existing Dispatcher console (web) + technician accept/decline offers (mobile)</td>
+<td>FieldJetX Mobile App (Flutter) existing Technician close-out wizard</td>
+<td>FieldJetX Mobile App (Flutter) existing Technician on-site search</td>
+</tr>
+<tr>
+<td>App / API host</td>
+<td>.NET Legacy API + .NET Microservices API on AWS EC2 existing One shared application host across all three use cases. The Microservices API gains a new AI-proxy route (B, C) and a new ECS Fargate scale-monitor route (A).</td>
+<td></td>
+<td></td>
+</tr>
+<tr>
+<td>Central AI service</td>
+<td>N/A deterministic — no LLM</td>
+<td>FastAPI on Azure Container Apps new Single entry point for both B and C; stateless, horizontally scalable containers; the only path to the models.</td>
+<td></td>
+</tr>
+<tr>
+<td>Workers</td>
+<td>AWS ECS Fargate new Async worker pool · scales 0–1 on toggle · 20 concurrent dispatches per task</td>
+<td>N/A</td>
+<td>N/A</td>
+</tr>
+<tr>
+<td>Message Broker</td>
+<td>Amazon ElastiCache for Redis new Redis Streams (XREADGROUP / XACK / XCLAIM) · division locks · per-technician reply BLPOP · decided implementation for the durable dispatch queue</td>
+<td>N/A</td>
+<td>N/A</td>
+</tr>
+<tr>
+<td>Vector store</td>
+<td>N/A</td>
+<td>Azure-hosted vector store experimental Cross-site similar-incident retrieval. Built only if the dataset proves it beats the deterministic baseline — decided from the data.</td>
+<td>Azure-hosted vector store experimental Fuzzy part-number matching via embedded dispatch-parts history + cosine similarity. Built only if the dataset proves it beats exact/keyword lookup — decided from the data.</td>
+</tr>
+<tr>
+<td>Push</td>
+<td>Amazon SNS new APNs (iOS) + FCM (Android) · one Publish call per device endpoint</td>
+<td>N/A</td>
+<td>N/A</td>
+</tr>
+<tr>
+<td>Database</td>
+<td>AWS SQL Server AWS System of record. A reads/writes dispatch &amp; assignment tables directly from AWS EC2 and AWS ECS Fargate — no cross-cloud hop for this data. B and C add no tables to SQL Server at all: they persist their AI output to the AI server's own MongoDB on Azure, and read business context only via the payload the .NET AI proxy sends. Stream 1's one cross-cloud hop is the AI request itself (AWS → Azure), not this database (see §2 cloud placement).</td>
+<td></td>
+<td></td>
+</tr>
+<tr>
+<td>Models</td>
+<td>N/A no LLM in this use case</td>
+<td>LiteLLM gateway (routing · primary + fallback) · self-hosted qwen3-vl-moe (vLLM) generation · bge-m3 embedding · Gemini fallback on-prem · unchanged Client's private hardware; dispatch/job text and images never leave client infrastructure. Any model or provider change must pass the eval set first.</td>
+<td></td>
+</tr>
+<tr>
+<td>Observability</td>
+<td>OpenTelemetry + CloudWatch (AWS) + Azure Monitor (AI stack) new Every service — AWS EC2 host, ElastiCache-fed workers, ECS Fargate, the Azure AI server, vector store calls — emits traces and logs via OpenTelemetry, viewed through CloudWatch on the AWS side and Azure Monitor for the AI stack.</td>
+<td></td>
+<td></td>
+</tr>
+</tbody>
+</table>
+<p>New non-AI infrastructure — the message broker, the worker pool, and push — stays on AWS , matching the existing FieldJetX platform. Only the AI stack (the central AI service, its MongoDB, and the vector store) runs on Azure ; that AI-request hop is Stream 1's sole cross-cloud dependency. AWS SQL Server is unaffected either way — it was always AWS and is read only by AWS-side compute.</p>
+<h3 id="dispatch-worker-stack-a">Dispatch Worker Stack A</h3>
+<p>Library-level detail for the Auto-Dispatch async worker (the Workers / Message Broker / Push rows above). Fully async top-to-bottom — no thread pools, no blocking calls in the event loop.
+1 Core Runtime
+- Python 3.11+
+- asyncio event loop drives all worker tasks
+- asyncio.Semaphore for concurrency control
+2 Push — Amazon SNS
+- aioboto3 async client against the SNS Publish API
+- IAM role credentials — no manual token handling
+- One Publish call per platform endpoint ARN (APNs / FCM)
+3 Messaging &amp; Sync — Amazon ElastiCache for Redis
+- redis.asyncio client against the ElastiCache endpoint
+- Input: consumes job tasks via Redis Streams ( XREADGROUP )
+- Wait-state: unblocked via Pub/Sub or a secondary stream when the mobile app's HTTP reply reaches the API host
+4 External Requests
+- httpx with built-in async connection pooling for 3rd-party API calls</p>
+<h3 id="central-ai-service-stack-b-c">Central AI Service Stack B C</h3>
+<p>Library-level detail for the shared FastAPI AI service (the Central AI service row above) — the single entry point for both B and C, and the only path to the models.
+1 Core Runtime
+- Python 3.11+
+- FastAPI async framework · Uvicorn ASGI server
+- pydantic request/response schemas
+2 Model Access
+- httpx async client to the LiteLLM gateway
+- Generation via qwen3-vl-moe (vLLM) · embeddings via bge-m3
+- Gateway handles primary + fallback routing (Gemini fallback)
+3 Retrieval experimental
+- Async client to the Azure-hosted vector store
+- Cosine-similarity search over bge-m3 embeddings
+- Built only if it beats the deterministic baseline — decided from the data</p>
+<h2 id="4-infrastructure">4. Infrastructure</h2>
+<p>What Stream 1 already has vs. what it introduces — the same §3 layers, regrouped by existing-platform vs. new-build. The existing platform and all new non-AI plumbing stay on AWS , aligned with FieldJetX; only the AI stack (FastAPI AI server + its own datastores) runs on Azure , with the models on-prem. See the callout below.
+Existing · reused as-is</p>
+<h3 id="fieldjetx-platform">📱 FieldJetX Platform</h3>
+<ul>
+<li>Mobile App — FieldJetX (Flutter) · technician-facing (B, C)</li>
+<li>FieldJetX Web App — admin / dispatcher console (A)</li>
+<li>AWS EC2 — one host running both .NET services AWS</li>
+<li>.NET Legacy API — existing service on the EC2 host AWS EC2</li>
+<li>.NET Microservices API — existing service on the EC2 host; gains new routes for A/B/C AWS EC2</li>
+<li>AWS SQL Server — system of record · business data only AWS
+New · introduced by this project</li>
+</ul>
+<h3 id="auto-dispatch-tier-central-ai-server">⚡ Auto-Dispatch tier + central AI server</h3>
+<ul>
+<li>Message Broker — Amazon ElastiCache for Redis , using Redis Streams (consumer groups + replay) as the durable dispatch queue for Auto-Dispatch (A) AWS</li>
+<li>ECS Fargate — Auto-Dispatch workers — scale 0–1 on toggle; consume queued dispatches, read/write SQL Server AWS ECS</li>
+<li>Amazon SNS — outbound push to technician phones (APNs / FCM); worker → SNS → Mobile App AWS</li>
+<li>Azure Container Apps — AI Server (FastAPI) — central AI service for B &amp; C; the only component that reaches the models. Two subsystems ride inside it: Observability &amp; Evals — every LLM call → llm_calls · technician edits → eval set · dashboard served here, viewed via the .NET proxy Suggestion engine — lightweight LSTM / classical ML · root cause → parts + relevant dispatch Azure</li>
+<li>MongoDB — AI-owned datastore: summaries · part results · llm_calls · evals. No SQL Server coupling. Azure Cosmos DB (vCore)</li>
+<li>Vector store — embedded dispatch-parts history index (C) · optional future similar-incident index (B) · only if evals demand it Azure AI Search / Pinecone</li>
+<li>.NET additions — AI-proxy route (B, C) + ECS task scale-monitor route (A) on the existing Microservices API AWS EC2</li>
+<li>LiteLLM Gateway + self-hosted LLM (qwen3-vl-moe / vLLM) + embedding (bge-m3) — private model infra, client hardware on-prem</li>
+<li>Google Gemini — managed fallback only, not primary external</li>
+<li>Observability &amp; Tracing — OpenTelemetry traces + logs → CloudWatch (AWS) + Azure Monitor (AI stack) abstract
+2
+new compute tiers
+ECS Fargate workers (0–1) + Container Apps AI server
+1
+new message broker
+Amazon ElastiCache for Redis (Redis Streams)
+2
+new data stores
+MongoDB + vector store (conditional)
+3
+off-cloud model entities
+LiteLLM + self-hosted LLM + embedding
+1
+external backup
+Google Gemini (fallback only)</li>
+</ul>
+<h3 id="environments">Environments</h3>
+<p>ClimatePros already runs Dev / Staging / Prod . Stream 1 mirrors all three. New AWS tiers (message broker, dispatch workers, push) and new Azure tiers (the AI server, its MongoDB, and the vector store) — plus the on-prem model link — are stood up per environment; the AWS SQL Server system of record is shared — lower environments point at a snapshot or a restricted replica, never live prod data (see §12 PII).</p>
+<table>
+<thead>
+<tr>
+<th>Environment</th>
+<th>Purpose</th>
+<th>What differs from Prod</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Dev</td>
+<td>Integration &amp; feature work provisioned alongside Staging + Prod</td>
+<td>Lowest replica caps; Gemini-only models (no on-prem link); points at a SQL snapshot</td>
+</tr>
+<tr>
+<td>Staging</td>
+<td>Pre-prod validation &amp; evals mirrors Prod topology</td>
+<td>Smaller replica ranges; restricted SQL replica; full model stack for eval fidelity</td>
+</tr>
+<tr>
+<td>Prod</td>
+<td>Live — 900–1,000 technicians, 46 branches full scale + HA</td>
+<td>—</td>
+</tr>
+</tbody>
+</table>
+<h3 id="compute-sizing">Compute sizing</h3>
+<p>New compute tiers — AWS ECS Fargate for dispatch workers, Azure Container Apps for the AI server — run small and scale horizontally, not vertically. Baseline instance size is 0.5 vCPU / 1 GB RAM across both, which handles 60+ concurrent dispatch operations per instance comfortably; load is met by adding replicas/tasks, not bigger boxes.</p>
+<table>
+<thead>
+<tr>
+<th>Component</th>
+<th>Instance size</th>
+<th>Scaling</th>
+<th>Notes</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Dispatch workers (ECS Fargate) AWS</td>
+<td>0.5 vCPU / 1 GB</td>
+<td>Scale 0–1 on Auto-Dispatch toggle</td>
+<td>60+ concurrent dispatches per instance; one instance covers current volume</td>
+</tr>
+<tr>
+<td>AI server (FastAPI) Azure</td>
+<td>0.5 vCPU / 1 GB</td>
+<td>Scale 1–N on request concurrency</td>
+<td>Central B &amp; C service; min 1 replica avoids cold-start on the model path</td>
+</tr>
+<tr>
+<td>Amazon ElastiCache for Redis AWS</td>
+<td>Managed tier</td>
+<td>Fixed; sized to queue depth</td>
+<td>Dispatch queue must not evict — persistence on, no-eviction policy</td>
+</tr>
+<tr>
+<td>Vector store Azure</td>
+<td>Managed / index-sized</td>
+<td>Grows with parts-history corpus</td>
+<td>Embedded dispatch-parts index (C); optional similar-incident index (B)</td>
+</tr>
+</tbody>
+</table>
+<h3 id="network-topology">Network topology</h3>
+<p>The existing platform and all new non-AI infrastructure sit inside a single AWS VPC , matching FieldJetX: EC2 (the .NET hosts) and ECS Fargate (dispatch workers) in an apps subnet, and ElastiCache for Redis and SQL Server reached over private subnets — neither exposes a public IP, so all worker↔broker and worker↔database traffic stays inside the VPC. The only public entry point is the .NET API, fronted by an AWS load balancer / API gateway where WAF filtering and TLS termination happen; the mobile app (B, C) and web console (A) reach the API there.
+A separate Azure VNet holds only the AI stack: Container Apps (the FastAPI AI server) in an apps subnet, with MongoDB and the vector store reached over private endpoints in a data subnet. The one cross-cloud path in Stream 1 is the .NET AI-proxy route on AWS calling the FastAPI AI server on Azure — technician phones never reach either side directly, and the AI server never reaches AWS SQL Server. From there, the AI server has two private egress paths of its own: the on-prem model stack (LiteLLM + self-hosted models) over a VPN / private link to the ClimatePros datacenter, and a fallback to Google Gemini over outbound HTTPS. That gives three trust boundaries to enforce: Internet→AWS (load balancer / WAF), AWS→Azure (the single AI-request hop — VPN/peering target state, public endpoint + IP allow-list as fallback), and Azure→on-prem (VPN / private link).
+Cross-cloud dependency:
+the seam isn't the database —
+AWS SQL Server
+is read and written only by AWS-side compute (EC2 and ECS Fargate), so Auto-Dispatch (A) never leaves AWS. The one cross-cloud hop is the AI request itself: when a technician triggers a summarisation (B) or parts search (C), the .NET AI-proxy route on AWS EC2 calls the FastAPI AI Server on Azure Container Apps, carrying the job context in its payload, and gets a response back.
+- Network path: target state is a site-to-site VPN or VPC-to-VNet private peering between the AWS account and the Azure subscription; until that's provisioned, the fallback is a public HTTPS endpoint on the AI server, locked down by IP allow-listing / mTLS.
+- Added latency: only the B/C request path pays inter-cloud round-trip time — once per summarisation or parts search, not per SQL call — and this has to be budgeted into the P95 targets in §9 Observability &amp; Evals.
+- Cost: AWS bills egress on the .NET proxy's outbound call to Azure; this is one request/response pair per B/C call, not a per-row data-transfer cost, and belongs in §10 Cost Projection.
+- Single seam: this AI-request hop is the only place Stream 1 crosses clouds — SQL Server, the message broker, the dispatch workers, and push all stay inside AWS. If the link goes down, B and C fall back to their existing manual path (forms without AI assist, no parts search); Auto-Dispatch (A) is entirely unaffected since it never touches Azure.</p>
+<h2 id="5-operational-flows">5. Operational Flows</h2>
+<p>The request/response mechanics for each use case, trigger to outcome. A is a closed-loop dispatch cascade with a hard timeout and human escalation; B is a technician-facing UX flow, shown both before and after the copilot, plus the background flywheel that feeds each visit's data into the next; C is the ordered, multi-source parts search that backs the mobile app's "source &amp; allocate" step. Companion to §2 Architecture and §3 Technology Stack — component-level detail (Redis Streams, division locks, ECS Fargate task walkthroughs) lives there; this section is the process view.</p>
+<h3 id="a-auto-dispatch-assignment-loop">A Auto-Dispatch — Assignment Loop</h3>
+<p>One dispatch, start to finish: a new job only enters the queue for divisions with auto-dispatch turned on, then works down a ranked shortlist until a technician accepts or the shortlist runs out. The admin Enable/Disable toggle is covered by the scale ON/OFF walkthrough in §2 .</p>
+<blockquote>
+<p><strong>Figure 4 — Use Case A — assignment loop (trigger to outcome)</strong></p>
+<p><em>[Paste screenshot here.]</em> The ranked cascade with a 30-second offer window per technician and escalation to a human dispatcher when the shortlist is exhausted. Steps are written out below. Live version: <code>stream1-unified-architecture.html</code>.</p>
+</blockquote>
+<p>Trigger · dispatch created
+1 New dispatch appears request hits .NET Legacy API on the AWS EC2
+Division has
+auto-dispatch
+enabled?
+NO
+YES
+Do nothing
+manual dispatch flow, unchanged
+Push dispatch id
+→ Redis Stream
+📦 AWS ECS Fargate pool picks up the dispatch a task consumes it from the stream ( XREADGROUP ) after winning the per-division lock — see §2 for the multi-task walkthrough
+1 Get nearby technicians build the candidate list + each tech's distance from the jobsite
+2 Ask each technician for availability parallel ~1 min window fan out to every candidate at once; collect “when can you be there” replies within the window
+3 Rank the technicians score by dispatch priority, ETA and familiarity → one ordered shortlist
+↻ retry
+4 Offer to the top-ranked technician 30s to respond push the offer to the current #1 on the shortlist via Amazon SNS
+Accepts
+within 30s?
+NO / TIMEOUT
+YES
+Move to next ranked tech
+↻ loop back to step 4
+Assigned ✓
+exit the loop
+5 Shortlist exhausted — no technician accepted hand the request to a human dispatcher for manual assignment
+Timeout rule: the worker's reply-wait timeout has to stay below the division lock's TTL. On timeout the worker escalates to the next technician on the shortlist; the division lock is never lost mid-flight.</p>
+<h4 id="amazon-sns-round-trip">Amazon SNS round-trip</h4>
+<p>The mechanics behind step 4's push — fire-and-forget out, a different path back in. Component-level diagram: §2 · Use Case A · step 3.
+1</p>
+<h4 id="worker-publishes-the-offer">Worker publishes the offer</h4>
+<p>The winning ECS Fargate worker calls the Amazon SNS Publish API with the technician's platform endpoint ARN and the offer payload {dispatchId, techId, job} .
+2</p>
+<h4 id="push-is-delivered">Push is delivered</h4>
+<p>Amazon SNS fans the message out to the platform application endpoint through APNs (iOS) or FCM (Android) straight to the technician's phone.
+3</p>
+<h4 id="technician-responds">Technician responds</h4>
+<p>Tapping Accept/Reject in the FieldJetX app POSTs the reply to the AWS EC2 API, which de-dupes with SETNX resp:done and LPUSH es it onto a per-technician Redis reply list.
+4</p>
+<h4 id="worker-wakes-instantly">Worker wakes instantly</h4>
+<p>The same worker that sent the offer is already blocked on BLPOP for that key — no polling, no delay.
+5</p>
+<h4 id="rank-assign">Rank &amp; assign</h4>
+<p>On Accept the worker writes the assignment to SQL Server, releases the division lock, and XACK s the stream message — closing the loop.</p>
+<h3 id="b-job-summarisation-technician-flow">B Job Summarisation — Technician Flow</h3>
+<p>The same close-out visit, shown twice: the manual process technicians use today, and the same steps with the copilot layered on top — plus the background flywheel that turns every clean ticket into better history for the next technician.</p>
+<h4 id="today-without-ai">Today · without AI</h4>
+<p>How a service visit works in the mobile app today. It works end to end, but leaves value on the table at three points: technicians arrive without the site's history, every record is typed by hand, and quality issues surface only after the technician has left. Red marks where those costs arise.</p>
+<blockquote>
+<p><strong>Figure 5 — Use Case B — the close-out visit today, without AI</strong></p>
+<p><em>[Paste screenshot here.]</em> Left column = technician steps in the app; right column = where cost arises today (goes in cold, quality varies by typist, no validation before submit, problems found when expensive). Live version: <code>stream1-unified-architecture.html</code>.</p>
+</blockquote>
+<h4 id="with-the-ai-copilot">With the AI Copilot</h4>
+<p>The same visit with the copilot in place. The technician's journey doesn't change; the AI works alongside it — preparing a briefing before arrival, drafting the paperwork, and checking the ticket before submit. Blue = technician action · amber = AI-assisted step .</p>
+<blockquote>
+<p><strong>Figure 6 — Use Case B — the same visit with the AI Copilot</strong></p>
+<p><em>[Paste screenshot here.]</em> Left column = technician actions (unchanged journey); right column = AI work behind the scenes (briefing builder, prefill + summarisation, analyse pipeline, persist + learn). Blue = technician action; amber = AI-assisted step. Live version: <code>stream1-unified-architecture.html</code>.</p>
+</blockquote>
+<h4 id="operational-flow-the-flywheel">Operational flow — the flywheel</h4>
+<p>Three flows drive the copilot day to day: building the site briefing at assignment time, the summarise-and-review loop when the technician closes the job, and the persist-and-learn path after submit.
+🧭 Site Briefing
+Trigger · dispatch assigned
+1 Assignment event received Use Case A (or manual dispatch) assigns the job; the briefing builder starts in the background
+2 Gather this site's history keyed SQL query over past visit digests: same customer, same site
+3 Find 2–3 similar past issues deterministic SQL retrieval (same equipment type + problem code, most recent first); customer procedures fetched live, never cached
+4 LLM writes the briefing card “past techs found X · issue recurred · try Y first” · cached in MongoDB
+⚡ Opens instantly when the tech taps the dispatch
+📝 Summarise &amp; Review
+Trigger · tech reaches Review step
+1 App compiles the wizard payload zero extra API calls · POST /api/v1/summarise through the .NET proxy
+2 Enrich, prompt, generate parallel fail-soft reads → versioned ticket standard → the LLM drafts the 12-section ticket + procedure checks
+Critical gaps
+found?
+YES
+NO
+Fix inline
+↻ re-analyse until clean
+Ticket clean
+Submit enabled
+💾 Persist &amp; Learn
+Trigger · tech taps Submit
+1 Job write-back, unchanged dispatch · parts · time · notes flow through the existing mobile-post path
+2 AI output persisted accepted summary → the summaries collection ; every call already logged in the llm_calls collection
+3 History refreshed the closed dispatch immediately extends the SQL history and co-occurrence counts the next briefing and suggestions read; no scheduler, no pipeline
+4 Corrections become ground truth any edits land in the summary_edits collection and feed the eval set
+🔄 This visit becomes the next tech's briefing
+The flywheel: the three flows chain into a loop — what Persist &amp; Learn stores is exactly what Site Briefing retrieves for the next assignment, so every clean ticket makes the next technician's briefing better.</p>
+<h3 id="c-parts-finder-find-allocate">C Parts Finder — Find &amp; Allocate</h3>
+<p>For every requested part, the Source API returns every place it can be gathered — ordered so the technician takes the free stock first and only pays for the vendor tier when nothing else has it. This is the operational flow behind the mobile app's “source &amp; allocate” step ( §2 · Use Case C already traces the Predict/RAG path that runs before it, steps 1–6).</p>
+<blockquote>
+<p><strong>Figure 7 — Use Case C — four-source find and greedy allocate</strong></p>
+<p><em>[Paste screenshot here.]</em> Truck → nearby technicians’ trucks → branch warehouse → third-party supplier, then greedy allocation down the sorted list. Steps are written out below. Live version: <code>stream1-unified-architecture.html</code>.</p>
+</blockquote>
+<p>Trigger · technician requests a part
+1 My truck the technician's own van inventory · 0 mi · free
+2 Nearby technicians' trucks another tech's van, modeled as a warehouse (name + warehouse code + address) · free · ranked by distance
+3 Branch warehouse other ClimatePros warehouses · free · nearest first
+4 Third-party supplier nearest United Refrigeration branch via the CP API Gateway · priced from InventorySupplierXREF.currentcost
+✓ Greedy allocate across the sorted list truck first, then ascending distance; each source takes min(remaining_need, available) until the requested quantity is met
+A van is a warehouse. Per operations, there is no separate “nearby technician” tier — another tech's van is modeled as a warehouse, which keeps the sourcing model to three underlying data tiers (truck / warehouse / vendor) while the technician-facing flow above still reads as four distinct sources.
+Vendor lookup fails → drop the tier, not the request. If the United Refrigeration lookup fails, the vendor tier is dropped rather than failing the whole request — the technician still sees every own-stock option (truck + warehouse). See §11 Onboarding &amp; Fault Tolerance.</p>
+<h2 id="6-core-logic-per-use-case">6. Core Logic (per use case)</h2>
+<p>The algorithms and pipelines behind the flows in §5 , lifted at full fidelity — every formula, weight, table and worked example intact, not condensed: how A ranks a shortlist of technicians, how B turns wizard answers into a 12-section ticket (plus the deterministic retrieval and measured baseline it stands on), and how C predicts parts by retrieval and sources them across three tiers.</p>
+<h3 id="a-auto-dispatch-ranking-algorithm">A Auto-Dispatch — Ranking Algorithm</h3>
+<p>This is the detail behind step 3 ( “Rank the technicians” ) of the assignment loop in §5 . It turns each candidate's availability, distance, and visit history into a single ordered shortlist. One formula covers every case — its behavior is tuned by a single weight w chosen from the job's dispatch type.</p>
+<h4 id="inputs">Inputs</h4>
+<ul>
+<li>free i — minutes until technician i is available (time left on current job)</li>
+<li>dist i — miles from technician i to the jobsite</li>
+<li>visits i — prior visits by technician i to this customer (familiarity)</li>
+<li>AVG_SPEED — average truck speed in mph, a configurable constant</li>
+<li>dispatchType — Emergency · High Priority · Medium Priority
+↓</li>
+</ul>
+<h4 id="step-a-unify-availability-distance-into-one-eta">Step A — unify availability + distance into one ETA</h4>
+<p>Distance can't be compared to wait-time directly. Convert distance to travel time using the average truck speed, then add the wait, so every technician collapses to one number : minutes-until-on-site. Lower is better.</p>
+<pre><code>travel_i = (dist_i / AVG_SPEED) * 60      # miles -&gt; minutes
+eta_i    = free_i + travel_i              # total minutes until tech is on site
+</code></pre>
+<p>↓</p>
+<h4 id="step-b-weighted-score">Step B — weighted score</h4>
+<p>Blend ETA and visit count into one score. Both must be on a 0–1 scale where higher is better, so min-max normalize each across this candidate set, then weight by w (the speed share). A pure ranking is just an endpoint: w=1 sorts by ETA only, w=0 by visits only — no separate sort needed.</p>
+<pre><code>speed_score_i = (eta_max - eta_i)      / (eta_max - eta_min)      # lowest eta  -&gt; 1.0
+fam_score_i   = (visits_i - visits_min)/ (visits_max - visits_min) # most visits -&gt; 1.0
+
+score_i = w * speed_score_i + (1 - w) * fam_score_i               # w = speed weight
+# sort score_i descending -&gt; rank 1 = offer target
+</code></pre>
+<p>Edge cases: a single candidate is rank 1 by default; if all ETAs tie the speed term is flat and familiarity breaks the tie (and vice-versa).
+↓</p>
+<h4 id="step-c-pick-w-from-the-dispatch-type">Step C — pick w from the dispatch type</h4>
+<p>Emergency and Medium are just the two ends ( w=1 , w=0 ) of the same combined formula — so one code path serves all three .</p>
+<table>
+<thead>
+<tr>
+<th>Dispatch Type</th>
+<th>Strategy</th>
+<th>w (speed)</th>
+<th>Result</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Emergency</td>
+<td>Speed-Based (locked)</td>
+<td>1.0</td>
+<td>Pure ETA; familiarity ignored — lowest combined time wins</td>
+</tr>
+<tr>
+<td>High Priority</td>
+<td>Combined</td>
+<td>0.2 (Speed 20 / Fam 80)</td>
+<td>Weighted blend; weight configurable per strategy</td>
+</tr>
+<tr>
+<td>Medium Priority</td>
+<td>Familiarity-Based</td>
+<td>0.0</td>
+<td>Pure visit count — most familiar tech wins</td>
+</tr>
+</tbody>
+</table>
+<p>One formula, three behaviors: the dispatch type only sets w . Emergency ( w=1 ) reduces to pure speed, Medium ( w=0 ) to pure familiarity, High blends them — no separate ranking code per type. The resulting ordered shortlist feeds directly into step 4 (offer to the top-ranked technician) in §5 .
+Future factor — skill gate: when technician skill data is available ( 1 ≤ skill i ≤ 5 ) and a job carries a minimum required skill, it enters as a hard gate, not a score term . Filter it in step 1 when building the candidate list — keep technician i only if skill i ≥ job.minSkill — so under-skilled technicians never reach ranking. The speed/familiarity scoring is untouched; only the candidate set shrinks.</p>
+<h3 id="b-job-summarisation-summarise-pipeline-retrieval">B Job Summarisation — Summarise Pipeline &amp; Retrieval</h3>
+<p>The 12-section ticket followed end to end, plus the retrieval mechanics and measured baseline it stands on.</p>
+<h4 id="the-summarise-pipeline">The Summarise Pipeline</h4>
+<p>One request followed end to end: what happens between the technician reaching the Review step and the 12-section ticket appearing.
+1</p>
+<h4 id="mobile-app-compiles-the-payload">Mobile app compiles the payload</h4>
+<p>The wizard answers (reason, parts, time, notes, completed forms, dropdowns decoded to labels) are packed client-side with zero extra API calls, then sent as POST /api/v1/summarise with the app's existing auth token.
+2</p>
+<h4 id="net-proxy-validates-forwards">.NET proxy validates &amp; forwards</h4>
+<p>The Microservices API validates the OAuth2/Entra token, strips user credentials, adds the internal API key, and forwards server-to-server to the private FastAPI service with an extended timeout.
+3</p>
+<h4 id="parallel-enrichment-fail-soft">Parallel enrichment (fail-soft)</h4>
+<p>Three reads fire simultaneously against the existing APIs: dispatch details ( GetAssignedDispatchesDetails ), per-equipment fields ( GetDispatchEquipmentFieldData ), and customer procedures ( GetDispatchProcedures , always fetched live, never cached). If any fetch fails, the pipeline continues without it.
+4</p>
+<h4 id="prompt-construction">Prompt construction</h4>
+<p>A versioned ticket standard ( ticket_standard.md ) forms the system instruction; the user prompt assembles dispatch context, equipment specs, completed forms, wizard answers, and procedures. Token profile ≈ 2,080 in / 1,050 out per dispatch.
+5</p>
+<h4 id="llm-call-to-the-clients-own-model">LLM call to the client's own model</h4>
+<p>The pipeline calls qwen3-vl on the client's private gateway (measured ~6–7s per call, 30–35 tok/s; data never leaves client infrastructure). The provider abstraction in llm_client.py stays, so a different model can be swapped in by config later, but no external provider is wired up. Returns the raw ticket + procedure checks as JSON.
+6</p>
+<h4 id="parse-guarantee-post-process">Parse, guarantee, post-process</h4>
+<p>The response is parsed and normalised against the canonical 12-section list: absent sections get an explicit MISSING placeholder, so the app always receives exactly 12 sections in standard order. Deterministic Python overrides then apply wizard-type rules (e.g. Sign-Off rebuilt from the last time entry; Refrigerant Tracking set N/A when no refrigerant was used).
+7</p>
+<h4 id="review-fix-gaps-submit">Review, fix gaps, submit</h4>
+<p>The technician sees the ticket with per-section status badges and the procedure checklist; critical gaps must be fixed inline before submit. Submission then flows through the existing mobile-post write-back unchanged, and the accepted summary is persisted to the summaries collection .</p>
+<h4 id="how-retrieval-works">How retrieval works</h4>
+<p>Everything the copilot retrieves is deterministic SQL over the client's real dispatch history : explainable, zero new infrastructure, and already measured against a full year of staging data (252,615 dispatches). This is what replaced the earlier vector-index plan after the 2026-07-07 architecture call.</p>
+<table>
+<thead>
+<tr>
+<th>Need</th>
+<th>Mechanism</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Same-site history (briefing)</td>
+<td>Keyed SQL query: past visit digests for the same customer and site, most recent first.</td>
+</tr>
+<tr>
+<td>Similar past issues (briefing)</td>
+<td>Deterministic lookup: 2–3 recent dispatches with the same equipment type and problem code are pulled and handed to the LLM as context. No embeddings, no similarity index.</td>
+</tr>
+<tr>
+<td>Part suggestions</td>
+<td>SQL co-occurrence: a frequency table keyed on (equipment manufacturer type × problem code) → most-used parts, with fallback to equipment type alone, then global top parts. One SQL aggregation, fully explainable.</td>
+</tr>
+<tr>
+<td>Compliance procedures</td>
+<td>Always fetched live from the source system, never cached or embedded: they are compliance-critical and change.</td>
+</tr>
+</tbody>
+</table>
+<h4 id="the-measured-baseline-backtested-on-staging-2026-07-08">The measured baseline (backtested on staging, 2026-07-08)</h4>
+<p>The co-occurrence method was trained on 11 months of real dispatches and tested on the final month (4,151 dispatches with installed parts, 3,100 distinct parts in play). “Hit” means at least one actually-installed part appeared in the top-k suggestion list:</p>
+<table>
+<thead>
+<tr>
+<th>Suggestions shown (k)</th>
+<th>Hit rate</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Top 1</td>
+<td>18.6%</td>
+</tr>
+<tr>
+<td>Top 3</td>
+<td>31.8%</td>
+</tr>
+<tr>
+<td>Top 5</td>
+<td>39.9%</td>
+</tr>
+<tr>
+<td>Top 10</td>
+<td>52.1%</td>
+</tr>
+</tbody>
+</table>
+<p>Why this matters: with 3,100 possible parts, a zero-ML lookup already puts a right part in a 5-item list 40% of the time. This is the baseline any classical-ML model, embedding index, or LLM-heavy approach must beat to justify its added cost and complexity, exactly the “capture the baseline, commit to no accuracy numbers” framing agreed on the call.</p>
+<h4 id="label-quality-reality-what-the-eda-must-account-for">Label-quality reality (what the EDA must account for)</h4>
+<p>An audit of the last 12 months of staging data showed the structured outcome codes are far weaker than they look: root-cause and failure codes have been dead since 2021, the problem code's top value is OTHER at 38%, and the summary code is SERVICE for 88% of filled rows. The genuine predictive signal lives in the free-text complaint ( DispatchReason , 230k+ distinct values) and technician notes , plus equipment identity. Any classical-ML phase therefore must include text feature engineering; training on code columns alone will underperform the baseline above.</p>
+<h4 id="the-vector-index-optional-criteria-gated">The vector index: optional, criteria-gated</h4>
+<table>
+<thead>
+<tr>
+<th>Question</th>
+<th>Answer</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Is it part of this architecture?</td>
+<td>No. Decided 2026-07-07: it added infrastructure cost and operational surface without validated benefit.</td>
+</tr>
+<tr>
+<td>When would we add it?</td>
+<td>Only if evals show deterministic retrieval misses relevant history that semantic search over the free-text fields would find, and the gain beats the baseline by enough to pay for the pipeline.</td>
+</tr>
+<tr>
+<td>How would it slot in?</td>
+<td>Behind the existing retrieval abstraction: the briefing builder swaps its SQL lookup for a filtered similarity query; nothing else in the architecture changes. Embeddings can run on the private gateway's nomic-embed model, keeping data in client infrastructure.</td>
+</tr>
+</tbody>
+</table>
+<h3 id="c-parts-finder-matching-sourcing-logic">C Parts Finder — Matching &amp; Sourcing Logic</h3>
+<p>Prediction is retrieval-augmented: find the most similar past dispatches, then rank the parts those dispatches used, weighting closeness over raw frequency so one near-identical job outranks several loosely-similar ones. Once parts are identified, the Source API works out where to get them from.</p>
+<h4 id="pipeline">Pipeline</h4>
+<ul>
+<li>Asymmetric embedding. Historical reasons are embedded at index time with a document task type; the live dispatch reason is embedded per request with a query task type. Both run on the self-hosted embedding model on customer hardware — dispatch text never goes to an external AI provider.</li>
+<li>Retrieve. Search the Azure-hosted vector store for the top K = 15 nearest neighbors, returning cosine distances and each neighbor's partsUsed .</li>
+<li>Rank &amp; aggregate. The self-hosted LLM ranks &amp; aggregates the retrieved parts: convert distance to similarity, gate on a threshold, and accumulate a cubed-similarity score per part.</li>
+<li>Confidence &amp; select. Normalize scores, clamp to a confidence band, return the top parts, and pre-select the confident ones.</li>
+</ul>
+<h4 id="scoring-exact">Scoring (exact)</h4>
+<pre><code>sim            = 1 − cosine_distance
+
+if
+ sim &gt; 0.55:                      
+# SIM_THRESHOLD — neighbor contributes
+
+
+for
+ part 
+in
+ neighbor.partsUsed:
+        score[part]     += sim ** 3      
+# closeness &gt; frequency
+
+        timesUsed[part] += 1
+
+confidence(part) = clamp( round( score[part] / max_score × 95 ), 20, 95 )
+
+return top 6 parts by score              
+# each pre-selected if confidence ≥ 60
+</code></pre>
+<table>
+<thead>
+<tr>
+<th>Constant</th>
+<th>Value</th>
+<th>Effect</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>TOP_K</td>
+<td>15</td>
+<td>Neighbors retrieved per query.</td>
+</tr>
+<tr>
+<td>SIM_THRESHOLD</td>
+<td>0.55</td>
+<td>A neighbor contributes only if sim &gt; 0.55 ; weaker matches are ignored.</td>
+</tr>
+<tr>
+<td>Weight</td>
+<td>sim³</td>
+<td>Cubed similarity — sharply favors very close matches.</td>
+</tr>
+<tr>
+<td>Confidence band</td>
+<td>[20, 95]</td>
+<td>Normalized to the top score × 95, then clamped.</td>
+</tr>
+<tr>
+<td>Output size</td>
+<td>Top 6</td>
+<td>Highest-scoring parts returned to the technician.</td>
+</tr>
+<tr>
+<td>CONFIDENCE_THRESHOLD</td>
+<td>60</td>
+<td>Parts with confidence ≥ 60 are pre-selected in the UI; the rest are shown unchecked.</td>
+</tr>
+</tbody>
+</table>
+<p>The response also reports basedOn — the number of neighbors above threshold — so the client can convey how much history a prediction rests on.</p>
+<h4 id="indexing-the-self-learning-loop">Indexing &amp; the self-learning loop</h4>
+<ul>
+<li>Idempotent upsert keyed by dispatchNo : only dispatches not already indexed are embedded, so re-runs and restarts are cheap.</li>
+<li>Rate-limit-aware batching : embeddings are computed in batches with pacing and retry-with-backoff on throttling.</li>
+<li>Feedback loop : when a dispatch is marked complete in SQL Server, its reason and used parts are embedded and upserted — the very next similar job benefits (the dashed learning-loop arrow in the architecture diagram in §2 ).</li>
+</ul>
+<h4 id="source-tiers">Source tiers</h4>
+<table>
+<thead>
+<tr>
+<th>Tier</th>
+<th>What it is</th>
+<th>Distance</th>
+<th>Price</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>truck</td>
+<td>The technician's own van inventory.</td>
+<td>0 mi</td>
+<td>free</td>
+</tr>
+<tr>
+<td>warehouse</td>
+<td>Other Climate Pros warehouses — including other technicians' vans — plus the branch warehouse.</td>
+<td>by distance, nearest first</td>
+<td>free</td>
+</tr>
+<tr>
+<td>vendor</td>
+<td>The nearest United Refrigeration branch — the outside parts supplier (CP API Gateway).</td>
+<td>from gateway</td>
+<td>priced</td>
+</tr>
+</tbody>
+</table>
+<p>A van is a warehouse. Per operations, there is no separate “nearby technician” tier — another tech's van is modeled as a warehouse (labeled with the person's name, a warehouse code, and a street address). This keeps the model simple and reflects how stock actually moves in the field.</p>
+<h4 id="ordering-allocation">Ordering &amp; allocation</h4>
+<ul>
+<li>Sort: truck first (0 mi), then all other sources by ascending distance — closest picked first.</li>
+<li>Pricing: own stock (truck + warehouse) has no price; only the United vendor tier carries a dollar cost, applied from InventorySupplierXREF.currentcost .</li>
+<li>Split large needs: per-source quantities are limited, so a large requested quantity is spread across sources. The client allocates greedily down the sorted list — each source takes min(remaining_need, available) until the need is met.</li>
+</ul>
+<pre><code># greedy allocation across the sorted sources
+
+remaining = qtyNeeded
+
+for
+ src 
+in
+ sources:            
+# truck first, then nearest → furthest
+
+    take        = min(remaining, src.available)
+    src.taken   = take
+    remaining  -= take
+
+if
+ remaining == 0: 
+break
+</code></pre>
+<p>Vendor lookup fails → drop the tier, not the request. If the vendor lookup fails, the vendor tier is dropped rather than failing the whole request — the technician still sees all own-stock options. See §11 Onboarding &amp; Fault Tolerance.</p>
+<h2 id="7-data-schema">7. Data &amp; Schema</h2>
+<p>Three data footprints, one per use case, lifted at full fidelity from each source design. A coordinates purely through ephemeral Amazon ElastiCache for Redis structures — no data model of its own. B and C each persist AI output into the AI server's own MongoDB on Azure (Azure Cosmos DB for MongoDB, vCore) — a separate datastore from the AWS SQL Server system of record, with zero coupling to the business tables ( §3 ). C additionally maintains a semantic vector index over historical dispatches for retrieval.</p>
+<h3 id="a-auto-dispatch-amazon-elasticache-for-redis-data-structures">A Auto-Dispatch — Amazon ElastiCache for Redis Data Structures</h3>
+<p>The three Redis structures that coordinate dispatch across the ECS Fargate worker pool.</p>
+<table>
+<thead>
+<tr>
+<th>Structure</th>
+<th>Key</th>
+<th>Purpose</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>STREAM</td>
+<td>dispatch:stream</td>
+<td>Durable buffer of incoming dispatch requests between the .NET Legacy API on AWS EC2 and the ECS Fargate workers. Consumed via a consumer group ( XREADGROUP ) — all N workers compete; each message goes to exactly one worker.</td>
+</tr>
+<tr>
+<td>MUTEX</td>
+<td>lock:tech:{techId}</td>
+<td>Per-technician distributed lock. A request acquires locks on its candidate technicians before offering, in a fixed order (e.g. ascending techId ) to avoid deadlock between overlapping requests. Requests with disjoint candidates run in parallel — even in the same division; requests sharing a technician serialize on that lock, so a tech is never double-offered. TTL self-releases on a crashed worker.</td>
+</tr>
+<tr>
+<td>LIST</td>
+<td>resp:{dispatchId}:{techId}</td>
+<td>Per-technician reply channel. The AWS EC2 API LPUSH es the Accept/Reject; the worker BLPOP s it — instant wake, no polling. EXPIRE 60s self-cleans.</td>
+</tr>
+</tbody>
+</table>
+<p>Concurrency: a worker processes up to 20 dispatches concurrently using async ( redis.asyncio ) — a blocked BLPOP on one dispatch never stalls the others.
+Diagram note: the §2 architecture diagram still shows a per-division lock ( lock:div:* ) as a simplification. The implemented model locks per candidate technician as described here — diagram redraw pending.</p>
+<h3 id="b-job-summarisation-the-ai-mongodb-collections">B Job Summarisation — the AI MongoDB Collections</h3>
+<p>All AI output lives in the AI server's own MongoDB (Azure Cosmos DB for MongoDB, vCore): a datastore owned entirely by the
+FastAPI AI service, with no connection to the AWS SQL Server system of record and therefore zero mixing with business tables.
+Indicative document shapes below; final collection and index design is agreed with the client DBA.</p>
+<p><strong>summaries</strong></p>
+<table>
+<thead>
+<tr>
+<th>Field</th>
+<th>Type / notes</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>_id</td>
+<td>ObjectId · primary key</td>
+</tr>
+<tr>
+<td>dispatchId</td>
+<td>int · reference to the SQL Server dispatch, carried in the request payload — not a database foreign key</td>
+</tr>
+<tr>
+<td>sections</td>
+<td>array · the 12 sections</td>
+</tr>
+<tr>
+<td>procedureResults</td>
+<td>array</td>
+</tr>
+<tr>
+<td>status</td>
+<td>draft / accepted</td>
+</tr>
+<tr>
+<td>acceptedAt</td>
+<td>date</td>
+</tr>
+<tr>
+<td>embedding</td>
+<td>array&lt;double&gt; · optional, stage 1</td>
+</tr>
+</tbody>
+</table>
+<p><strong>llm_calls</strong></p>
+<table>
+<thead>
+<tr>
+<th>Field</th>
+<th>Type / notes</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>_id</td>
+<td>ObjectId · primary key</td>
+</tr>
+<tr>
+<td>dispatchId</td>
+<td>int</td>
+</tr>
+<tr>
+<td>provider / model</td>
+<td>gateway · qwen3-vl</td>
+</tr>
+<tr>
+<td>tokensIn / tokensOut</td>
+<td>int</td>
+</tr>
+<tr>
+<td>latencyMs</td>
+<td>int</td>
+</tr>
+<tr>
+<td>outcome</td>
+<td>ok / parse_fail / error</td>
+</tr>
+</tbody>
+</table>
+<p><strong>summary_edits</strong></p>
+<table>
+<thead>
+<tr>
+<th>Field</th>
+<th>Type / notes</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>_id</td>
+<td>ObjectId · primary key</td>
+</tr>
+<tr>
+<td>summaryId</td>
+<td>reference → summaries._id</td>
+</tr>
+<tr>
+<td>section</td>
+<td>which of the 12</td>
+</tr>
+<tr>
+<td>beforeText / afterText</td>
+<td>the correction</td>
+</tr>
+<tr>
+<td>editedBy / editedAt</td>
+<td>who · when</td>
+</tr>
+</tbody>
+</table>
+<p>About the embedding field: it is a placeholder for the optional future vector layer ( §6 ). Because MongoDB stores it as a
+native array of doubles, the SQL Server 2022 Web Edition constraint that previously forced a varbinary column no longer
+applies. It stays empty unless that layer is added. Open client items: collection and index design sign-off, and the
+dispatch-assignment trigger mechanism.</p>
+<h3 id="c-parts-finder-data-model">C Parts Finder — Data Model</h3>
+<p>Two stores cooperate: the relational system of record (SQL Server fieldgetics ) owns dispatches, inventory, and stock; the vector store — an Azure-hosted vector store — holds the semantic index used for prediction. AI-written data lands in the AI server's own MongoDB collections on Azure; the AI service performs no writes against SQL Server at all.</p>
+<h4 id="system-of-record-fieldgetics-sql-server-aws">System of record — fieldgetics (SQL Server) AWS</h4>
+<table>
+<thead>
+<tr>
+<th>Entity</th>
+<th>Key fields used</th>
+<th>Purpose in this system</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Dispatch</td>
+<td>reason , problemCode , repairCategory , priority , nte , branchWarehouse</td>
+<td>The reason text is the prediction input; completion feeds the learning loop.</td>
+</tr>
+<tr>
+<td>DispatchPartsRequest / Inventory</td>
+<td>part number, name, category</td>
+<td>Parts catalog and the parts a dispatch requests/uses.</td>
+</tr>
+<tr>
+<td>InventoryLocationXref</td>
+<td>location, quantity-on-hand</td>
+<td>Stock by location — drives own-stock (truck + warehouse) availability in sourcing.</td>
+</tr>
+<tr>
+<td>InventorySupplierXREF</td>
+<td>currentcost</td>
+<td>Vendor price for a part (the United API returns stock + location; price is applied from here).</td>
+</tr>
+</tbody>
+</table>
+<h4 id="ai-owned-collections-mongodb-azure">AI-owned collections — MongoDB Azure</h4>
+<p>Everything the AI layer writes lives in its own MongoDB collections: the parts lists a technician commits (with per-source allocations), prediction acceptance signals, and indexing bookkeeping. Nothing in the existing SQL Server dbo tables changes and the AI service needs no write access to the system of record — the AI footprint can be audited, backed up, or dropped independently.</p>
+<p>Learning-loop mechanism: because the AI server has no SQL Server connection, dispatch completion cannot be observed by polling the database. The completed dispatch — its reason text and the parts actually used — is handed to the AI server by the .NET side through the AI-proxy route, which is what triggers the embed-and-upsert described in §6. Confirming that trigger is an open client item.</p>
+<h4 id="vector-store-dispatch-parts-index-azure">Vector store — dispatch-parts index Azure</h4>
+<p>Each historical completed dispatch becomes one record, indexed for cosine similarity:</p>
+<pre><code># one record per completed dispatch
+
+id        = dispatchNo                 
+# stable key → idempotent upsert
+
+document  = dispatch.reason            
+# the embedded text
+
+embedding = embed(reason, DOCUMENT)    
+# vector (cosine / HNSW)
+
+metadata  = { partsUsed: [ {partNo, qty}, ... ] }
+</code></pre>
+<p>Derived, not authoritative: the vector store holds only the reason text and the parts that were actually used . It is a derived, rebuildable index — the relational database remains the system of record.</p>
+<h2 id="8-api-reference">8. API Reference</h2>
+<p>The full HTTP surface across all three use cases, lifted at full fidelity from each source design — every endpoint, parameter, and response shape kept intact. Only the caller-facing compute labels are updated to match this document's Azure-first infrastructure ( §2 – §4 ) and the service renames already established there. Nothing in the request/response bodies themselves changes.</p>
+<h3 id="a-auto-dispatch-api-reference">A Auto-Dispatch — API Reference</h3>
+<p>New endpoints introduced for Auto-Dispatch. Two callers: the admin dashboard (control plane — toggle &amp; config) and the technician mobile app (data plane — push registration &amp; replies). All existing endpoints (dispatch ingestion, dispatch status, technician location) are unchanged and out of scope here.</p>
+<table>
+<thead>
+<tr>
+<th>Method</th>
+<th>Path</th>
+<th>Caller</th>
+<th>Purpose</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>POST</td>
+<td>/divisions/{id}/toggle</td>
+<td>Dashboard → AWS EC2</td>
+<td>Turn auto-dispatch ON/OFF for one division. Body { enabled: bool } . On enable : pull pending requests into the stream and scale the ECS Fargate pool up; on disable : drain and scale to zero (idle = $0).</td>
+</tr>
+<tr>
+<td>PUT</td>
+<td>/divisions/{id}/config</td>
+<td>Dashboard → AWS EC2</td>
+<td>Update per-division ranking weights — distance, familiarity, priority, availability window. Body { weights: {...} } . Applied to the next assignment loop; no restart needed.</td>
+</tr>
+<tr>
+<td>GET</td>
+<td>/divisions/{id}/config</td>
+<td>Dashboard → AWS EC2</td>
+<td>Read current toggle state + weights so the admin UI can render the switch position and weight sliders. Paired read for the two writes above.</td>
+</tr>
+<tr>
+<td>POST</td>
+<td>/devices/register</td>
+<td>Mobile → AWS EC2</td>
+<td>Register/refresh a device push token. Body { techId, platform: ios|android, token } . AWS EC2 registers the device with Amazon SNS and stores techId → endpointArn . Re-posted whenever the OS rotates the token, so pushes never silently die.</td>
+</tr>
+<tr>
+<td>POST</td>
+<td>/technicians/{id}/availability</td>
+<td>Mobile → AWS EC2</td>
+<td>Technician reports when they will be free. Body { availableAt } . Not tied to any dispatch — it updates the technician's general availability state, which the ranking loop reads for whichever request is being processed.</td>
+</tr>
+<tr>
+<td>POST</td>
+<td>/dispatches/{id}/respond</td>
+<td>Mobile → AWS EC2</td>
+<td>Technician accepts/rejects a specific offer. Body { accept: bool } . Deduped via SETNX , then LPUSH ed to resp:{dispatchId}:{techId} ; the worker's BLPOP wakes instantly.</td>
+</tr>
+</tbody>
+</table>
+<h4 id="authentication">Authentication</h4>
+<p>No new auth mechanism is introduced. Every endpoint sits behind the platform's existing auth middleware , by caller:
+- Control plane ( POST /divisions/{id}/toggle , PUT /divisions/{id}/config , GET /divisions/{id}/config ) — behind the admin Dashboard auth, identical to the existing Dashboard endpoints. Only authenticated admins can toggle or reconfigure a division.
+- Data plane ( POST /devices/register , POST /technicians/{id}/availability , POST /dispatches/{id}/respond ) — behind the technician mobile-app auth, identical to the existing technician endpoints. The authenticated technician identity must match the techId /technician in the path or body.</p>
+<h4 id="error-contract">Error contract</h4>
+<p>All endpoints return the platform's standard error envelope so a client can handle failures uniformly:</p>
+<pre><code>{ &quot;code&quot;: &quot;string&quot;,        
+// stable machine code, e.g. DIVISION_NOT_FOUND
+
+  &quot;message&quot;: &quot;string&quot;,     
+// human-readable
+
+  &quot;requestId&quot;: &quot;string&quot; }  
+// correlation id for tracing
+</code></pre>
+<p>Global status codes apply across all endpoints:
+- 400 — malformed body / invalid field (e.g. weight out of range, unknown platform ).
+- 401 — missing/invalid credentials · 403 — authenticated but not permitted (e.g. non-admin hitting a control-plane route, technician acting for another techId ).
+- 404 — division / dispatch / technician not found.
+- 409 — duplicate reply on /dispatches/{id}/respond (the SETNX dedupe already rejected it); the first reply stands.
+- 500 — unexpected server error (correlate via requestId ).</p>
+<h4 id="two-response-types-two-separate-endpoints">Two response types — two separate endpoints</h4>
+<p>The technician's two replies live at different paths because they have different scope:
+- Availability — POST /technicians/{id}/availability . Tech-scoped, no dispatchId . A general "I'm free at …" answer to the availability poll during the ~1 min ranking window; updates the technician's availability record that ranking reads.
+- Decision — POST /dispatches/{id}/respond . Dispatch-scoped. Accept/reject one specific offer; drives the offer loop, and a reject (or timeout) moves to the next ranked technician. This is the reply the worker is blocked on ( BLPOP ).</p>
+<h3 id="b-job-summarisation-api-reference">B Job Summarisation — API Reference</h3>
+<p>The API surface is plain REST with Pydantic models (the earlier prototype's GraphQL layer is refactored away). The service is reachable only through the .NET proxy; there is no public endpoint.</p>
+<table>
+<thead>
+<tr>
+<th>Method</th>
+<th>Route</th>
+<th>Purpose</th>
+<th>Typical latency</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>POST</td>
+<td>/api/v1/summarise</td>
+<td>Wizard payload → 12-section ticket + procedure check results</td>
+<td>~6–7s (LLM-bound)</td>
+</tr>
+<tr>
+<td>POST</td>
+<td>/api/v1/analyse</td>
+<td>Ticket → gap findings + inline remediation fields; re-run until clean</td>
+<td>~6–7s</td>
+</tr>
+<tr>
+<td>GET</td>
+<td>/api/v1/suggestions</td>
+<td>Dispatch context (equipment type + problem code) → top-k part suggestions from the co-occurrence tables; deterministic, no LLM call</td>
+<td>&lt;200ms</td>
+</tr>
+<tr>
+<td>GET</td>
+<td>/admin/dashboard</td>
+<td>Observability dashboard: edit-rate per section, latency, cost, parse failures, read from the AI MongoDB collections . Served by the same FastAPI container; no separate web app.</td>
+<td>&lt;500ms</td>
+</tr>
+<tr>
+<td>GET</td>
+<td>/health</td>
+<td>Liveness probe for the Container Apps health check</td>
+<td>&lt;50ms</td>
+</tr>
+</tbody>
+</table>
+<p>Auth model: no client talks to these routes directly. The .NET proxy is the only caller, authenticated by an internal API key plus network trust (private Azure VNet, security rules). The dashboard follows the same rule: it is exposed through a .NET-proxied route with an admin-role check on the existing Entra token. This keeps a single user-auth system and zero new login surfaces.</p>
+<h3 id="c-technician-parts-finder-api-reference">C Technician Parts Finder — API Reference</h3>
+<p>The FastAPI AI Server exposes a deliberately small HTTP surface, reached by FJX 2.2 through the .NET Microservices API's AI proxy route — the mobile app never calls the AI layer directly, and the proxy forwards exactly the two control endpoints ( /parts/predict , /parts/source ).</p>
+<table>
+<thead>
+<tr>
+<th>Endpoint</th>
+<th>Purpose</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>GET /health</td>
+<td>Liveness / deploy probe (load-balancer + Container Apps health checks; not proxied to clients).</td>
+</tr>
+<tr>
+<td>POST /parts/predict</td>
+<td>RAG-predicted parts for a dispatch — via the AI proxy route.</td>
+</tr>
+<tr>
+<td>POST /parts/source</td>
+<td>All sources per part — via the AI proxy route.</td>
+</tr>
+</tbody>
+</table>
+<p>Scope: everything else the flow touches stays where it already lives: dispatch list/detail and the manual-add inventory tabs / catalog search are served by the existing .NET APIs, unchanged . The AI server does not serve or duplicate them — it reads the dispatch reason and stock context from the Legacy API, and calls the United CP Gateway server-side for the supplier tier.</p>
+<h4 id="post-partspredict">POST /parts/predict</h4>
+<pre><code>// request
+
+{ 
+&quot;dispatchId&quot;
+: 
+&quot;...&quot;
+ }
+
+// response → PredictedPart[]
+
+[ {
+
+&quot;inventoryId&quot;
+: 
+&quot;C066&quot;
+,
+
+&quot;name&quot;
+:        
+&quot;Condenser Fan Motor 1/4 HP&quot;
+,
+
+&quot;partNumber&quot;
+:  
+&quot;C066&quot;
+,
+
+&quot;confidence&quot;
+:  88,          
+// 20–95
+
+
+&quot;selected&quot;
+:    true,        
+// pre-selected when confidence ≥ 60
+
+
+&quot;timesUsed&quot;
+:   3
+} ]
+</code></pre>
+<p>Returns 503 when the prediction subsystem (embedding model / vector store) is unavailable — the client falls back to manual add. 502 on an upstream failure during prediction.</p>
+<h4 id="post-partssource">POST /parts/source</h4>
+<pre><code>// request
+
+{ 
+&quot;inventoryIds&quot;
+: [
+&quot;C066&quot;
+, 
+&quot;24708&quot;
+], 
+&quot;dispatchId&quot;
+: 
+&quot;...&quot;
+, 
+&quot;priority&quot;
+: 
+&quot;Normal&quot;
+ }
+
+// response → SourcedPart[]
+
+[ {
+
+&quot;inventoryId&quot;
+: 
+&quot;C066&quot;
+,
+
+&quot;name&quot;
+:        
+&quot;Condenser Fan Motor 1/4 HP&quot;
+,
+
+&quot;partNumber&quot;
+:  
+&quot;C066&quot;
+,
+
+&quot;qtyNeeded&quot;
+:   1,
+
+&quot;sources&quot;
+: [ {
+
+&quot;tier&quot;
+:        
+&quot;truck&quot;
+,      
+// truck | warehouse | vendor
+
+
+&quot;label&quot;
+:       
+&quot;Your Truck — IL01 WH V1885&quot;
+,
+
+&quot;detail&quot;
+:      
+&quot;Bin C2&quot;
+,
+
+&quot;distanceMi&quot;
+:  0.0,
+
+&quot;qtyAvailable&quot;
+: 2,
+
+&quot;price&quot;
+:       null        
+// null for own stock; $ for vendor
+
+  } ]
+} ]
+</code></pre>
+<h4 id="supplier-integration-united-cp-gateway-server-side-outbound">Supplier integration — United CP Gateway (server-side, outbound)</h4>
+<p>For the vendor tier of /parts/source , the AI server calls the ClimatePros API Gateway for United Refrigeration from the backend — the contract below is the gateway's own shape, so the integration is a drop-in and the subscription key never leaves the server:</p>
+<pre><code>// request
+
+{ 
+&quot;item&quot;
+: 
+&quot;C066&quot;
+, 
+&quot;coordinates&quot;
+: { 
+&quot;latitude&quot;
+: 21.30, 
+&quot;longitude&quot;
+: -157.85 },
+
+&quot;qty&quot;
+: 1, 
+&quot;miles&quot;
+: 50, 
+&quot;branchesIn&quot;
+: [], 
+&quot;limit&quot;
+: 1 }
+
+// response
+
+{ 
+&quot;code&quot;
+: 100, 
+&quot;success&quot;
+: true, 
+&quot;response&quot;
+: 
+&quot;OK&quot;
+, 
+&quot;errors&quot;
+: [],
+
+&quot;inventory&quot;
+: [ { 
+&quot;branchNo&quot;
+, 
+&quot;address1&quot;
+, 
+&quot;city&quot;
+, 
+&quot;state&quot;
+, 
+&quot;zipcd&quot;
+,
+
+&quot;phone&quot;
+, 
+&quot;miles&quot;
+, 
+&quot;workingHours&quot;
+, 
+&quot;item&quot;
+, 
+&quot;qtyAvail&quot;
+ } ] }
+</code></pre>
+<h4 id="contract-notes">Contract notes</h4>
+<table>
+<thead>
+<tr>
+<th>Concern</th>
+<th>Behavior</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Auth</td>
+<td>Bearer token from the FJX 2.2 session, validated at the .NET Microservices API before the AI proxy route forwards the call; the AI server is reachable only from inside the VNet. Supplier gateway calls use a subscription key held server-side (see §12 Non-goals &amp; PII).</td>
+</tr>
+<tr>
+<td>Errors</td>
+<td>400 validation · 404 dispatch not found · 502 upstream failure · 503 prediction unavailable.</td>
+</tr>
+<tr>
+<td>CORS</td>
+<td>Restricted to the FJX 2.2 mobile origin / native client in production.</td>
+</tr>
+<tr>
+<td>Idempotency</td>
+<td>Predict and source are read-only and side-effect free; safe to retry.</td>
+</tr>
+</tbody>
+</table>
+<h2 id="9-observability-evals">9. Observability &amp; Evals</h2>
+<p>Two different concerns share this section. Observability is operational and unified: one tracing/logging layer, introduced fresh by this project ( §3 Technology Stack, §4 Infrastructure), watches all three use cases the same way. Evals are about AI output quality and only apply where a model is in the loop — Auto-Dispatch (A) is a deterministic ranking formula ( §6 Core Logic) with nothing to eval; Job Summarisation (B) already has a working, production-grounded eval loop, lifted at full fidelity below; Parts Finder (C) today only validates retrieval quality on a held-out set of recent dispatches and does not yet have B's correction-based feedback loop — closing that gap is future work, not part of this architecture.</p>
+<h3 id="unified-observability-opentelemetry-tracing-cloudwatch-azure-monitor-logs">Unified Observability — OpenTelemetry Tracing + CloudWatch / Azure Monitor Logs</h3>
+<p>Every service in Stream 1 — the AWS EC2 host running both .NET APIs, the AWS ECS Fargate dispatch-worker pool (A), the Azure Container Apps FastAPI AI server (B, C), the Redis-fed worker loop, and every vector-store call — emits OpenTelemetry traces and structured logs. AWS-side services report into CloudWatch; the Azure AI stack reports into an Azure Monitor workspace, and trace context is propagated across the single AWS→Azure hop so one dispatch is one trace ( §3 , §4 ). This was an abstract, “not yet designed” placeholder in the source design; here it is the one piece of infrastructure every use case shares, so it is specified once instead of three times.</p>
+<h5 id="distributed-traces">📡 Distributed traces</h5>
+<p>One trace per request, spanning every hop it takes — .NET proxy → Container Apps → AI server → LiteLLM → model, or .NET → Redis Stream → worker → SQL Server. The cross-cloud hop to AWS SQL Server ( §4 ) is a span like any other, so the added round-trip is visible, not hidden.</p>
+<h5 id="structured-logs">📋 Structured logs</h5>
+<p>Every service logs to Azure Monitor in one schema. Each entry carries the same requestId issued in the error envelope ( §8 API Reference), so a failed call traces from the client-visible error code back through every hop it touched.</p>
+<h5 id="correlation">🔄 Correlation</h5>
+<p>requestId is the join key across traces, logs, and the AI-specific tables in §7 Data &amp; Schema ( the llm_calls collection , the summary_edits collection ) — so a slow trace, a log line, and an eval finding for the same request all resolve to one id.
+P95 targets — open item: §4 Infrastructure flags that cross-cloud AWS SQL Server round-trips must be budgeted into per-flow P95 targets, especially the Auto-Dispatch worker's per-request SQL calls. No formal SLOs exist yet in any of the three source designs; the inputs this document already establishes are the ~1 min technician-availability window and BLPOP reply-wait timeout (A, §5 Operational Flows), the ~6–7s LLM-bound /summarise / /analyse calls (B, §8 ), and the &lt;200ms / &lt;50ms deterministic endpoints (B/C, §8 ). Setting numeric P95 targets per flow, inclusive of the cross-cloud SQL leg, is follow-up work once Azure Monitor is live and has real traffic to baseline against — not something any source design specified.</p>
+<h3 id="b-evals-the-feedback-loop">B Evals — the Feedback Loop</h3>
+<p>Every AI interaction is persisted in the client's own database, so quality is measured from production reality, not vibes.
+📈</p>
+<h4 id="the-feedback-loop">The feedback loop</h4>
+<p>Log everything → corrections become ground truth → changes must beat the eval set.
+- the llm_calls collection records provider, model, tokens, latency, and outcome for every call: cost and reliability are queryable at any time.
+- the summary_edits collection records every human correction to an AI section: this is labelled ground truth generated by normal usage.
+- Eval set is built from those corrected rows and re-run before any prompt, ticket-standard, or provider/model change ships.
+- Headline metric: edit-rate per section : which of the 12 sections the AI gets right, tracked over time and per customer.
+Traceability: because prompts are built from a versioned ticket_standard.md and every call is logged with its model id, any ticket in production can be traced back to exactly which standard version and model produced it.
+How we view it: a lightweight dashboard page ( GET /admin/dashboard , §8 API Reference) is served by the same FastAPI container and reads straight from the AI MongoDB collections: no separate web app, no new hosting. Access is proxied through the .NET backend with an admin-role check on the existing Entra token, the same pattern as every other AI route, so the service stays fully private and no new login surface is created. Eval runs themselves are offline jobs over the summary_edits collection , not a hosted service.
+The eval set inherits weak labels, not clean ones: the same audit that shaped the retrieval baseline ( §6 Core Logic · B · Label-quality reality) found the structured outcome codes are mostly dead signal — root-cause/failure codes unused since 2021, problem code OTHER at 38%, summary code SERVICE for 88% of filled rows. The real predictive signal is free text ( DispatchReason , technician notes). the summary_edits collection works around this because it labels the model's actual output, not the weak structured codes — but it also means the eval set is only as good as what technicians bother to correct, not an independently audited ground truth.</p>
+<h2 id="10-cost-projection">10. Cost Projection</h2>
+<p>Every dollar figure below is lifted as-is from its source design's AWS cost projection. Under the confirmed cloud placement ( §2 – §4 ) Use Case A stays entirely on AWS — ECS Fargate, ElastiCache for Redis, SNS, CloudWatch — so those source rates apply to the services actually being bought and need no translation. The only lines that still require a re-pricing pass are the Azure-side AI components: Container Apps for the FastAPI AI server, the Azure-hosted vector store, and Azure Monitor for the AI stack.
+Pending re-pricing — Azure AI lines only: Use Case A's figures are AWS list rates for the services in the design, so they stand as directional AWS estimates. The shared B·C lines were sourced from AWS equivalents (Fargate, S3 Vectors, CloudWatch) and must be re-priced against Azure Container Apps, the chosen Azure vector store, and Azure Monitor before this section is used for a real budget.</p>
+<h3 id="a-auto-dispatch">A Auto-Dispatch</h3>
+<p>Only the ECS Fargate worker pool is a variable cost — it is the whole point of scale-to-zero. Everything else is fixed or effectively free. Source rates are us-east-1 AWS Fargate / ElastiCache / SNS list prices — the services actually used; verify against current AWS rate cards at build time .</p>
+<h4 id="aws-ecs-fargate-cost-formula">AWS ECS Fargate cost formula</h4>
+<p>Task = 1 vCPU / 2 GB → $0.04937 per task-hour (AWS Fargate rate). Note: §4 Compute sizing states a 0.5 vCPU / 1 GB baseline for these workers — the two figures need to be reconciled before this is used for budget.</p>
+<pre><code>monthly_cost = N x H x 30 x (1 x $0.04048  +  2 x $0.004445)
+             = N x H x 30 x $0.04937
+
+N = number of ECS Fargate tasks (2 assumed; each handles 20 dispatches concurrently)
+H = hours the division is ON per day
+</code></pre>
+<h4 id="amazon-elasticache-for-redis-amazon-sns-cost-fixed-near-zero">Amazon ElastiCache for Redis + Amazon SNS cost — fixed &amp; near-zero</h4>
+<pre><code>elasticache = $0.032/hr x 730 hr/mo  =  ~$23.36/mo   (cache.t4g.small, always on)
+
+sns_push = $0.50 per 1,000,000 pushes   (first 1M/mo free — SNS mobile push rate)
+            e.g. 500 dispatches/day x 5 techs x 30 = 75,000 pushes/mo  -&gt;  $0 (within free tier)
+            FCM (Android) = $0        APNs (iOS) = $0
+</code></pre>
+<table>
+<thead>
+<tr>
+<th>Scenario</th>
+<th>N tasks</th>
+<th>Hours ON/day</th>
+<th>ECS Fargate/mo</th>
+<th>ElastiCache/mo</th>
+<th>SNS/push</th>
+<th>Total/mo*</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Light / 2h day</td>
+<td>2</td>
+<td>2</td>
+<td>~$5.92</td>
+<td>~$23</td>
+<td>~$0</td>
+<td>~$29</td>
+</tr>
+<tr>
+<td>8h-ON daily</td>
+<td>2</td>
+<td>8</td>
+<td>~$23.70</td>
+<td>~$23</td>
+<td>~$0</td>
+<td>~$47</td>
+</tr>
+<tr>
+<td>24×7 always-on</td>
+<td>2</td>
+<td>24</td>
+<td>~$71.09</td>
+<td>~$23</td>
+<td>~$0</td>
+<td>~$94</td>
+</tr>
+</tbody>
+</table>
+<p>*Figures are AWS list-rate estimates for the services in the design; excludes the existing AWS EC2 app host + AWS SQL Server (sunk — unchanged by this project, itemized separately below). ElastiCache row uses cache.t4g.small at ~$0.032/hr.
+Scale-to-zero payoff: a disabled division drops its ECS Fargate line to $0 — the 24×7 vs Light / 2h day rows differ by ~12× on the variable cost. Fixed floor stays ~$23/mo (ElastiCache) regardless.</p>
+<h3 id="b-c-job-summarisation-parts-finder-shared-ai-server-vector-store">B C Job Summarisation &amp; Parts Finder — Shared AI Server + Vector Store</h3>
+<p>B and C share one central AI service and one vector store ( §3 Technology Stack), so their infrastructure cost is one shared line, not two . B carries no cost projection of its own, so the fixed baseline below is taken entirely from C's projection — the only one of the three use cases that quantified this tier — and covers both use cases' traffic against the same Container Apps / vector-store instances.</p>
+<h4 id="fixed-monthly-baseline-est">Fixed monthly baseline (est.)</h4>
+<table>
+<thead>
+<tr>
+<th>Component</th>
+<th>Assumption</th>
+<th>~ Monthly</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Azure Container Apps · FastAPI AI Server shared B·C</td>
+<td>1–2 tasks (0.5 vCPU / 1 GB)</td>
+<td>$20 – $40</td>
+</tr>
+<tr>
+<td>Azure-hosted vector store shared B·C</td>
+<td>Serverless, pay-per-use (storage + queries) — source rate: Amazon S3 Vectors — needs Azure re-pricing</td>
+<td>$5 – $15</td>
+</tr>
+<tr>
+<td>Azure Monitor + OpenTelemetry</td>
+<td>Logs, metrics, traces (moderate volume) — source rate: CloudWatch + ADOT</td>
+<td>$15 – $30</td>
+</tr>
+<tr>
+<td>Load balancer + data transfer</td>
+<td>Baseline</td>
+<td>$20</td>
+</tr>
+<tr>
+<td>Self-hosted models (LiteLLM + LLM + embedding)</td>
+<td>Client hardware, on-prem — unchanged</td>
+<td>— (client's cost)</td>
+</tr>
+<tr>
+<td>Fixed subtotal (shared across B &amp; C)</td>
+<td>≈ $60 – $105 / mo</td>
+<td></td>
+</tr>
+</tbody>
+</table>
+<h4 id="variable-per-predictionsummary">Variable — per prediction/summary</h4>
+<p>Each call is one embedding pass and one generation/ranking pass on the customer-hosted models (no per-token fee, per §3 ) plus one vector-store similarity query — source estimate: a small fraction of a cent (&lt; $0.001 ) per call. SQL Server reads/writes are the cross-cloud hop covered separately below, not billed per-call here.</p>
+<table>
+<thead>
+<tr>
+<th>Scenario</th>
+<th>Calls / mo (B + C combined)</th>
+<th>Variable</th>
+<th>Fixed + Variable (est.)</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Light pilot</td>
+<td>500</td>
+<td>&lt; $1</td>
+<td>≈ $60 – $105</td>
+</tr>
+<tr>
+<td>Typical</td>
+<td>5,000</td>
+<td>≈ $2 – $5</td>
+<td>≈ $65 – $110</td>
+</tr>
+<tr>
+<td>Heavy</td>
+<td>50,000</td>
+<td>≈ $10 – $25</td>
+<td>≈ $70 – $130</td>
+</tr>
+</tbody>
+</table>
+<p>Self-hosting keeps the marginal cost near zero: no per-token model fees and no always-on vector-DB cluster — the fixed baseline stays small and B/C's combined call volume scales cheaply on top of it. This scenario table was sized against C's traffic in its source design; B adds calls against the same shared instances rather than a second bill.</p>
+<h3 id="database-cross-cloud-egress">Database &amp; Cross-Cloud Egress</h3>
+<p>Per §3 / §4 , the SQL Server system of record stays on AWS and is read and written only by AWS-side compute (EC2 and ECS Fargate), so it carries no cross-cloud cost of its own. The single cross-cloud line is the AI request itself — the .NET AI-proxy call from AWS out to the FastAPI AI server on Azure. Both are their own cost lines, not folded into the figures above.</p>
+<table>
+<thead>
+<tr>
+<th>Component</th>
+<th>Cloud</th>
+<th>~ Monthly</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>AWS SQL Server (system of record)</td>
+<td>AWS</td>
+<td>Existing / sunk — excluded from the A and C projections as unchanged by this project. No incremental cost, and no egress: only AWS-side compute connects to it.</td>
+</tr>
+<tr>
+<td>Cross-cloud egress (AWS → Azure AI requests)</td>
+<td>AWS egress</td>
+<td>TBD — depends on B/C volume. One request/response pair per summarisation or parts search, not a per-row transfer cost. No source figure exists for this line in any of the three designs; see §4 Infrastructure.</td>
+</tr>
+</tbody>
+</table>
+<p>New cost this project adds: the egress line is a genuinely new cost, not a relabeled one — none of the three single-cloud source designs paid a cross-cloud data-transfer fee, because none of them had a cross-cloud hop. Under the confirmed placement it is a narrow line: Use Case A never leaves AWS, and the AI server holds no SQL Server connection, so the only billable crossing is the .NET proxy's outbound AI request and its response (B, C), per §4 's cross-cloud callout. Sizing this requires a traffic estimate (summaries/day × parts-lookups/day × average payload size) that no source design provides — get an AWS Data Transfer OUT quote once real volume is known, rather than guessing a number here.</p>
+<h2 id="11-onboarding-fault-tolerance">11. Onboarding &amp; Fault Tolerance</h2>
+<p>Two lifecycle questions, answered separately for each use case: how does it go from an empty production environment to live technician traffic ( Onboarding ), and how does it behave when a dependency it relies on fails ( Fault Tolerance )? A's dispatch queue, B's copilot, and C's parts predictor each have their own rollout phases and their own failure modes — only the underlying Azure services they run on ( §3 Technology Stack, §4 Infrastructure) are shared. AWS service names in the two source designs are transformed to their Azure equivalents throughout; AWS SQL Server stays on AWS in every phase below, per §3 / §4 .</p>
+<h3 id="a-auto-dispatch_1">A Auto-Dispatch</h3>
+<h4 id="onboarding">Onboarding</h4>
+<h4 id="phase-0-infrastructure-provisioning-one-time">Phase 0 — Infrastructure provisioning (one-time)</h4>
+<ul>
+<li>Amazon ElastiCache for Redis cluster up, and create the consumer group ( XGROUP CREATE dispatch:stream … ) — workers cannot read the stream until it exists ( §7 Data &amp; Schema · Amazon ElastiCache for Redis structures).</li>
+<li>AWS ECS Fargate ready: worker image pushed to Amazon ECR, task definition (1 vCPU / 2 GB — reconcile with §4's 0.5 vCPU / 1 GB baseline), scale 0↔N policy.</li>
+<li>Amazon SNS registrations created — one APNs (Apple .p8 key), one FCM (Google key). Hard precondition for /devices/register : no device registration can exist until these are live.</li>
+<li>AWS IAM roles : SNS Publish, ECS task scale control, ElastiCache access.</li>
+</ul>
+<h4 id="phase-1-data-seeding-to-db-per-division">Phase 1 — Data seeding to DB (per division)</h4>
+<ul>
+<li>Default ranking config — seed each division's weights (distance, familiarity, priority, availability window) directly into SQL Server at production cutover.</li>
+<li>Toggle default OFF — every division starts disabled. Safe default: nothing auto-dispatches until an admin explicitly opts in.</li>
+<li>Escalation target — the human dispatcher/queue the "no technician accepted" path hands off to. Without it, escalation has nowhere to go.</li>
+<li>Technician data readiness — each tech needs division, location source, and skills populated; ranking silently breaks on missing data.</li>
+</ul>
+<h4 id="phase-2-client-rollout-amazon-sns-push-onboarding">Phase 2 — Client rollout &amp; Amazon SNS push onboarding</h4>
+<p>Push is new to the platform, but signed-up technicians already exist on iOS/Android with no push token yet. Amazon SNS can only ring a technician once a endpointArn exists — the per-device registration Amazon SNS returns when you register a push token ( §8 API Reference); you send to that installation id, not the raw token. Onboarding must create it for both cohorts with no one-off migration job.</p>
+<h5 id="new-technician">+ New technician</h5>
+<p>Signs up on a push-enabled build → grants permission → POST /devices/register fires at once. Installation id exists before first dispatch. No gap.</p>
+<h5 id="existing-technician">↻ Existing technician</h5>
+<p>Account exists but no token, no installation id — unreachable until they update the app, open it, and grant permission. The one cohort with a temporary gap.
+- Ship the push-enabled app + min-version gate — before enabling any division, or no one is reachable.
+- Token management — the app registers its token on first login, whenever the OS rotates it (reinstall/restore), and on a periodic (e.g. daily) refresh. Tokens stay valid for months, so this is a few calls per technician, not one per launch.
+- Backend upsert on (techId, token) — first call creates the registration, unchanged token no-ops, rotated token updates the installation id.
+- Fallback if unreachable — a tech with no installation id (or one Amazon SNS reports dead) is skipped to manual/escalation; the dispatch never hard-fails, and the tech re-registers on its next refresh.
+Device token / installation id = PII. The push token and its Amazon SNS endpointArn are the one new piece of personal data this project stores ( techId → endpointArn ). They are treated as sensitive: encrypted at rest, access-limited to the dispatch backend, and kept only while the device is active — a rotated token overwrites the old id (upsert) and a dead id is cleaned up, so stale tokens do not accumulate. Technician location is not newly stored here — distance/ETA comes from the platform's existing location system, which auto-dispatch only reads, so its retention is unchanged and out of scope for this project.</p>
+<h4 id="phase-3-go-live-sequencing">Phase 3 — Go-live sequencing</h4>
+<ul>
+<li>Monitoring/alerting live first (Azure Monitor, §9 ) — push-adoption %, stream lag, lock-hold time, BLPOP-timeout rate.</li>
+<li>Pilot one division — flip a single division ON, validate exactly-once assignment and the escalation path end-to-end.</li>
+<li>Expand division-by-division — enable the rest once the pilot is clean; drop the manual fallback as installation-id adoption nears 100%.</li>
+</ul>
+<h4 id="environments-deployment">Environments &amp; deployment</h4>
+<ul>
+<li>Staging before prod — the change is validated in a staging environment first, then promoted to production. Staging and production each get their own isolated instances (separate Amazon ElastiCache for Redis, isolated SQL Server database, separate ECS Fargate service) — no shared state across environments, so a staging run can never touch live technician data.</li>
+<li>CI/CD — client's existing pipeline. Auto-Dispatch is a one-time change to an existing platform, not a new service, so it introduces no new pipeline. Build, test, deploy, and rollback of the worker image and the .NET Server A/B changes all follow the client's established deployment strategy on the shared AWS EC2 host ( §3 ); rollback is whatever that pipeline already provides (e.g. redeploy the previous image/revision).</li>
+</ul>
+<h4 id="fault-tolerance">Fault Tolerance</h4>
+<h4 id="how-a-crashed-or-slow-worker-is-handled">How a crashed or slow worker is handled</h4>
+<p>A dispatch request is handed to one worker to process. The system tracks that the request is "handed out but not yet finished" ( §7 Data &amp; Schema · Amazon ElastiCache for Redis structures). When the worker finishes, it marks the request done and the request clears. The goal: never lose a request if a worker dies, and never process the same request twice.
+- Problem — worker crashes partway. The request is still marked "handed out, not finished," but nobody is actually working on it. It is stuck, and the customer waits forever.
+- Rescue. If a request stays "not finished" for too long, another worker is allowed to take it over and process it. The stuck request is recovered.
+- New danger. What if the first worker did not crash — just ran slow? Then the second worker takes over and processes the same request while the first is still working it — the same job offered to two technicians.
+- Safeguard. Before offering a job, a worker must hold a claim on that technician, and only one worker can hold it at a time. If the first worker is just slow it still holds the claim , so the second worker is blocked — no double offer. If the first worker truly crashed, its claim releases automatically after a short time, so the second worker safely takes over.
+The claim decides it: still held means "someone is alive and working — stay out"; released means "they are gone — go ahead."
+Net effect — exactly-once: every request is processed even if a worker dies, and no request is ever processed twice even if a worker is slow. Nothing lost, nothing duplicated.</p>
+<h3 id="b-job-summarisation">B Job Summarisation</h3>
+<h4 id="onboarding_1">Onboarding</h4>
+<h4 id="phase-0-infrastructure-provisioning-one-time_1">Phase 0 — Infrastructure provisioning (one-time)</h4>
+<ul>
+<li>Network: private subnet and an internal load balancer (idle timeout ≥ 120s); the AI service gets no public URL.</li>
+<li>Container hosting ready: FastAPI image built and pushed to the registry, always-on service at min 2 instances on Azure Container Apps — the shared central AI service ( §3 ) that also serves C.</li>
+<li>LLM connectivity : network path and API key for the client's private gateway, which serves both self-hosted models (qwen3-vl for generation, nomic-embed for embeddings) unchanged by the migration.</li>
+<li>Secrets : the gateway key, the internal proxy API key, and the FieldJetX API token ( FJX_API_TOKEN , open client item) in Azure Key Vault ; nothing in code or images.</li>
+<li>.NET proxy route deployed on the Microservices API (shared AWS EC2 host, §3 ): this is client-owned code, so it must be scheduled with their team, not ours.</li>
+</ul>
+<h4 id="phase-1-data-schema-seeding">Phase 1 — Data &amp; schema seeding</h4>
+<ul>
+<li>DBA sign-off on the read-only SQL Server account, then create the AI MongoDB database and its collections ( summaries , llm_calls , summary_edits ) with their indexes on Azure Cosmos DB for MongoDB. Hard precondition for everything downstream.</li>
+<li>Pin the ticket standard : ticket_standard.md version 1 agreed and frozen; every prompt and eval references a version.</li>
+<li>Build the co-occurrence tables : one idempotent SQL aggregation over the last 12 months of dispatch/parts history seeds the suggestion frequency tables; refreshed as new dispatches close.</li>
+<li>Procedure coverage check : verify each pilot customer's compliance procedures are current in the source system; the gap checks are only as good as the procedure list.</li>
+</ul>
+<h4 id="phase-2-client-rollout-app-onboarding">Phase 2 — Client rollout &amp; app onboarding</h4>
+<p>The copilot ships inside the existing app, so rollout is an app-version story, not an account-migration story: no per-technician provisioning is needed.</p>
+<h5 id="pilot-technicians">+ Pilot technicians</h5>
+<p>Update to the copilot-enabled build → the Review step shows the AI ticket on their next dispatch. No sign-up, no new login : same app, same token.</p>
+<h5 id="everyone-else">↻ Everyone else</h5>
+<p>Old app versions keep today's manual review page untouched; the AI route simply is not called. Technicians join the copilot as their app updates.
+- Ship the copilot build + min-version gate for the pilot cohort before enabling the AI route for their branch.
+- Decide the assignment trigger (open client item): poll for new assignments vs a .NET hook, needed for briefings to start in the background.
+- Technician expectations : brief the pilot cohort that the AI drafts and they stay accountable: review, edit, then submit. Their edits train the eval set ( §9 ), so editing is contributing, not correcting a failure.</p>
+<h4 id="phase-3-go-live-sequencing_1">Phase 3 — Go-live sequencing</h4>
+<ul>
+<li>Monitoring/alerting live first : LLM latency and error rate, parse-failure rate, proxy timeout rate, and the edit-rate dashboard, all straight from the llm_calls collection / the summary_edits collection ( §9 Observability &amp; Evals).</li>
+<li>Pilot one customer/branch : validate briefing usefulness, ticket quality, and the gap-check loop end to end on real dispatches.</li>
+<li>Baseline, then expand : capture the pilot's edit-rate and call-back baseline; roll out branch by branch once stable. Any prompt/model change after baseline must pass the eval set ( §9 ).</li>
+</ul>
+<h4 id="environments-deployment_1">Environments &amp; deployment</h4>
+<ul>
+<li>Staging before prod : the copilot is validated against FieldJetX staging first (its own Container Apps service and its own MongoDB database), then promoted. No shared state across environments, so staging can never touch live customer data.</li>
+<li>CI/CD : the FastAPI service ships from its own repo pipeline (build image → push to the container registry → rolling deploy on Container Apps; rollback = redeploy the previous image). The one .NET proxy route rides the client's existing deployment pipeline on the shared AWS EC2 host, as their strategy dictates.</li>
+</ul>
+<h4 id="fault-tolerance_1">Fault Tolerance</h4>
+<table>
+<thead>
+<tr>
+<th>Failure</th>
+<th>Behaviour</th>
+<th>Why it is safe</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>An enrichment read fails</td>
+<td>Pipeline continues without that block (fail-soft)</td>
+<td>The ticket is generated from what is available; missing context degrades quality, not availability</td>
+</tr>
+<tr>
+<td>Private gateway outage</td>
+<td>AI features degrade to the manual experience: the review page shows today's plain recap and briefings/suggestions are skipped; submission is never blocked</td>
+<td>The gateway is the single model dependency, and the whole design treats AI as an overlay, so losing it means losing assistance, not function</td>
+</tr>
+<tr>
+<td>Gateway saturated under load</td>
+<td>Calls queue with a timeout; measured throughput drops from 30–35 tok/s (single call) to ~11 tok/s at 4 concurrent calls, and calls that exceed the timeout degrade to the manual recap</td>
+<td>Latency degrades gracefully; the ~10% pilot keeps concurrency low, and capacity is monitored via the llm_calls collection before any wider rollout</td>
+</tr>
+<tr>
+<td>LLM returns malformed output</td>
+<td>Parser falls back to regex extraction, then MISSING placeholders</td>
+<td>The app always receives exactly 12 sections; a bad generation can never break the review page</td>
+</tr>
+<tr>
+<td>An Azure Container Apps instance dies</td>
+<td>The load balancer routes to the remaining instance; Container Apps replaces the dead replica</td>
+<td>Minimum 2 always-on instances; no cold-start window</td>
+</tr>
+<tr>
+<td>AI tier unreachable</td>
+<td>Review page falls back to today's manual recap; submission is never blocked</td>
+<td>The existing close-job flow is untouched, so the worst case is the pre-copilot experience</td>
+</tr>
+</tbody>
+</table>
+<p>System of record: AWS SQL Server remains the single source of truth. The AI tier only ever writes documents to its own MongoDB collections and never writes to SQL Server at all; job write-back rides the existing mobile-post path, so an AI failure can never corrupt or block business data.</p>
+<h3 id="c-parts-finder">C Parts Finder</h3>
+<h4 id="onboarding_2">Onboarding</h4>
+<h4 id="phase-0-provision">Phase 0 — Provision</h4>
+<ul>
+<li>Azure Container Apps service (private VNet) + internal load balancer; container image built in CI.</li>
+<li>Azure-hosted vector store bucket + index created; connectivity to the customer-hosted embedding model and LLM configured and health-checked.</li>
+<li>Network path + read-only credentials to AWS SQL Server, plus connectivity to its own MongoDB, the .NET Legacy API, and the United CP Gateway.</li>
+<li>MongoDB collections and indexes created on Azure Cosmos DB for MongoDB; AI proxy route deployed on the .NET Microservices API — the same shared route B uses ( §3 ).</li>
+</ul>
+<h4 id="phase-1-seed-the-index">Phase 1 — Seed the index</h4>
+<ul>
+<li>Batch-embed historical completed dispatches on the self-hosted embedding model (idempotent upsert by dispatchNo ).</li>
+<li>Validate retrieval quality on a held-out set of recent dispatches.
+This is what closes C's cold-start gap: the index is never empty at go-live, because it is seeded from the platform's own dispatch history before the first technician sees a prediction.</li>
+</ul>
+<h4 id="phase-2-client-rollout">Phase 2 — Client rollout</h4>
+<ul>
+<li>Ship the "Add Parts with AI" / sourcing experience in the mobile app behind a feature flag , enabled per branch/division.</li>
+<li>Pilot with a small technician cohort; watch acceptance rate and source mix (truck / warehouse / vendor, §6 Core Logic).</li>
+</ul>
+<h4 id="phase-3-go-live-continuous-learning">Phase 3 — Go-live &amp; continuous learning</h4>
+<ul>
+<li>Expand the flag division-by-division.</li>
+<li>Wire the on-completion re-embed pipeline so the index grows automatically as dispatches close — the self-learning loop keeps improving suggestions without a separate retraining job ( §6 Core Logic).</li>
+</ul>
+<h4 id="environments-deployment_2">Environments &amp; deployment</h4>
+<ul>
+<li>Staging : isolated Azure-hosted vector index, supplier gateway on a test key — validation before each release.</li>
+<li>Production : production vector index, supplier gateway on a production key — live technician traffic. No shared state across environments, matching A and B.</li>
+</ul>
+<h4 id="fault-tolerance_2">Fault Tolerance</h4>
+<table>
+<thead>
+<tr>
+<th>Failure</th>
+<th>Behavior</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Self-hosted models / vector store unavailable</td>
+<td>/parts/predict returns 503 ; the client falls back to manual inventory add — the flow continues.</td>
+</tr>
+<tr>
+<td>Supplier (United) outage or timeout</td>
+<td>The vendor tier is dropped from a part's sources; own-stock (truck/warehouse) options are still returned. The request does not fail.</td>
+</tr>
+<tr>
+<td>Model throttling / slowness</td>
+<td>Retry with backoff and batched pacing at index time; request-time timeouts bound prediction latency. Transient throttling doesn't corrupt the index.</td>
+</tr>
+<tr>
+<td>Duplicate / repeated indexing</td>
+<td>Idempotent upsert keyed by dispatchNo — re-running indexing never double-counts a dispatch.</td>
+</tr>
+<tr>
+<td>SQL Server slow / unavailable</td>
+<td>Read replicas + brief caching for hot stock lookups; sourcing surfaces last-known availability where safe.</td>
+</tr>
+<tr>
+<td>Container Apps replica crash</td>
+<td>Stateless Azure Container Apps replicas behind the load balancer; Container Apps replaces unhealthy replicas (health-checked via /health ).</td>
+</tr>
+</tbody>
+</table>
+<p>Supplier-timeout fallback, restated: the vendor (United) lookup is the one call in C that reaches outside the client's own infrastructure, so it is the row most likely to fail independently of the AI tier — dropping just that tier, rather than failing the whole /parts/source request, is what keeps a United outage from blocking a technician who only needed own-stock parts.</p>
+<h2 id="12-non-goals-pii">12. Non-goals &amp; PII</h2>
+<p>Two boundaries, drawn once for all three use cases instead of three times: what each use case deliberately does not do, and what personal data this project touches. C's source design carries the only dedicated PII inventory of the three — lifted at full fidelity below — and A's one new piece of personal data (the device push token) was already catalogued in full where it is introduced, §11 Onboarding &amp; Fault Tolerance.</p>
+<h3 id="non-goals">Non-goals</h3>
+<h4 id="a-auto-dispatch_2">A Auto-Dispatch</h4>
+<ul>
+<li>Not route optimization — closest-available-responder, like a 911 dispatch. It ranks who answers next, not the most efficient multi-stop route.</li>
+<li>Deterministic, no LLM — a weighted-sum over stated inputs with configured (not learned) weights, so every assignment is explainable and repeatable.</li>
+<li>The existing manual dispatch flow is untouched — a division with the toggle OFF behaves exactly as today.</li>
+<li>No UI change beyond the toggle and its configuration (task count N ).</li>
+<li>No change to the SQL Server system-of-record schema beyond dispatch status fields.</li>
+</ul>
+<h4 id="b-job-summarisation_1">B Job Summarisation</h4>
+<ul>
+<li>Never fabricates. The ticket is generated from what is actually available — a missing block degrades to a MISSING placeholder, never an invented one ( §6 Core Logic, §8 API Reference).</li>
+<li>Never blocks Save. Every failure mode — malformed output, gateway outage, saturation — degrades to the manual recap; submission is never gated on the AI tier ( §11 Fault Tolerance).</li>
+<li>Completeness over prose. The headline isn't prettier writing — that's table stakes — it's cross-checking the note against parts, time and photos actually logged and surfacing what's missing.</li>
+</ul>
+<h4 id="c-parts-finder_1">C Parts Finder</h4>
+<ul>
+<li>No price ranking, no ordering. The tech decides where to pick a part up — the system shows the part, the place and the distance, and stops there.</li>
+<li>One supplier for the POC (United, via the existing CP API Gateway); more suppliers is future work, not this scope.</li>
+<li>Not replacing technician judgment — predictions are suggestions the tech can add, swap or ignore, never auto-committed.</li>
+<li>No automatic purchasing or PO creation from the vendor, and no warehouse/inventory management — stock levels stay owned by the system of record.</li>
+</ul>
+<h3 id="pii-inventory-data-handling">PII inventory &amp; data handling</h3>
+<h4 id="c-pii-inventory-security-controls">C PII inventory &amp; security controls</h4>
+<p>AWS-specific terms are reconciled to their Azure equivalents per §3 / §4 (private Azure VNet in place of AWS VPC, Azure Key Vault in place of AWS Secrets Manager/SSM Parameter Store); AWS SQL Server and the self-hosted embedding/LLM layer are unchanged.</p>
+<table>
+<thead>
+<tr>
+<th>Area</th>
+<th>Control</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Client → service auth</td>
+<td>Bearer token from the FJX 2.2 session, validated at the .NET Microservices API before the AI proxy route forwards the call; CORS restricted to the mobile client.</td>
+</tr>
+<tr>
+<td>Network isolation</td>
+<td>The AI layer runs in a private Azure VNet — the FastAPI AI Server is not internet-reachable; only the .NET proxy route (and the VNet paths to SQL Server, the vector store, and the customer-hosted models) can reach it.</td>
+</tr>
+<tr>
+<td>Model hosting</td>
+<td>Embedding and LLM inference run on client-provided, self-hosted models on customer hardware — dispatch text and parts history are never sent to a third-party AI provider.</td>
+</tr>
+<tr>
+<td>Supplier gateway</td>
+<td>United calls carry the Ocp-Apim-Subscription-Key header; the key is held server-side only and never reaches the mobile client ( §8 API Reference · Contract notes).</td>
+</tr>
+<tr>
+<td>Secrets management</td>
+<td>All credentials (gateway key, DB, model endpoints) resolved from a secret store — Azure Key Vault — with rotation. No secrets in source or images.</td>
+</tr>
+<tr>
+<td>Data store access</td>
+<td>Least-privilege SQL Server account: read-scoped on inventory and dispatch tables with no write grant at all; every AI write goes to its own MongoDB. Network-restricted to the service subnet.</td>
+</tr>
+<tr>
+<td>Transport</td>
+<td>TLS on all hops (client, proxy, gateway, model endpoints, internal service calls).</td>
+</tr>
+</tbody>
+</table>
+<ul>
+<li>Dispatch &amp; customer detail (name, address, phone) — served to the authenticated technician only; excluded from log bodies ( §9 Observability &amp; Evals).</li>
+<li>Van / warehouse locations — used transiently for distance ordering; not persisted beyond short-lived caching.</li>
+<li>The vector store holds no direct customer PII — only dispatch reason text and used part numbers — reducing the sensitivity of the derived index ( §7 Data &amp; Schema).
+🔒 Derived and rebuildable: because the Azure-hosted vector store is derived from SQL Server rather than an independent source of truth, it can be re-seeded at any time — supporting deletion and data-retention requests handled at the SQL Server layer.</li>
+</ul>
+<h4 id="a-device-push-token-see-11">A Device push token — see §11</h4>
+<p>Auto-Dispatch's one new piece of personal data — the push token and its Amazon SNS endpointArn ( techId → endpointArn ) — is catalogued in full where it is introduced: encrypted at rest, access-limited to the dispatch backend, retained only while the device is active. See the Device token / installation id = PII callout in §11 Onboarding &amp; Fault Tolerance · Phase 2. Technician location itself is not newly stored by this project — distance/ETA reads the platform's existing location system, unchanged and out of scope here.</p>
+<h4 id="b-c-the-history-b-and-c-learn-from">B C The history B and C learn from</h4>
+<p>ClimatePros has 10–12 years of operational data — 200,000+ jobs in the last six months alone , and 16.3 million note records across the full span. It is messy by the client's own admission: ~40% of notes are ≤40 characters , and the single most common note in the database is literally “checked history.” That is the problem B and C are solving, so it is also the data both inherit — B's eval set ( §9 ) and C's retrieval index ( §6 , §7 ) are both built on it.
+10–12 yrs
+operational history
+200,000+
+jobs, last 6 months
+16.3M
+note records, full span
+~40%
+notes ≤40 chars
+Not trained on the raw dump. The corpus is de-duplicated down to unique cases first , and personally identifiable information is stripped before anything reaches a model — whether that model is B's summarisation/copilot pipeline or C's embedding index. This is a data-preparation step upstream of both §6 Core Logic pipelines, not a per-request runtime control like the table above.</p>
+<hr />
+<h2 id="appendix-a-corrections-applied-during-conversion">Appendix A — Corrections applied during conversion</h2>
+<p>The source section fragments had drifted apart: §2a, §3 and §4 had been updated to the confirmed cloud placement while §5 and §7–§12 still carried an earlier Azure-first model. Every correction below applies one rule — <strong>AI-specific components on Azure, everything else on AWS</strong> — together with the AI-datastore decision (MongoDB on Azure, not an <code>ai.*</code> schema on SQL Server). No other source content was altered, and no figures, formulas or API parameters were changed.</p>
+<p><strong>Terminology replaced throughout</strong></p>
+<table>
+<thead>
+<tr>
+<th>Was</th>
+<th>Now</th>
+<th>Sections</th>
+<th>Occurrences</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>Azure Cache for Redis</code></td>
+<td><code>Amazon ElastiCache for Redis</code></td>
+<td>§7, §10, §11</td>
+<td>10</td>
+</tr>
+<tr>
+<td><code>Azure Notification Hubs</code></td>
+<td><code>Amazon SNS</code></td>
+<td>§5, §10, §11</td>
+<td>4</td>
+</tr>
+<tr>
+<td><code>Azure VM</code></td>
+<td><code>AWS EC2</code></td>
+<td>§2, §5, §7, §8, §9, §10, §11</td>
+<td>17</td>
+</tr>
+<tr>
+<td><code>Notification Hubs</code></td>
+<td><code>Amazon SNS</code></td>
+<td>§2, §5, §8, §10, §11, §12</td>
+<td>15</td>
+</tr>
+<tr>
+<td><code>ai.* tables</code></td>
+<td><code>the AI MongoDB collections</code></td>
+<td>§5</td>
+<td>1</td>
+</tr>
+<tr>
+<td><code>ai.llm_calls</code></td>
+<td><code>the llm_calls collection</code></td>
+<td>§5, §7, §9, §11</td>
+<td>6</td>
+</tr>
+<tr>
+<td><code>ai.summaries</code></td>
+<td><code>the summaries collection</code></td>
+<td>§5, §6, §7</td>
+<td>4</td>
+</tr>
+<tr>
+<td><code>ai.summary_edits</code></td>
+<td><code>the summary_edits collection</code></td>
+<td>§5, §7, §9, §11</td>
+<td>7</td>
+</tr>
+<tr>
+<td><code>device installation id</code></td>
+<td><code>platform endpoint ARN</code></td>
+<td>§5</td>
+<td>1</td>
+</tr>
+<tr>
+<td><code>deviceInstallationId</code></td>
+<td><code>endpointArn</code></td>
+<td>§8, §11, §12</td>
+<td>6</td>
+</tr>
+</tbody>
+</table>
+<p><strong>Statements rewritten</strong> (each corrected a claim that contradicted the cloud rule or the MongoDB decision)</p>
+<table>
+<thead>
+<tr>
+<th>Correction</th>
+<th>Section</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>intro — Azure relabelling premise removed; A prices as AWS</td>
+<td>§10</td>
+</tr>
+<tr>
+<td>callout — re-pricing scoped to the Azure AI lines</td>
+<td>§10</td>
+</tr>
+<tr>
+<td>A — variable cost is the Fargate pool</td>
+<td>§10</td>
+</tr>
+<tr>
+<td>A — rate provenance now matches the services bought</td>
+<td>§10</td>
+</tr>
+<tr>
+<td>heading — Fargate formula is the live formula</td>
+<td>§10</td>
+</tr>
+<tr>
+<td>Fargate task rate — flagged sizing conflict with §4</td>
+<td>§10</td>
+</tr>
+<tr>
+<td>code — ElastiCache line and real instance class</td>
+<td>§10</td>
+</tr>
+<tr>
+<td>code — SNS push line</td>
+<td>§10</td>
+</tr>
+<tr>
+<td>scenario table header — AWS service names</td>
+<td>§10</td>
+</tr>
+<tr>
+<td>table footnote — provenance and cache instance class</td>
+<td>§10</td>
+</tr>
+<tr>
+<td>scale-to-zero note — Fargate</td>
+<td>§10</td>
+</tr>
+<tr>
+<td>scale-to-zero note — ElastiCache floor</td>
+<td>§10</td>
+</tr>
+<tr>
+<td>vector store line — flagged for Azure re-pricing</td>
+<td>§10</td>
+</tr>
+<tr>
+<td>formula legend — ECS Fargate tasks</td>
+<td>§10</td>
+</tr>
+<tr>
+<td>egress heading &amp; intro — the seam is the AI request, not the database</td>
+<td>§10</td>
+</tr>
+<tr>
+<td>egress table — rows rescoped to the AI-request hop</td>
+<td>§10</td>
+</tr>
+<tr>
+<td>egress note — A stays in AWS; only B/C requests cross</td>
+<td>§10</td>
+</tr>
+<tr>
+<td>A Phase 0 — ECS Fargate + ECR, sizing conflict flagged</td>
+<td>§11</td>
+</tr>
+<tr>
+<td>A Phase 0 — IAM instead of Azure RBAC</td>
+<td>§11</td>
+</tr>
+<tr>
+<td>A environments — per-env Fargate service</td>
+<td>§11</td>
+</tr>
+<tr>
+<td>B Phase 1 — MongoDB collections replace the SQL ai.* schema</td>
+<td>§11</td>
+</tr>
+<tr>
+<td>B environments — per-env MongoDB database</td>
+<td>§11</td>
+</tr>
+<tr>
+<td>B fault tolerance — AI writes are MongoDB-only</td>
+<td>§11</td>
+</tr>
+<tr>
+<td>C Phase 0 — read-only SQL access, writes to MongoDB</td>
+<td>§11</td>
+</tr>
+<tr>
+<td>C Phase 0 — MongoDB provisioning replaces SQL migration</td>
+<td>§11</td>
+</tr>
+<tr>
+<td>data-store access — SQL account is read-only</td>
+<td>§12</td>
+</tr>
+<tr>
+<td>2b Use Case A caption — cloud placement corrected</td>
+<td>§2</td>
+</tr>
+<tr>
+<td>2b B&amp;C caption — stale "no AWS managed service" claim removed</td>
+<td>§2</td>
+</tr>
+<tr>
+<td>AI datastore — ai.* on SQL Server → MongoDB on Azure</td>
+<td>§2</td>
+</tr>
+<tr>
+<td>2b A summary line — ECS Fargate worker</td>
+<td>§2</td>
+</tr>
+<tr>
+<td>Database row — AI output goes to MongoDB, not a SQL ai.* schema</td>
+<td>§3</td>
+</tr>
+<tr>
+<td>A step 1 — dispatch workers are ECS Fargate, not Container Apps</td>
+<td>§5</td>
+</tr>
+<tr>
+<td>push round-trip step 1 — SNS Publish, ECS Fargate worker</td>
+<td>§5</td>
+</tr>
+<tr>
+<td>push round-trip step 2 — SNS platform application wording</td>
+<td>§5</td>
+</tr>
+<tr>
+<td>intro — ECS Fargate task walkthroughs</td>
+<td>§5</td>
+</tr>
+<tr>
+<td>briefing builder — cached in MongoDB</td>
+<td>§5</td>
+</tr>
+<tr>
+<td>intro — AI output store is MongoDB, not an ai.* SQL schema</td>
+<td>§7</td>
+</tr>
+<tr>
+<td>A heading body — Container Apps pool → ECS Fargate pool</td>
+<td>§7</td>
+</tr>
+<tr>
+<td>STREAM row — producer/consumer are EC2 and ECS Fargate</td>
+<td>§7</td>
+</tr>
+<tr>
+<td>B — relational ai.* schema rewritten as MongoDB collections</td>
+<td>§7</td>
+</tr>
+<tr>
+<td>C intro — AI writes go to MongoDB, not a SQL ai.* schema</td>
+<td>§7</td>
+</tr>
+<tr>
+<td>C — ai.* schema section rewritten as MongoDB + learning-loop trigger stated</td>
+<td>§7</td>
+</tr>
+<tr>
+<td>/admin/dashboard — reads MongoDB collections</td>
+<td>§8</td>
+</tr>
+<tr>
+<td>/divisions/{id}/toggle — scales the ECS Fargate pool</td>
+<td>§8</td>
+</tr>
+<tr>
+<td>heading — both clouds’ log sinks named</td>
+<td>§9</td>
+</tr>
+<tr>
+<td>scope sentence — A is not an AI tier; split CloudWatch / Azure Monitor</td>
+<td>§9</td>
+</tr>
+<tr>
+<td>dashboard — reads MongoDB collections</td>
+<td>§9</td>
+</tr>
+</tbody>
+</table>
+<hr />
+<h2 id="appendix-b-open-items">Appendix B — Open items</h2>
+<p>Carried from the source sections plus the two conflicts surfaced by this conversion. Each needs a ClimatePros owner before
+this document can move from draft to agreed.</p>
+<table>
+<thead>
+<tr>
+<th>#</th>
+<th>Open item</th>
+<th>Where</th>
+<th>Why it matters</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>1</td>
+<td>Dispatch-worker task size: §4 Compute sizing specifies 0.5 vCPU / 1 GB; §10 Cost Projection and §11 Phase 0 both assume 1 vCPU / 2 GB.</td>
+<td>§4, §10, §11</td>
+<td>The cost formula and the ECS task definition are built from this number; the two figures give different monthly totals.</td>
+</tr>
+<tr>
+<td>2</td>
+<td>Azure re-pricing for the AI lines — Container Apps, the chosen vector store, and Azure Monitor.</td>
+<td>§10</td>
+<td>Those figures are still AWS-sourced rates. Use Case A’s AWS figures now stand as-is.</td>
+</tr>
+<tr>
+<td>3</td>
+<td>Vector store selection: §4 lists Azure AI Search / Pinecone as candidates; §3 marks the store experimental; §6 B states the index is out of scope pending evals, while §6 C actively searches it.</td>
+<td>§3, §4, §6</td>
+<td>C needs a store at go-live; B only if evals justify it. The selection and the C-only scope should be stated explicitly.</td>
+</tr>
+<tr>
+<td>4</td>
+<td>Learning-loop trigger for C: the AI server has no SQL Server connection, so dispatch completion must be pushed to it by the .NET side rather than polled.</td>
+<td>§6 C, §7 C</td>
+<td>Without a confirmed trigger the self-learning index never updates.</td>
+</tr>
+<tr>
+<td>5</td>
+<td>MongoDB collection and index design sign-off with the client DBA (replaces the earlier ai.* DDL approval).</td>
+<td>§7 B</td>
+<td>Determines query performance for briefing retrieval and the eval dashboards.</td>
+</tr>
+<tr>
+<td>6</td>
+<td>Dispatch-assignment trigger mechanism for the B briefing builder.</td>
+<td>§5 B, §7 B</td>
+<td>The briefing must start building at assignment time to be warm when the technician opens the job.</td>
+</tr>
+<tr>
+<td>7</td>
+<td>Per-division lock model: the §2 diagram still shows a per-division lock (<code>lock:div:*</code>); the implemented model locks per candidate technician. Diagram redraw pending.</td>
+<td>§2, §7 A</td>
+<td>The diagram and the implementation disagree on concurrency behaviour.</td>
+</tr>
+<tr>
+<td>8</td>
+<td>Cross-cloud network path: site-to-site VPN or VPC-to-VNet peering is the target state; the interim fallback is a public HTTPS endpoint with IP allow-listing / mTLS.</td>
+<td>§4</td>
+<td>Security review and the P95 latency budget in §9 both depend on which one ships.</td>
+</tr>
+<tr>
+<td>9</td>
+<td>Push token / endpoint ARN is the one new piece of personal data this project stores.</td>
+<td>§11, §12</td>
+<td>Needs to be reflected in the PII inventory and retention policy.</td>
+</tr>
+<tr>
+<td>10</td>
+<td><code>CLAUDE.md</code> in the source repository still describes the older Azure-first model (“Azure except the AWS SQL Server database”) and names Azure Notification Hubs and Azure Cache for Redis.</td>
+<td>repository</td>
+<td>Future edits made from that guidance would reintroduce the mismatches corrected here.</td>
+</tr>
+</tbody>
+</table>
+</body></html>

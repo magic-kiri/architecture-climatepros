@@ -1,0 +1,51 @@
+{
+  "1": {
+    "file": "fig1.png",
+    "w": 2640,
+    "h": 2629,
+    "aspect": 0.9958,
+    "source": "diagram-2a.html"
+  },
+  "2": {
+    "file": "fig2.png",
+    "w": 2407,
+    "h": 3234,
+    "aspect": 1.3436,
+    "source": "diagram-2b-a.html"
+  },
+  "3": {
+    "file": "fig3.png",
+    "w": 3014,
+    "h": 1430,
+    "aspect": 0.4745,
+    "source": "diagram-2b-b.html"
+  },
+  "4": {
+    "file": "fig4.png",
+    "w": 2600,
+    "h": 1560,
+    "aspect": 0.6,
+    "source": "diagram_dispatch_loop"
+  },
+  "5": {
+    "file": "fig5.png",
+    "w": 2053,
+    "h": 584,
+    "aspect": 0.2845,
+    "source": "05.html"
+  },
+  "6": {
+    "file": "fig6.png",
+    "w": 1757,
+    "h": 1086,
+    "aspect": 0.6181,
+    "source": "05.html"
+  },
+  "7": {
+    "file": "fig7.png",
+    "w": 1377,
+    "h": 992,
+    "aspect": 0.7204,
+    "source": "05.html"
+  }
+}

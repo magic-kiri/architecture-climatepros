@@ -211,8 +211,6 @@ Technicians join the copilot as their app updates.</p></div>
 <ul>
 <li><b>Ship the copilot build + min-version gate</b> for the pilot cohort before enabling the AI route
 for their branch.</li>
-<li><b>Decide the assignment trigger</b> (open client item): poll for new assignments vs a .NET hook,
-needed for briefings to start in the background.</li>
 <li><b>Technician expectations</b>: brief the pilot cohort that the AI drafts and they stay
 accountable: review, edit, then submit. Their edits train the eval set (<a class="xref" href="#s9">&sect;9</a>), so editing is
 contributing, not correcting a failure.</li>
@@ -225,7 +223,7 @@ contributing, not correcting a failure.</li>
 <li><b>Monitoring/alerting live first</b>: LLM latency and error rate, parse-failure rate, proxy timeout
 rate, and the edit-rate dashboard, all straight from <code>ai.llm_calls</code> /
 <code>ai.summary_edits</code> (<a class="xref" href="#s9">&sect;9</a> Observability &amp; Evals).</li>
-<li><b>Pilot one customer/branch</b>: validate briefing usefulness, ticket quality, and the gap-check
+<li><b>Pilot one customer/branch</b>: validate ticket quality and the gap-check
 loop end to end on real dispatches.</li>
 <li><b>Baseline, then expand</b>: capture the pilot's edit-rate and call-back baseline; roll out branch
 by branch once stable. Any prompt/model change after baseline must pass the eval set (<a class="xref" href="#s9">&sect;9</a>).</li>
@@ -252,7 +250,7 @@ their strategy dictates.</li>
 <tr><td>An enrichment read fails</td><td>Pipeline continues without that block (fail-soft)</td><td>The
 ticket is generated from what is available; missing context degrades quality, not availability</td></tr>
 <tr><td>Private gateway outage</td><td>AI features degrade to the manual experience: the review page
-shows today's plain recap and briefings/suggestions are skipped; submission is never blocked</td>
+shows today's plain recap and suggestions are skipped; submission is never blocked</td>
 <td>The gateway is the single model dependency, and the whole design treats AI as an overlay, so losing
 it means losing assistance, not function</td></tr>
 <tr><td>Gateway saturated under load</td><td>Calls queue with a timeout; measured throughput drops from

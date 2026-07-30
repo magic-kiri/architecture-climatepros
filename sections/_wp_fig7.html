@@ -1,0 +1,24 @@
+<!DOCTYPE html><html><head><meta charset="utf-8">
+<link rel="stylesheet" href="style.css">
+<style>@page { size: 1000px 4000px; margin:0; }
+html,body { margin:0; padding:14px; background:#fff; }
+*{font-family:'Carlito','DejaVu Sans',sans-serif !important;}
+.opsflow-cards.opsflow-solo{max-width:940px !important;margin:0 !important;}
+.diagram-frame{overflow:visible !important;border:none !important;padding:0 !important;}
+</style></head><body><div class="opsflow-cards opsflow-solo">
+<div class="opsflow-card">
+<div class="opsflow-card-head">🔧 Four-Source Find → Allocate</div>
+<span class="opsflow-trigger blue">Trigger · technician requests a part</span>
+<div class="opsflow-chain">
+<div class="opsflow-node blue"><div class="opsflow-body"><span class="opsflow-step" style="background:var(--blue)">1</span><span class="opsflow-txt">My truck<small>the technician's own van inventory · 0 mi · free</small></span></div></div>
+<div class="opsflow-conn"><svg height="24" width="18"><path d="M9 0v16M3 12l6 6 6-6" fill="none" stroke="#2563eb" stroke-width="2"></path></svg></div>
+<div class="opsflow-node blue"><div class="opsflow-body"><span class="opsflow-step" style="background:var(--blue)">2</span><span class="opsflow-txt">Nearby technicians' trucks<small>another tech's van, modeled as a warehouse (name + warehouse code + address) · free · ranked by distance</small></span></div></div>
+<div class="opsflow-conn"><svg height="24" width="18"><path d="M9 0v16M3 12l6 6 6-6" fill="none" stroke="#2563eb" stroke-width="2"></path></svg></div>
+<div class="opsflow-node blue"><div class="opsflow-body"><span class="opsflow-step" style="background:var(--blue)">3</span><span class="opsflow-txt">Branch warehouse<small>other ClimatePros warehouses · free · nearest first</small></span></div></div>
+<div class="opsflow-conn"><svg height="24" width="18"><path d="M9 0v16M3 12l6 6 6-6" fill="none" stroke="#d97706" stroke-width="2"></path></svg></div>
+<div class="opsflow-node amber"><div class="opsflow-body"><span class="opsflow-step">4</span><span class="opsflow-txt">Third-party supplier<small>nearest United Refrigeration branch via the CP API Gateway · priced from <code>InventorySupplierXREF.currentcost</code></small></span></div></div>
+<div class="opsflow-conn"><svg height="24" width="18"><path d="M9 0v16M3 12l6 6 6-6" fill="none" stroke="#7c3aed" stroke-width="2"></path></svg></div>
+<div class="opsflow-node violet"><div class="opsflow-body"><span class="opsflow-step" style="background:var(--purple)">✓</span><span class="opsflow-txt">Greedy allocate across the sorted list<small>truck first, then ascending distance; each source takes <code>min(remaining_need, available)</code> until the requested quantity is met</small></span></div></div>
+</div>
+</div>
+</div></body></html>

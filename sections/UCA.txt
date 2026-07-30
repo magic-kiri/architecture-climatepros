@@ -9,7 +9,9 @@ Stage A:
 1. Get nearest TECHNICIAN LIST withing 10mile redius. We have api + functions already. Just need to call it.
 2. Get metadata from DB for each TECHNICIAN. 
 3. Send PUSH Notification into mobile app using AWS SNS to get ETA from EACH technician. 
-4. Technician will submit into mobile app and the mobile app will send the information to the .NET server. 
+
+
+Technician will submit an ETA from the mobile app and the mobile app will send the ETA to the .NET server. 
 
 Our system will wait for maximum X seconds for technicians response. If all replies before X seconds or X second passed we will move to Stage B. 
 

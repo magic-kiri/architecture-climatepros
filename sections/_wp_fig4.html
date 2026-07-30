@@ -1,0 +1,51 @@
+<!DOCTYPE html><html><head><meta charset="utf-8">
+<link rel="stylesheet" href="style.css">
+<style>@page { size: 1000px 4000px; margin:0; }
+html,body { margin:0; padding:14px; background:#fff; }
+*{font-family:'Carlito','DejaVu Sans',sans-serif !important;}
+.opsflow-cards.opsflow-solo{max-width:940px !important;margin:0 !important;}
+.diagram-frame{overflow:visible !important;border:none !important;padding:0 !important;}
+</style></head><body><div class="opsflow-cards opsflow-solo">
+<div class="opsflow-card">
+<div class="opsflow-card-head">🔄 New Dispatch → Assignment</div>
+<span class="opsflow-trigger blue">Trigger · dispatch created</span>
+<div class="opsflow-chain">
+<div class="opsflow-node blue"><div class="opsflow-body"><span class="opsflow-step">1</span><span class="opsflow-txt">New dispatch appears<small>request hits .NET Legacy API on the AWS EC2 host</small></span></div></div>
+<div class="opsflow-conn"><svg height="24" width="18"><path d="M9 0v16M3 12l6 6 6-6" fill="none" stroke="#2563eb" stroke-width="2"></path></svg></div>
+<div class="opsflow-decision"><div class="opsflow-decision-inner">Division has<br/>auto-dispatch<br/>enabled?</div></div>
+<div class="opsflow-branch-arms">
+<div class="opsflow-arm no">NO</div>
+<div class="opsflow-arm yes">YES</div>
+</div>
+<div class="opsflow-branches">
+<div class="opsflow-end">Do nothing<br/><small style="font-weight:500">manual dispatch flow, unchanged</small></div>
+<div class="opsflow-end go">Push dispatch id<br/>→ Redis Stream</div>
+</div>
+<div class="opsflow-conn"><svg height="24" width="18"><path d="M9 0v16M3 12l6 6 6-6" fill="none" stroke="#d97706" stroke-width="2"></path></svg></div>
+<div class="opsflow-node amber"><div class="opsflow-body"><span class="opsflow-step icon">📦</span><span class="opsflow-txt">AWS ECS Fargate pool picks up the dispatch<small>a task consumes it from the stream (<code>XREADGROUP</code>) after winning the per-division lock — see <a class="xref" href="#s2">§2</a> for the multi-task walkthrough</small></span></div></div>
+<div class="opsflow-conn"><svg height="24" width="18"><path d="M9 0v16M3 12l6 6 6-6" fill="none" stroke="#7c3aed" stroke-width="2"></path></svg></div>
+<div class="opsflow-node violet"><div class="opsflow-body"><span class="opsflow-step" style="background:var(--purple)">1</span><span class="opsflow-txt">Get nearby technicians<small>build the candidate list + each tech's distance from the jobsite</small></span></div></div>
+<div class="opsflow-conn"><svg height="24" width="18"><path d="M9 0v16M3 12l6 6 6-6" fill="none" stroke="#7c3aed" stroke-width="2"></path></svg></div>
+<div class="opsflow-node violet"><div class="opsflow-body"><span class="opsflow-step" style="background:var(--purple)">2</span><span class="opsflow-txt">Ask each technician for availability<span class="opsflow-tag amber">parallel</span><span class="opsflow-tag blue">~1 min window</span><small>fan out to every candidate at once; collect “when can you be there” replies within the window</small></span></div></div>
+<div class="opsflow-conn"><svg height="24" width="18"><path d="M9 0v16M3 12l6 6 6-6" fill="none" stroke="#7c3aed" stroke-width="2"></path></svg></div>
+<div class="opsflow-node violet"><div class="opsflow-body"><span class="opsflow-step" style="background:var(--purple)">3</span><span class="opsflow-txt">Rank the technicians<small>score by dispatch priority, ETA and familiarity → one ordered shortlist</small></span></div></div>
+<div class="opsflow-conn"><svg height="24" width="18"><path d="M9 0v16M3 12l6 6 6-6" fill="none" stroke="#7c3aed" stroke-width="2"></path></svg></div>
+<div class="opsflow-loop">
+<span class="opsflow-loop-tag">↻ retry</span>
+<div class="opsflow-node violet"><div class="opsflow-body"><span class="opsflow-step" style="background:var(--purple)">4</span><span class="opsflow-txt">Offer to the top-ranked technician<span class="opsflow-tag blue">30s to respond</span><small>push the offer to the current #1 on the shortlist via Amazon SNS</small></span></div></div>
+<div class="opsflow-conn"><svg height="24" width="18"><path d="M9 0v16M3 12l6 6 6-6" fill="none" stroke="#7c3aed" stroke-width="2"></path></svg></div>
+<div class="opsflow-decision violet"><div class="opsflow-decision-inner">Accepts<br/>within 30s?</div></div>
+<div class="opsflow-branch-arms">
+<div class="opsflow-arm" style="color:var(--amber-dark)">NO / TIMEOUT</div>
+<div class="opsflow-arm yes">YES</div>
+</div>
+<div class="opsflow-branches">
+<div class="opsflow-end move">Move to next ranked tech<br/><small style="font-weight:500">↻ loop back to step 4</small></div>
+<div class="opsflow-end go">Assigned ✓<br/><small style="font-weight:500">exit the loop</small></div>
+</div>
+</div>
+<div class="opsflow-conn"><svg height="24" width="18"><path d="M9 0v16M3 12l6 6 6-6" fill="none" stroke="#dc2626" stroke-width="2"></path></svg></div>
+<div class="opsflow-node red"><div class="opsflow-body"><span class="opsflow-step" style="background:var(--red)">5</span><span class="opsflow-txt">Shortlist exhausted — no technician accepted<small>hand the request to a human dispatcher for manual assignment</small></span></div></div>
+</div>
+</div>
+</div></body></html>
