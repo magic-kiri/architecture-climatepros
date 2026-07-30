@@ -1,0 +1,313 @@
+{
+  "project": "ClimatePros — Stream 1 Unified Architecture",
+  "documentReviewed": "/Users/magic-kiri/Desktop/Codes/Techjays/climate-archi/score-testing/ClimatePros-Stream1-Unified-Architecture .pdf",
+  "documentVersion": "1.1 — Draft for client review (2026)",
+  "reviewDate": "2026-07-31 02:34",
+  "reviewId": "2026-07-31-023449",
+  "round": 1,
+  "priorReview": null,
+  "system": {
+    "isAI": true,
+    "aiNote": "Use Case A (Auto Dispatch) is explicitly deterministic — a weighted-sum ranking with no LLM. Use Cases B (Job Summarisation Copilot) and C (Parts Finder) use a self-hosted qwen3-vl-moe (vLLM) generation model plus bge-m3 embeddings behind a LiteLLM gateway, with Google Gemini as an external fallback; C additionally runs RAG-style vector-similarity retrieval over historical dispatch reasons/parts-used data.",
+    "multiSystem": true,
+    "multiSystemNote": "The existing AWS-hosted FieldJetX platform (.NET APIs on EC2, SQL Server on RDS, plus new ElastiCache Redis + ECS Fargate workers + Amazon SNS for A) is joined to a new Azure-hosted AI tier (FastAPI AI server on Container Apps, Cosmos DB Mongo, a vector store) over a single cross-cloud hop, plus on-prem ClimatePros hardware running the self-hosted models, plus two third-party integrations (Google Gemini fallback, United Refrigeration's CP API Gateway for vendor parts)."
+  },
+  "overallScore": 5.4,
+  "verdict": "Significant gaps — revise before build",
+  "verdictReason": "Average of 5.4 across the 13 applicable areas, and independently capped by one unresolved Blocker (FND-018: the Gemini fallback path contradicts the document's own privacy-first / ‘never sent to a third-party AI provider’ claim and is still an open item).",
+  "executiveSummary": "This is a technically substantial ‘how’ companion to the Stream 1 Scope Document, covering deterministic Auto Dispatch (A) plus AI-assisted Job Summarisation (B) and Parts Finder (C, both technician-overridable). It is stronger than most first-draft architecture docs in its per-use-case failure-mode reasoning (§11), its self-critical, CI-gating eval loop for B, and its own candid ‘Open Items’ appendix that already names several of this review's findings. Overall score 5.4/10 — Significant gaps — revise before build — driven primarily by an unresolved contradiction between the document's stated privacy-first posture and its Gemini fallback path (FND-018, Blocker), compounded by two concrete rule mismatches against the scope document's own business rules (ranking tie-break, parts cross-tier buffer), cost figures the document itself admits are priced on the wrong cloud, and missing delivery mechanics (no CI/CD pipeline, no backup/DR for the new AI datastore, no capacity validation despite the scope document assigning that validation to this deliverable).",
+  "gatingFindings": ["FND-018", "FND-002", "FND-003", "FND-019", "FND-023", "FND-024"],
+  "strengths": [
+    "Exceptionally thorough failure-mode / fault-tolerance treatment (§11) across all three use cases — worker crash, gateway outage, malformed model output, vendor timeout — each paired with a stated safe behavior; broader and more concrete than most first-draft architecture docs.",
+    "A genuine, CI-gating feedback/eval loop for Job Summarisation (B): human corrections become labelled ground truth in summary_edits, the eval set rebuilds and must be re-run before any prompt/model/standard change ships, with an honest admission that historical outcome-code labels are weak signal.",
+    "An unusually candid self-audit: the 10-row ‘Appendix — Open Items’ table already names several of this review's own findings (embedding-model ambiguity, the Gemini/privacy contradiction, pending Azure re-pricing) with an owner column — the authors know where the soft spots are.",
+    "Cost projection shows real formulas and three load scenarios (Light/Typical/Heavy) rather than a single false-precision number, and is transparent about which lines are still provisional.",
+    "No material scope creep detected — every new infrastructure component traces back to an in-scope module in the Stream 1 Scope Document, and the non-goals in both documents align closely."
+  ],
+  "areas": [
+    {
+      "num": 1, "code": "OVR", "name": "Overview & Problem Framing", "group": "Architecture & Design",
+      "score": 6, "band": "Adequate",
+      "assessment": "The document inherits a clear problem statement from the scope document and adds a genuinely useful cover apparatus — a document-control table, a ‘how to read this document’ section stating the cloud-placement rule up front, and an Appendix of open items. Non-goals for A/B/C (§12) closely track the scope document's out-of-scope tables. The material gap is a numeric success-criterion mismatch: this document states Use Case B's target as ‘~3–4 minutes’ while the scope document commits to ‘up to roughly half’ of the 10–15 minute baseline (a ~5–7.5 minute floor) — a meaningfully more aggressive number stated in the companion ‘how’ document than in the authoritative scope baseline.",
+      "findingIds": ["FND-001"],
+      "suggestions": "Align the B time-savings figure with the scope document's Objectives/Success Measures wording (or get ClimatePros sign-off on the more aggressive number and push that change back into the scope document). Consider restating A and C's success measures here too, even just by reference, so a reader of only this document isn't missing the measurable targets.",
+      "strengths": "Document-control table, explicit reading rules, and the Open Items appendix are a strong, unusually transparent framing device."
+    },
+    {
+      "num": 2, "code": "ARC", "name": "Architecture & System Design", "group": "Architecture & Design",
+      "score": 6, "band": "Adequate",
+      "assessment": "Three diagrams (unified system, A detail, B&C detail) are clear, internally consistent with the prose, and each component has a stated single responsibility (e.g. ‘workers never touch SQL Server’ as an explicit design decision). Scale and failure-mode thinking is genuinely strong (see FLW). The gap is fidelity to the scope document's own algorithm rules: the ranking tie-break described here (§6: ‘if all ETAs tie, familiarity breaks the tie’) does not match the scope document's three-level tie-break (minutes left on current job → fewest scheduled jobs → stable identifier), and the scope's configurable ‘cross-tier buffer’ for Parts Finder sourcing is absent from this document's sourcing algorithm entirely. No formal SLOs/P95 targets exist yet, which is honestly self-flagged as an open item rather than hidden.",
+      "findingIds": ["FND-002", "FND-003", "FND-004", "FND-005"],
+      "suggestions": "Reconcile §6's tie-break description with the scope document's A2 Business Rule 5 wording exactly (three-level sequence, not just familiarity). Add the cross-tier buffer as an explicit configuration parameter in §6/§8's C algorithm and endpoint description. Once real traffic exists, close the open P95/SLO item and let it drive alerting thresholds in §9.",
+      "strengths": "The explicit AWS/Azure/on-prem boundary rules (single SQL connection holder, single cross-cloud hop, AI server never touches SQL) are a clean, auditable security-boundary design."
+    },
+    {
+      "num": 3, "code": "FLW", "name": "Feature Flows & System Sequencing", "group": "Architecture & Design",
+      "score": 6, "band": "Adequate",
+      "assessment": "This is the document's deepest section: §5 gives a full assignment-loop diagram for A with timeout/escalation, a two-loop (summarise-and-review / persist-and-learn) diagram for B, and a greedy source-allocation flow for C; §11 pairs nearly every plausible failure (worker crash, gateway outage, malformed output, vendor timeout, SQL slowness) with a stated safe behavior. The one significant gap: the A ‘safe assignment’ write can fail after the Redis-side dedupe (SETNX) has already succeeded, and what happens next — a technician appearing to accept a job that never actually gets marked Dispatched — is not addressed anywhere in the failure tables. A smaller gap: the scope's stated travel-time-over-distance preference for C sourcing (falling back to plain distance, flagged) isn't mentioned here.",
+      "findingIds": ["FND-006", "FND-007"],
+      "suggestions": "Add the post-dedupe write-failure case to §11's A failure table — state whether the .NET API's dedupe-and-write is a single atomic operation, or define the retry/escalation path if it can fail independently. Add one line to §6/§7 on travel-time-over-distance-with-fallback for C sourcing.",
+      "strengths": "The per-use-case failure-mode tables in §11 are the standout section of the whole document — concrete failures paired with concrete, justified safe behaviors, covering far more of the unhappy path than is typical at this stage."
+    },
+    {
+      "num": 4, "code": "DAT", "name": "Data Schema & Modeling", "group": "Engineering Contracts",
+      "score": 5, "band": "Adequate",
+      "assessment": "Redis structures for A (§7) are modeled well — key patterns, TTLs, and purpose are all explicit. The new AI-owned MongoDB collections (summaries, llm_calls, summary_edits) are described only at the collection-purpose level: no field names, types, required/nullable status, or index design, with final schema and indexing explicitly deferred to a future client-DBA sign-off (Open Item #5). The vector index for C is described at a similar level (id = dispatchNo, embedded reason text, partsUsed metadata) without stating embedding dimensionality or index type — partly because the vector store technology itself is still undecided (Open Item #3). No migration/versioning approach for the Mongo collections is discussed.",
+      "findingIds": ["FND-008", "FND-009"],
+      "suggestions": "Add even a draft field list with types for each Mongo collection and a first-pass index list (at minimum on dispatchId and whatever admin/dashboard queries by) ahead of the DBA sign-off, so the sign-off session has something concrete to react to rather than starting from a blank page.",
+      "strengths": "The Redis-structure table (Structure/Key/Purpose, with TTLs and self-cleaning semantics called out) is a model of clarity for an ephemeral coordination layer."
+    },
+    {
+      "num": 5, "code": "API", "name": "API Contracts", "group": "Engineering Contracts",
+      "score": 5, "band": "Adequate",
+      "assessment": "§8 deliberately keeps the API reference brief — method/path/caller/purpose tables, a shared error envelope (stable code, message, correlation requestId, standard 4xx/5xx set), and explicit idempotency call-outs for the read-only, safe-to-retry endpoints. It defers full request/response schemas to a companion API specification this review did not have access to. No AI model-call contract is given anywhere in the document — no token-limit ceiling, no statement of the primary structured-output enforcement mechanism (only the fallback path, regex extraction + MISSING placeholders, is described), and only a qualitative ‘the timeout’ reference rather than a number. No rate limits are mentioned for any client-facing endpoint, and /v1 versioning is only applied to B's routes.",
+      "findingIds": ["FND-010", "FND-011"],
+      "suggestions": "Add a short model-call contract table next to §8's endpoint tables: max input/output tokens, the structured-output enforcement mechanism used in the happy path, and the numeric timeout that triggers the documented fail-soft behavior. Confirm the companion API spec exists and reference it by name; add rate-limit guidance and extend /v1 versioning to A and C.",
+      "strengths": "The shared error envelope and the explicit ‘safe to retry’ idempotency call-outs on read-only endpoints are a good baseline contract, better than most specs at this stage of API detail."
+    },
+    {
+      "num": 6, "code": "LIB", "name": "Libraries, Frameworks & Tech Stack", "group": "Engineering Contracts",
+      "score": 4, "band": "Weak",
+      "assessment": "Concrete libraries are named for the async/AI stack (FastAPI, Uvicorn, pydantic, httpx, redis.asyncio, aioboto3, LiteLLM) — a real strength, better than a spec that just says ‘a web framework.’ But no library beyond Python 3.11+ is version-pinned, there is no licensing discussion for the self-hosted open-source models/tooling being deployed commercially (qwen3-vl-moe weights, vLLM, bge-m3), and the embedding model's identity is internally ambiguous — the document's own Open Item #8 notes ‘bge-m3 vs nomic-embed appear in different sources for the same gateway,’ yet §2, §3, and §6 all state bge-m3 as if settled. Vector store technology is also still undecided (Open Item #3), a lock-in-relevant choice left open.",
+      "findingIds": ["FND-012", "FND-013"],
+      "suggestions": "Resolve and pin the embedding model name in one place — every downstream section (schema, cost, capacity) inherits this choice. Add a version column to the stack tables and a one-line license note per self-hosted model/tool.",
+      "strengths": "LiteLLM as a provider-agnostic routing layer is a genuinely good lock-in mitigation for the model layer, even though the document doesn't explicitly call out the lock-in reasoning behind that choice."
+    },
+    {
+      "num": 7, "code": "OBS", "name": "Observability & Traceability", "group": "Applied AI / LLM Engineering",
+      "score": 7, "band": "Good",
+      "assessment": "The correlation-ID architecture is sound: one OpenTelemetry trace per request across every hop including the AWS→Azure span, structured logs split CloudWatch/Azure Monitor by side, and a shared requestId joins traces, logs, and the AI-specific Mongo collections (llm_calls, summary_edits) so a slow trace, a log line, and an eval finding resolve to one id. §12 explicitly states dispatch/customer detail is excluded from log bodies. The one real gap: llm_calls is described as capturing provider/model/tokens/latency/outcome but not explicitly the raw prompt or completion text, which is the single most useful artifact for debugging a specific bad generation.",
+      "findingIds": ["FND-014"],
+      "suggestions": "State explicitly whether the raw prompt (post-PII-scrub) and raw model output are captured per call, and for how long — even if only for a short rolling window, this materially improves the ability to debug a single bad generation.",
+      "strengths": "Cross-cloud trace correlation and the dedicated llm_calls/summary_edits collections feeding both the cost dashboard and the eval loop is a well-designed, lean alternative to a third-party LLM observability tool."
+    },
+    {
+      "num": 8, "code": "EVL", "name": "Evaluation Strategy", "group": "Applied AI / LLM Engineering",
+      "score": 6, "band": "Adequate",
+      "assessment": "Job Summarisation (B) has a genuinely strong, CI-gating eval loop: summary_edits records every human correction as ground truth, the eval set rebuilds from those corrections and is re-run before any prompt/ticket-standard/model change ships, and the document is honestly self-critical about a real weakness (historical outcome-code labels being weak signal). Parts Finder (C) is comparatively thin — described only as validating retrieval quality on a held-out set ‘with a correction-based loop as future work,’ with no dataset provenance, no metric stated in this document (the top-3 hit-rate target lives only in the scope document), and no stated re-validation trigger for model/index changes. Neither B nor C mentions safety/injection test cases for their free-text ingestion paths.",
+      "findingIds": ["FND-015", "FND-016"],
+      "suggestions": "Give C the same treatment as B: name the held-out set's source/size, restate the top-3 hit-rate metric in this document (not only the scope doc), and state what re-triggers the backtest (e.g. before any embedding-model or ranking-constant change ships).",
+      "strengths": "B's correction-based eval loop, with prompts versioned against ticket_standard.md and every call logging its model id so a production ticket traces back to the exact standard version and model, is a genuinely mature design for this stage."
+    },
+    {
+      "num": 9, "code": "FBK", "name": "Feedback Loops & Continuous Improvement", "group": "Applied AI / LLM Engineering",
+      "score": 7, "band": "Good",
+      "assessment": "Both AI use cases have an explicit, well-described self-learning loop: B's ‘Persist & Learn’ diagram shows corrections becoming ground truth and co-occurrence history refreshing inline with every write-back (‘every clean ticket sharpens the history the next technician's ticket draws from’); C's indexing loop embeds and upserts a completed dispatch's reason/parts immediately so ‘the very next similar job benefits.’ Prompt/model versioning ties production behavior back to a specific change. The one gap: no explicit drift-detection mechanism is named beyond the edit-rate trend on the admin dashboard, which is a reasonable but implicit proxy rather than a stated monitor.",
+      "findingIds": ["FND-017"],
+      "suggestions": "Name the edit-rate trend explicitly as the drift signal (with a threshold that would trigger investigation), or add a lightweight explicit drift check if a stronger signal is wanted.",
+      "strengths": "Explicit, diagrammed self-learning loops for both B and C, with the flywheel value spelled out in prose, is rarer and more valuable than most specs at this stage provide."
+    },
+    {
+      "num": 10, "code": "CMP", "name": "AI Compliance, Safety & Governance", "group": "Applied AI / LLM Engineering",
+      "score": 3, "band": "Weak",
+      "assessment": "The document is capped by an unresolved Blocker: it states models never send data to a third-party AI provider, yet the architecture includes Google Gemini as a live fallback in the model-routing diagram — a direct contradiction the document's own Open Item #9 already flags as unresolved (‘the fallback's data handling must be covered or the fallback removed’). Separately, the scope document's central data-boundary control — a deterministic, code-level layer that scrubs PII and pricing from every model call and re-inserts it afterward — is not described anywhere in this architecture document: no component owns it, and it doesn't appear in either diagram. Voice-dictation capture (B1), which the scope document requires to ship only behind a written cost-and-privacy assessment, also isn't addressed here. On the positive side, the primary self-hosted path, network isolation, Key-Vault-managed secrets, and the audit-trail (system activity + llm_calls) are all solid.",
+      "findingIds": ["FND-018", "FND-019", "FND-020"],
+      "suggestions": "Resolve the Gemini contradiction first — either document a reviewed data-use/DPA position (region, retention, legal basis) for Gemini, or remove it from the Phase 1 routing diagram. Add the PII/pricing scrubbing layer as an explicit, located component in §5/§6 and Figure 3. Add the voice-capture data flow and reference the required cost-and-privacy assessment.",
+      "strengths": "Network isolation, Key-Vault secret management, least-privilege read-only SQL access, and the audit-trail design (system activity feed + llm_calls + summary_edits) are all concretely and correctly described for the primary (self-hosted) path."
+    },
+    {
+      "num": 11, "code": "INF", "name": "Infrastructure & Environment Setup", "group": "Delivery & Operations",
+      "score": 5, "band": "Adequate",
+      "assessment": "Environments (Dev/Staging/Prod), network segmentation (AWS VPC with private subnets + WAF/load-balancer public entry; Azure VNet with private endpoints), and secrets management (Azure Key Vault with rotation, IAM-role credentials) are all concretely described, along with per-component sizing and scaling notes. Two real gaps: no backup/DR policy (RPO/RTO) is stated anywhere for the new AI MongoDB store, even though the document itself notes that summary_edits holds original, non-rebuildable records (unlike the vector store, which is explicitly rebuildable from SQL Server); and no peak-concurrency/capacity model is run against the stated technician/dispatch volume, despite the scope document explicitly assigning that validation to this architecture deliverable.",
+      "findingIds": ["FND-021", "FND-022"],
+      "suggestions": "Add an RPO/RTO statement for the Cosmos DB Mongo store (e.g. continuous backup with an N-day point-in-time restore). Add a capacity worksheet — expected peak concurrent dispatches/AI calls, per-instance throughput, resulting replica count at P95 — so this document discharges the obligation the scope document assigns to it.",
+      "strengths": "The environment-difference table and the explicit description of the single AWS→Azure network seam (with its interim vs. target state both stated) are clear and honest about what is and isn't yet production-grade."
+    },
+    {
+      "num": 12, "code": "CICD", "name": "CI/CD & Release Management", "group": "Delivery & Operations",
+      "score": 4, "band": "Weak",
+      "assessment": "The phased rollout model (§11: Provision → Seed → Roll out behind a flag/pilot cohort → Go live) and the min-version app gating that keeps older mobile clients off the new AI routes are a genuinely good, unusually concrete staged-exposure design, and B's eval-gate (no prompt/model/standard change ships without passing the eval set) doubles as a real release gate. What's missing is everything else CI/CD normally covers: no automated build/test pipeline (unit/integration tests, lint, security scanning) is mentioned, and no rollback procedure is described for a bad Container Apps or ECS Fargate deployment despite both platforms supporting revision-based rollback.",
+      "findingIds": ["FND-023"],
+      "suggestions": "Add a short CI/CD subsection: automated test/lint gates before merge, reuse B's eval-set gate explicitly as the AI-quality release gate, and state the rollback mechanism (Container Apps revision traffic-shifting; ECS Fargate task-definition rollback).",
+      "strengths": "The phase-gated rollout table and the mobile min-version gating are a well-thought-out, concrete staged-exposure strategy — stronger than most specs' treatment of gradual rollout."
+    },
+    {
+      "num": 13, "code": "CST", "name": "Cost Projection", "group": "Delivery & Operations",
+      "score": 6, "band": "Adequate",
+      "assessment": "§10 is a genuine strength on structure: real cost formulas (e.g. the ECS Fargate per-task-hour math shown explicitly), a fixed/near-fixed cost floor broken into named line items, and a three-scenario table (Light/Typical/Heavy) rather than one false-precision number. The document is also unusually transparent about its own limitations: it flags that the three largest Azure/AI-tier lines (Container Apps, vector store, Monitor) are still priced on AWS rate cards pending real Azure quotes, and that cross-cloud egress needs a real traffic estimate. What's missing: the Google Gemini fallback's per-token usage cost isn't modeled anywhere, despite Gemini being the one component in the stack billed per-token by a third party; and on-prem GPU/hardware cost for the self-hosted models is excluded from the total with no note that it's an intentional exclusion.",
+      "findingIds": ["FND-024", "FND-025", "FND-026"],
+      "suggestions": "Get real Azure list prices for the flagged lines before this table is used in any budget conversation. Add a Gemini-fallback cost line using an assumed fallback-trigger rate × published per-token pricing, at least as a Heavy-scenario sensitivity case. Note the on-prem hardware exclusion explicitly rather than leaving it silent.",
+      "strengths": "Showing the actual cost formulas and a three-scenario sensitivity table, plus proactively flagging which numbers are still provisional, is well above the bar for a document at this stage."
+    },
+    {
+      "num": 14, "code": "SCA", "name": "Scope Alignment (vs. Stream 1 Scope Document)", "group": "Scope Alignment",
+      "score": "N/A", "band": "N/A",
+      "assessment": "Cross-checked against ClimatePros-Stream1-Scope-Document.pdf (47 pages, the authoritative functional baseline). Coverage is broadly strong — every in-scope module (A1–A4, B1–B4, C1–C3) has a corresponding technical treatment, every use case's AI boundary (‘system proposes, technician decides’) is preserved, and no material scope creep was found: every new infrastructure component introduced by this document traces back to an in-scope module, and the non-goals sections of both documents align closely. Seven concrete mismatches or coverage gaps were found: a numeric success-criterion conflict on Use Case B's time savings (FND-001); two business-rule fidelity gaps where this document's algorithm description diverges from the scope document's stated rule (the A2 ranking tie-break, FND-002; the C2 cross-tier sourcing buffer, FND-003); one flow-level gap (travel-time-over-distance preference for C sourcing, FND-007); two AI-governance items the scope document treats as central but this document omits describing (the PII/pricing scrubbing layer, FND-019; the voice-capture cost-and-privacy assessment gate, FND-020); and one delivery obligation the scope document explicitly assigns to this deliverable but which isn't discharged here (peak-concurrency capacity validation, FND-022). This area is scored N/A and excluded from the overall average — it is a cross-document consistency check, not one of the 13 rubric areas — but every finding below still counts toward its home area's score.",
+      "findingIds": ["FND-001", "FND-002", "FND-003", "FND-007", "FND-019", "FND-020", "FND-022"],
+      "suggestions": "Before this document leaves Draft status, walk it against the scope document module-by-module with ClimatePros in the room specifically for the seven items above — each is either a number, a rule, or an explicit obligation stated once in the scope document and either restated differently or left silent here.",
+      "strengths": "No scope creep found; strong module-for-module coverage; non-goals and AI-boundary language are consistent across both documents."
+    }
+  ],
+  "findings": [
+    {
+      "id": "FND-001", "severity": "Major", "area": "OVR",
+      "finding": "This document states Use Case B's target as '10-15 minutes down to about 3-4' (§1, p.5) — roughly a 65-75% reduction. The scope document's Objectives (§2) and Success Measures (§9) both state the B target as 'up to roughly half' of the 10-15 minute baseline — a target floor of roughly 5-7.5 minutes. These are two different numeric commitments to the same metric across the two documents that are meant to travel together as scope+architecture companions.",
+      "fix": "Pick one number and state it identically in both documents — either soften this document's '3-4 minute' framing to match the scope document's 'up to roughly half,' or confirm with ClimatePros that a more aggressive target is intended and update the scope document's Objectives and Success Measures sections to match.",
+      "status": "Open", "authorResponse": null, "adjudication": null, "followUps": [], "resolvedOn": null, "decisionId": null
+    },
+    {
+      "id": "FND-018", "severity": "Blocker", "area": "CMP",
+      "finding": "The architecture states models never send data to a third-party AI provider (§12: ‘dispatch text and parts history are never sent to a third-party AI provider’), yet Figure 1/3 and §4 include Google Gemini as a live external fallback in the LiteLLM routing path. This is a direct, unresolved contradiction — the document's own Open Item #9 already names it (‘the fallback's data handling must be covered or the fallback removed’) but no decision has been made or documented.",
+      "fix": "Before build starts on B/C, either (a) formally review Google Gemini's enterprise data-use/retention terms and document the legal basis, region, and retention setting with the same rigor given to the AWS/Azure boundary, or (b) remove the Gemini fallback from the Phase 1 routing path entirely and document the resulting availability trade-off. Update §12's 'never sent to a third-party AI provider' line to match whichever decision is made — the current document contradicts itself.",
+      "status": "Open", "authorResponse": null, "adjudication": null, "followUps": [], "resolvedOn": null, "decisionId": null
+    },
+    {
+      "id": "FND-002", "severity": "Major", "area": "ARC",
+      "finding": "The ranking tie-break described in §6 (‘if all ETAs tie, familiarity breaks the tie and vice-versa’) does not match the scope document's A2 Business Rule 5, which specifies a three-level tie-break: fewer minutes left on the current job, then fewest scheduled jobs, then a stable identifier. Building to the architecture as written would not satisfy the scope document's acceptance criterion 'Exact ties resolve by the fixed tie-break.'",
+      "fix": "Update §6's edge-case note to state the exact three-level sequence from scope A2 Rule 5, or if the simplified familiarity-based tie-break is an intentional simplification, get ClimatePros sign-off and update the scope document to match. Do not leave two authoritative documents describing different tie-break logic for the same decision.",
+      "status": "Open", "authorResponse": null, "adjudication": null, "followUps": [], "resolvedOn": null, "decisionId": null
+    },
+    {
+      "id": "FND-003", "severity": "Major", "area": "ARC",
+      "finding": "Scope document C2 Business Rule 3 defines a configurable 'cross-tier buffer' (Phase-1 default: strict owned-first) that can let a dramatically closer vendor outrank a much-farther owned source — an explicit, named, configurable capability with its own acceptance criterion ('owned-first holds under the default buffer'). The architecture's C sourcing algorithm (§6, §7) describes only strict owned-first, ascending-distance, greedy allocation, with no configuration field, data model entry, or API parameter representing this buffer anywhere.",
+      "fix": "Add the cross-tier buffer as an explicit configuration parameter in §6's C algorithm description and in §8's /parts/source contract, and state where it's persisted/administered — mirroring how A's per-division weights are handled in §8.",
+      "status": "Open", "authorResponse": null, "adjudication": null, "followUps": [], "resolvedOn": null, "decisionId": null
+    },
+    {
+      "id": "FND-004", "severity": "Minor", "area": "ARC",
+      "finding": "No formal SLOs or P95 latency targets exist yet for any of the three use cases; this is honestly self-flagged in §9 as an open item pending real Azure Monitor traffic to baseline against.",
+      "fix": "No new action required beyond keeping this open item visible; once real traffic exists, set numeric P95 targets per flow and use them to drive alerting thresholds on the cost/quality dashboards described in §9.",
+      "status": "Open", "authorResponse": null, "adjudication": null, "followUps": [], "resolvedOn": null, "decisionId": null
+    },
+    {
+      "id": "FND-005", "severity": "Nit", "area": "ARC",
+      "finding": "The AWS→Azure cross-cloud path for B/C currently runs over a locked-down public HTTPS endpoint (IP allow-list / mTLS) as an interim state before VPN/VNet peering is established — already flagged as Open Item #6, noted here only because it also affects the P95 latency budget referenced in §9's cost math.",
+      "fix": "No new action beyond what Open Item #6 already tracks; whoever closes it should also update §9's latency budget once the real network path is chosen.",
+      "status": "Open", "authorResponse": null, "adjudication": null, "followUps": [], "resolvedOn": null, "decisionId": null
+    },
+    {
+      "id": "FND-006", "severity": "Major", "area": "FLW",
+      "finding": "The A 'safe assignment' write path can fail after the Redis-side dedupe (SETNX) has already succeeded. Because SETNX is what prevents a dispatch from being double-assigned, a failure in the subsequent .NET write (DB down, timeout) after the dedupe key is already set is not addressed in §11's failure tables — a retry (by the same or another worker) would find the dedupe key already claimed and could silently drop the assignment, leaving a technician who tapped Accept with no actual Dispatched status and no visible error.",
+      "fix": "Document what happens when the post-dedupe write fails — e.g. state that the .NET API's dedupe-check-and-write is a single atomic operation so this can't occur, or define a short TTL on the dedupe key plus a documented retry/escalation path if it isn't atomic. Add this case to §11's A failure table alongside 'worker dies mid-dispatch.'",
+      "status": "Open", "authorResponse": null, "adjudication": null, "followUps": [], "resolvedOn": null, "decisionId": null
+    },
+    {
+      "id": "FND-007", "severity": "Minor", "area": "FLW",
+      "finding": "Scope document C2 Business Rule 2 specifies 'travel time over distance where available; plain distance is the accepted fallback, flagged in the ordering.' The architecture's sourcing description (§6, §7) only says sources are ordered 'by distance' — it doesn't mention the travel-time preference or the fallback-flagging behavior.",
+      "fix": "Add one line to §6/§7 noting that C sourcing uses travel time when available, falls back to plain distance, and flags the fallback case — matching the scope document's rule exactly.",
+      "status": "Open", "authorResponse": null, "adjudication": null, "followUps": [], "resolvedOn": null, "decisionId": null
+    },
+    {
+      "id": "FND-008", "severity": "Major", "area": "DAT",
+      "finding": "The AI-owned MongoDB collections (summaries, llm_calls, summary_edits) are described only at the collection-purpose level in §7 — no field names, types, required/nullable status, or index design is given, and this is explicitly deferred to a future client-DBA sign-off (Open Item #5). A team cannot yet code against this store with confidence.",
+      "fix": "Add a draft field list with types for each collection (e.g. summaries: {dispatchId: string, sections: [...], acceptedAt: datetime, ...}) and a first-pass index list (at minimum on dispatchId and on any field /admin/dashboard queries by) ahead of the DBA sign-off session, rather than leaving the whole schema open.",
+      "status": "Open", "authorResponse": null, "adjudication": null, "followUps": [], "resolvedOn": null, "decisionId": null
+    },
+    {
+      "id": "FND-009", "severity": "Minor", "area": "DAT",
+      "finding": "No migration or schema-versioning approach is discussed for the new MongoDB collections (unlike the versioned ticket_standard.md prompt template, which does have an explicit versioning story).",
+      "fix": "State a lightweight schema-evolution approach for the Mongo collections (e.g. additive-only fields, a schema_version field per document) so future changes don't silently break the admin dashboard or the eval pipeline.",
+      "status": "Open", "authorResponse": null, "adjudication": null, "followUps": [], "resolvedOn": null, "decisionId": null
+    },
+    {
+      "id": "FND-010", "severity": "Major", "area": "API",
+      "finding": "No AI model-call contract is given anywhere in the document: no token-limit ceiling for the LLM/embedding calls, no statement of the primary structured-output enforcement mechanism (only the fallback path — 'parser falls back to regex extraction, then MISSING placeholders' — is described, not the primary mechanism), and no numeric request timeout (only a qualitative reference to 'the timeout' in the failure tables).",
+      "fix": "Add a short model-call contract table alongside §8's endpoint tables: max input/output tokens per call, the structured-output enforcement mechanism used in the happy path (e.g. JSON mode, function calling, grammar constraints), and the numeric timeout value that triggers the documented fail-soft behavior.",
+      "status": "Open", "authorResponse": null, "adjudication": null, "followUps": [], "resolvedOn": null, "decisionId": null
+    },
+    {
+      "id": "FND-011", "severity": "Minor", "area": "API",
+      "finding": "§8 explicitly defers request/response schemas to a companion API specification not available to this review. No rate limits are mentioned for any client-facing (mobile/dispatcher) endpoint, and /v1 versioning is only applied to B's routes, not A's or C's.",
+      "fix": "Confirm the companion API specification exists and is current, and reference it explicitly by name in §8. Add rate-limit guidance for mobile-originated endpoints and extend the /v1 versioning convention to A and C for consistency.",
+      "status": "Open", "authorResponse": null, "adjudication": null, "followUps": [], "resolvedOn": null, "decisionId": null
+    },
+    {
+      "id": "FND-012", "severity": "Major", "area": "LIB",
+      "finding": "The embedding model's identity is internally ambiguous: Open Item #8 notes 'bge-m3 vs nomic-embed appear in different sources for the same gateway,' yet §2, §3, and §6 all state bge-m3 as if settled. Vector dimensionality, index type, and embedding cost/latency assumptions throughout the document all depend on which model is actually used.",
+      "fix": "Resolve and pin the embedding model name in one place before this document leaves Draft status — every downstream section (data model, cost, capacity) inherits this choice, so leaving it ambiguous risks rebuilding those sections around the wrong model later.",
+      "status": "Open", "authorResponse": null, "adjudication": null, "followUps": [], "resolvedOn": null, "decisionId": null
+    },
+    {
+      "id": "FND-013", "severity": "Minor", "area": "LIB",
+      "finding": "Beyond 'Python 3.11+,' no library or framework in the stack (FastAPI, Uvicorn, pydantic, httpx, redis.asyncio, aioboto3, LiteLLM) is version-pinned, and there is no discussion of license compatibility for the self-hosted open-source models/tooling (qwen3-vl-moe weights, vLLM, bge-m3) being deployed commercially.",
+      "fix": "Add a pinned-version column to the stack tables, and a one-line license note per self-hosted model/tool confirming it permits ClimatePros' commercial, on-prem use.",
+      "status": "Open", "authorResponse": null, "adjudication": null, "followUps": [], "resolvedOn": null, "decisionId": null
+    },
+    {
+      "id": "FND-014", "severity": "Minor", "area": "OBS",
+      "finding": "The llm_calls collection is described as capturing 'provider, model, tokens in/out, latency, outcome' but not explicitly the raw prompt or completion text. Without that, a team can't always reconstruct exactly what the model saw and produced when debugging a single bad generation (only the final accepted/edited output lives in summaries/summary_edits, not the raw pre-parse model output).",
+      "fix": "State explicitly whether the raw prompt (post-PII-scrub per §12) and raw completion are captured per call, and for how long — this is the single most useful artifact for debugging a bad AI output.",
+      "status": "Open", "authorResponse": null, "adjudication": null, "followUps": [], "resolvedOn": null, "decisionId": null
+    },
+    {
+      "id": "FND-015", "severity": "Major", "area": "EVL",
+      "finding": "C's evaluation loop is materially thinner than B's. B has a fully described, self-critical, CI-gating loop (§9: corrections rebuild the eval set, re-run before any prompt/model/standard change ships, with an honest caveat about weak historical labels). C is only described as 'validates retrieval quality on a held-out set, with a correction-based loop as future work' — no dataset provenance, no metric definition in this document (the top-3 hit-rate lives only in the scope document), and no stated trigger tying a future model/index change to re-validation.",
+      "fix": "Give C the same treatment as B in this document: name the held-out set's source and size, restate the top-3 hit-rate metric here explicitly, and state what re-triggers the backtest (e.g. before any embedding-model or ranking-constant change ships).",
+      "status": "Open", "authorResponse": null, "adjudication": null, "followUps": [], "resolvedOn": null, "decisionId": null
+    },
+    {
+      "id": "FND-016", "severity": "Minor", "area": "EVL",
+      "finding": "Neither B nor C mentions safety/guardrail test cases (prompt injection, adversarial free-text input) despite both features feeding technician-entered free text into a prompt or matching pipeline.",
+      "fix": "Add a small set of adversarial test inputs to the eval set for B (e.g. free text attempting to override the 'never invent' instruction) and note the low but non-zero injection surface for C's symptom-matching step.",
+      "status": "Open", "authorResponse": null, "adjudication": null, "followUps": [], "resolvedOn": null, "decisionId": null
+    },
+    {
+      "id": "FND-017", "severity": "Minor", "area": "FBK",
+      "finding": "No explicit drift-detection mechanism is named beyond the edit-rate trend on the admin dashboard (§9), which is a reasonable but implicit proxy for quality drift rather than a stated, thresholded monitor.",
+      "fix": "Name the edit-rate trend explicitly as the drift signal, with a stated threshold or rate-of-change that would trigger investigation, so 'drift monitoring' is a designed control rather than an incidental side-effect of an existing dashboard.",
+      "status": "Open", "authorResponse": null, "adjudication": null, "followUps": [], "resolvedOn": null, "decisionId": null
+    },
+    {
+      "id": "FND-019", "severity": "Major", "area": "CMP",
+      "finding": "The scope document's AI & Data Governance section (§7) treats a deterministic, code-level scrubbing layer — stripping customer PII and all pricing from every model call and re-inserting it afterward — as the central data-boundary control, applying 'regardless of which runtime serves a request.' This architecture document's own PII/data-handling section (§12) does not describe this scrubbing layer at all: no component owns it, it doesn't appear in the request flow described in §5/§6, and it isn't labeled in Figure 1 or Figure 3.",
+      "fix": "Add the scrubbing layer as an explicit step in the B/C request flow (§5/§6) and as a labeled component in Figure 3, stating exactly where the redact/re-insert boundary sits (ideally before the cross-cloud hop) so the architecture actually shows the control the scope document relies on.",
+      "status": "Open", "authorResponse": null, "adjudication": null, "followUps": [], "resolvedOn": null, "decisionId": null
+    },
+    {
+      "id": "FND-020", "severity": "Minor", "area": "CMP",
+      "finding": "Scope document §7 requires the Closeout Copilot's voice-dictation capture (B1) to ship 'only as a declared beta, and only after a written cost-and-privacy assessment is reviewed with ClimatePros.' The architecture document doesn't mention voice/audio input anywhere — no transcription component, no data flow for audio, and no reference to the required assessment.",
+      "fix": "Add voice capture to the B request flow, even briefly — what transcribes it, where the audio goes, whether it's discarded after transcription — so the required cost-and-privacy assessment has something concrete to review.",
+      "status": "Open", "authorResponse": null, "adjudication": null, "followUps": [], "resolvedOn": null, "decisionId": null
+    },
+    {
+      "id": "FND-021", "severity": "Major", "area": "INF",
+      "finding": "No backup/DR policy (RPO/RTO) is defined for the new AI MongoDB store. Unlike the vector store (explicitly 'derived and rebuildable' from SQL Server) and Redis (ephemeral, non-critical if lost), the MongoDB summaries and summary_edits collections hold original, non-rebuildable records — the document itself notes summary_edits are 'original records' — yet no backup cadence, retention, or recovery target is stated anywhere in §4 or §12.",
+      "fix": "Add an RPO/RTO statement for the Cosmos DB Mongo store (e.g. continuous backup with an N-day point-in-time restore, consistent with Cosmos DB's built-in options) alongside the existing environment/sizing tables in §4.",
+      "status": "Open", "authorResponse": null, "adjudication": null, "followUps": [], "resolvedOn": null, "decisionId": null
+    },
+    {
+      "id": "FND-022", "severity": "Major", "area": "INF",
+      "finding": "Scope document §7 explicitly assigns peak-concurrency validation to this architecture deliverable ('peak-concurrency validation against real volume is part of the architecture deliverable before this is relied on'), but the document only states static sizing assumptions (e.g. '60+ concurrent dispatches per instance,' 'min 1 replica avoids cold-start') without any capacity model tested against the stated ~700 dispatches/day or ~900–1,000 technician volume.",
+      "fix": "Add a capacity worksheet: expected peak concurrent dispatches/AI calls, measured or estimated per-instance throughput, and the resulting replica count needed at P95 load — so this deliverable actually discharges the obligation the scope document assigns to it.",
+      "status": "Open", "authorResponse": null, "adjudication": null, "followUps": [], "resolvedOn": null, "decisionId": null
+    },
+    {
+      "id": "FND-023", "severity": "Major", "area": "CICD",
+      "finding": "No CI/CD pipeline mechanics are described anywhere — no automated build/test pipeline (unit/integration tests, lint, security scanning), and no rollback procedure for a bad Container Apps or ECS Fargate deployment, despite both platforms supporting revision-based rollback. The rollout phases in §11 describe feature-flagged, staged exposure well, but say nothing about how a bad build is caught before it reaches even the pilot cohort, or how a live revision is rolled back if it misbehaves.",
+      "fix": "Add a short CI/CD subsection: automated test/lint gates before merge, reuse B's eval-set gate explicitly as the documented AI-quality release gate, and an explicit rollback mechanism (Container Apps revision-based traffic shifting back to the last-known-good revision; ECS Fargate task-definition rollback).",
+      "status": "Open", "authorResponse": null, "adjudication": null, "followUps": [], "resolvedOn": null, "decisionId": null
+    },
+    {
+      "id": "FND-024", "severity": "Major", "area": "CST",
+      "finding": "The three largest Azure/AI-tier cost lines (Container Apps $20–40/mo, Vector store ~$5/mo, Monitor+OTel $15–30/mo) are explicitly built on AWS rate cards, not real Azure pricing (self-disclosed: 'Pending re-pricing... carry AWS rate-card estimates, not real Azure prices yet'). The headline scenario totals (~$159–235/mo) are therefore not a reliable budget figure as currently published.",
+      "fix": "Obtain real Azure list prices (Container Apps consumption plan, the chosen vector store SKU, Azure Monitor ingestion) for the target region before this table is used in any client-facing budget conversation; mark the table itself, not just the surrounding prose, as provisional until re-priced.",
+      "status": "Open", "authorResponse": null, "adjudication": null, "followUps": [], "resolvedOn": null, "decisionId": null
+    },
+    {
+      "id": "FND-025", "severity": "Major", "area": "CST",
+      "finding": "Google Gemini fallback usage cost is entirely unmodeled — no assumed fallback-trigger rate × per-token price appears anywhere in the cost formulas or scenario table, despite Gemini being the one component in the stack billed per-token by a third party.",
+      "fix": "Add an assumption for expected fallback-trigger frequency (e.g. 'X% of B/C calls fail over to Gemini') and a per-token cost line using Gemini's published pricing, at least as a sensitivity case in the Heavy scenario.",
+      "status": "Open", "authorResponse": null, "adjudication": null, "followUps": [], "resolvedOn": null, "decisionId": null
+    },
+    {
+      "id": "FND-026", "severity": "Minor", "area": "CST",
+      "finding": "On-prem GPU/hardware cost for the self-hosted models (qwen3-vl-moe, bge-m3) is excluded from the cost totals with no note that this is an intentional exclusion, and no clean per-technician or per-dispatch unit economic is given anywhere in §10.",
+      "fix": "Add a one-line note that on-prem hardware/power is excluded as existing/sunk infrastructure (if that's the intent), and add a simple unit economic (e.g. $/technician/month at Typical load) so the business can reason about margin.",
+      "status": "Open", "authorResponse": null, "adjudication": null, "followUps": [], "resolvedOn": null, "decisionId": null
+    }
+  ],
+  "questions": [
+    "Does a companion API specification (OpenAPI/AsyncAPI) with full request/response schemas exist for the A/B/C endpoints referenced in §8? This review did not have access to it.",
+    "Is the Google Gemini fallback intended to remain in the Phase 1 build, or is it a placeholder pending the data-use review flagged in Open Item #9?",
+    "Which embedding model is actually being built against — bge-m3 or nomic-embed (Open Item #8)? Every downstream estimate (dimensionality, cost, capacity) depends on this.",
+    "Is the scope document's configurable 'cross-tier buffer' for Parts Finder sourcing (C2 Rule 3) still intended for this phase, or was it deliberately simplified to strict owned-first in the technical design?",
+    "Has a peak-concurrency/capacity model been run against real technician volume in a separate sizing exercise not captured in this document?"
+  ],
+  "nextActions": [
+    "Close FND-018 first — get a documented data-use/DPA decision on the Gemini fallback (region, retention, legal basis) or remove it from Phase 1 — before further B/C build work proceeds.",
+    "Reconcile the two scope-vs-architecture rule mismatches (FND-002 ranking tie-break, FND-003 parts cross-tier buffer) with ClimatePros and update whichever document is currently wrong.",
+    "Get real Azure list pricing for the AI tier (FND-024) and add a Gemini-fallback cost line (FND-025) before the cost table is used in any client budget conversation.",
+    "Add the missing delivery mechanics: a CI/CD pipeline with rollback (FND-023), a backup/DR policy for the AI MongoDB store (FND-021), and the peak-concurrency validation the scope document explicitly assigns to this deliverable (FND-022).",
+    "Pin the embedding model (FND-012) and sketch field-level schemas for the new MongoDB collections (FND-008) so the data/vector layer can be built with confidence ahead of the DBA sign-off session."
+  ]
+}
