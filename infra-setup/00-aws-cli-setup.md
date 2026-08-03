@@ -94,6 +94,10 @@ No `AWS_REGION` needed — §3 already stored the region in the profile.
 ## 5. Verify
 
 ```bash
+# with explicit profile
+aws sts get-caller-identity --profile cp-test
+
+# or if AWS_PROFILE is already set in the environment
 aws sts get-caller-identity
 ```
 
