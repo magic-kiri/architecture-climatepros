@@ -27,23 +27,22 @@ FieldJetX VPC and SQL Server is a later step, not this one.
 
 ## 1. Variables
 
-Nothing to discover. Save as `vars.sh` **outside git**, `source vars.sh`, re-source in every new
-terminal.
+Nothing to discover. Save as `vars.ps1` **outside git**, `. C:\path\to\vars.ps1` to load, re-source in every new terminal.
 
-```bash
-export AWS_PROFILE=cp-prod
-export AWS_REGION=us-east-1
-export ENV=prod
-export ACCOUNT_ID=$(aws sts get-caller-identity --query Account --output text)
+```powershell
+$env:AWS_PROFILE = "cp-test"
+$env:AWS_REGION  = "us-east-1"
+$env:ENV         = "prod"
+$env:ACCOUNT_ID  = "123456789012"   # replace with: aws sts get-caller-identity --profile cp-test --query Account --output text
 
 # filled in as you go
-export VPC_ID=
-export SUBNET_A=
-export SUBNET_B=
-export WORKER_SG_ID=
-export REDIS_SG_ID=
-export REDIS_ENDPOINT=
-export ECR_URI=$ACCOUNT_ID.dkr.ecr.$AWS_REGION.amazonaws.com/cp/dispatch-worker
+$env:VPC_ID        = ""
+$env:SUBNET_A      = ""
+$env:SUBNET_B      = ""
+$env:WORKER_SG_ID  = ""
+$env:REDIS_SG_ID   = ""
+$env:REDIS_ENDPOINT= ""
+$env:ECR_URI       = "$env:ACCOUNT_ID.dkr.ecr.$env:AWS_REGION.amazonaws.com/cp/dispatch-worker"
 ```
 
 Tag every resource `Project=stream1 Env=$ENV ManagedBy=techjays` — teardown and cost attribution
