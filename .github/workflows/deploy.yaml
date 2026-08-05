@@ -6,9 +6,8 @@ on:
 
 env:
   AWS_REGION: us-east-1
+  ENV: test
   ECR_REPO: cp/dispatch-worker
-  CLUSTER: cp-prod-dispatch
-  SERVICE: cp-prod-dispatch-workers
   CONTAINER: dispatch-worker
 
 jobs:
@@ -33,7 +32,7 @@ jobs:
         id: build
         env:
           REGISTRY: ${{ steps.ecr.outputs.registry }}
-          TAG: prod-${{ github.sha }}
+          TAG: ${{ env.ENV }}-${{ github.sha }}
         run: |
           docker build --platform linux/amd64 -f worker/Dockerfile -t $REGISTRY/$ECR_REPO:$TAG worker/
           docker push $REGISTRY/$ECR_REPO:$TAG
@@ -51,6 +50,6 @@ jobs:
         uses: aws-actions/amazon-ecs-deploy-task-definition@v2
         with:
           task-definition: ${{ steps.taskdef.outputs.task-definition }}
-          service: ${{ env.SERVICE }}
-          cluster: ${{ env.CLUSTER }}
+          service: cp-${{ env.ENV }}-dispatch-workers
+          cluster: cp-${{ env.ENV }}-dispatch
           wait-for-service-stability: true
