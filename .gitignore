@@ -2,3 +2,8 @@
 .gstack/
 stream1-unified-architecture.bundle.html
 scripts/__pycache__/
+worker/.venv/
+worker/__pycache__/
+worker/app/__pycache__/
+worker/*.log
+vars.ps1
