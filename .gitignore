@@ -6,4 +6,6 @@ worker/.venv/
 worker/__pycache__/
 worker/app/__pycache__/
 worker/*.log
+worker/*.tar
+worker/*.tar.gz
 vars.ps1
