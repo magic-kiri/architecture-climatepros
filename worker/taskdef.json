@@ -1,0 +1,36 @@
+{
+  "family": "cp-test-dispatch-worker",
+  "networkMode": "awsvpc",
+  "requiresCompatibilities": ["FARGATE"],
+  "cpu": "512",
+  "memory": "1024",
+  "runtimePlatform": { "cpuArchitecture": "X86_64", "operatingSystemFamily": "LINUX" },
+  "executionRoleArn": "arn:aws:iam::851725643801:role/cp-test-task-exec",
+  "taskRoleArn": "arn:aws:iam::851725643801:role/cp-test-task",
+  "containerDefinitions": [{
+    "name": "dispatch-worker",
+    "image": "851725643801.dkr.ecr.us-east-1.amazonaws.com/cp/dispatch-worker:test-0.1.0",
+    "essential": true,
+    "environment": [
+      { "name": "ENVIRONMENT",              "value": "test" },
+      { "name": "REDIS_HOST",               "value": "master.cp-test-dispatch-redis.oiejj1.use1.cache.amazonaws.com" },
+      { "name": "REDIS_PORT",               "value": "6379" },
+      { "name": "REDIS_TLS",                "value": "true" },
+      { "name": "DISPATCH_STREAM",          "value": "dispatch:stream" },
+      { "name": "CONSUMER_GROUP",           "value": "dispatch-workers" },
+      { "name": "MAX_CONCURRENT_DISPATCHES","value": "20" }
+    ],
+    "secrets": [
+      { "name": "REDIS_AUTH_TOKEN", "valueFrom": "arn:aws:secretsmanager:us-east-1:851725643801:secret:cp/test/redis-auth-token-xpVaaz" }
+    ],
+    "logConfiguration": {
+      "logDriver": "awslogs",
+      "options": {
+        "awslogs-group": "/ecs/cp-test-dispatch-worker",
+        "awslogs-region": "us-east-1",
+        "awslogs-stream-prefix": "worker"
+      }
+    },
+    "stopTimeout": 60
+  }]
+}
