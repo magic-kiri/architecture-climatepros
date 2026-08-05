@@ -1,0 +1,56 @@
+name: deploy
+on:
+  push:
+    branches: [main]
+    paths: ['worker/**']
+
+env:
+  AWS_REGION: us-east-1
+  ECR_REPO: cp/dispatch-worker
+  CLUSTER: cp-prod-dispatch
+  SERVICE: cp-prod-dispatch-workers
+  CONTAINER: dispatch-worker
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: Log in to ECR
+        id: ecr
+        uses: aws-actions/amazon-ecr-login@v2
+
+      - name: Build and push image
+        id: build
+        env:
+          REGISTRY: ${{ steps.ecr.outputs.registry }}
+          TAG: prod-${{ github.sha }}
+        run: |
+          docker build --platform linux/amd64 -f worker/Dockerfile -t $REGISTRY/$ECR_REPO:$TAG worker/
+          docker push $REGISTRY/$ECR_REPO:$TAG
+          echo "image=$REGISTRY/$ECR_REPO:$TAG" >> $GITHUB_OUTPUT
+
+      - name: Render task definition
+        id: taskdef
+        uses: aws-actions/amazon-ecs-render-task-definition@v1
+        with:
+          task-definition: worker/taskdef.json
+          container-name: ${{ env.CONTAINER }}
+          image: ${{ steps.build.outputs.image }}
+
+      - name: Deploy to ECS
+        uses: aws-actions/amazon-ecs-deploy-task-definition@v2
+        with:
+          task-definition: ${{ steps.taskdef.outputs.task-definition }}
+          service: ${{ env.SERVICE }}
+          cluster: ${{ env.CLUSTER }}
+          wait-for-service-stability: true

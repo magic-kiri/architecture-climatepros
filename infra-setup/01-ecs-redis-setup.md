@@ -1,12 +1,12 @@
-# 01 · ECS Fargate + ElastiCache Redis + CD
+# 01 · ECS Fargate + ElastiCache Redis
 
 **Prereq:** [`00-aws-cli-setup.md`](00-aws-cli-setup.md) done — `aws sts get-caller-identity` works.
 
 **Standalone.** Own VPC, nothing discovered, nothing existing touched. One pass, top to bottom:
 
 ```
-GitHub push ──► ECR ──► ECS service ──► task ──► ElastiCache Redis (6379 TLS)
-   (CD)                (Fargate)
+CD pipeline ──► ECR ──► ECS service ──► task ──► ElastiCache Redis (6379 TLS)
+(see 02)                (Fargate)
 ```
 
 | Built here | Name |
@@ -14,21 +14,22 @@ GitHub push ──► ECR ──► ECS service ──► task ──► ElastiC
 | VPC + 2 subnets + internet gateway | `cp-prod-vpc` |
 | Security groups (2) | `cp-prod-workers`, `cp-prod-redis` |
 | Secret (1) | `cp/prod/redis-auth-token` |
-| IAM roles (3) | task-exec, task, github-deploy |
+| IAM roles (2) | task-exec, task |
 | ElastiCache Redis | `cp-prod-dispatch-redis` |
 | ECR repo | `cp/dispatch-worker` |
 | ECS cluster / task def / service | `cp-prod-dispatch` |
-| CD | GitHub Actions → ECR → ECS |
 
-Everything is new and deletable — teardown at the bottom removes the lot. Connecting to the existing
-FieldJetX VPC and SQL Server is a later step, not this one.
+CD (build → ECR → ECS deploy, GitHub Actions or Azure DevOps) is a separate doc — see
+[`02-cicd-setup.md`](02-cicd-setup.md). Everything above is new and deletable — teardown at the bottom
+removes the lot. Connecting to the existing FieldJetX VPC and SQL Server is a later step, not this one.
 
 **Platforms.** Every command block below is given twice — **macOS / Linux** (bash) first, then
 **Windows (PowerShell 7+, or Windows PowerShell 5.1)**. All IAM policy documents are passed
 `file://...json` rather than inline, so there is no bash-vs-PowerShell quoting difference to trip over —
-see `00` § "Cross-platform rules". Once you `aws ecs execute-command` into a running task (§10), you're
+see `00` § "Cross-platform rules". Once you `aws ecs execute-command` into a running task (§9), you're
 in the container's own Linux `/bin/sh` regardless of which OS you ran the `aws` command from — those
-in-container lines are not duplicated.
+in-container lines are not duplicated. Same for §7 "First image" — it runs in **AWS CloudShell**
+(always bash, no local Docker required), so that block isn't duplicated either.
 
 ---
 
@@ -143,6 +144,10 @@ export RTB_ID=$(aws ec2 create-route-table --vpc-id $VPC_ID \
 aws ec2 create-route --route-table-id $RTB_ID --destination-cidr-block 0.0.0.0/0 --gateway-id $IGW_ID
 aws ec2 associate-route-table --route-table-id $RTB_ID --subnet-id $SUBNET_A
 aws ec2 associate-route-table --route-table-id $RTB_ID --subnet-id $SUBNET_B
+
+# verify before moving on — must show the 0.0.0.0/0 route AND both subnet IDs
+aws ec2 describe-route-tables --route-table-ids $RTB_ID \
+  --query 'RouteTables[0].{Routes:Routes[].DestinationCidrBlock,Associations:Associations[].SubnetId}'
 ```
 
 **Windows (PowerShell)**
@@ -161,7 +166,18 @@ $env:RTB_ID = $(aws ec2 create-route-table --vpc-id $env:VPC_ID `
 aws ec2 create-route --route-table-id $env:RTB_ID --destination-cidr-block 0.0.0.0/0 --gateway-id $env:IGW_ID
 aws ec2 associate-route-table --route-table-id $env:RTB_ID --subnet-id $env:SUBNET_A
 aws ec2 associate-route-table --route-table-id $env:RTB_ID --subnet-id $env:SUBNET_B
+
+# verify before moving on — must show the 0.0.0.0/0 route AND both subnet IDs
+aws ec2 describe-route-tables --route-table-ids $env:RTB_ID `
+  --query 'RouteTables[0].{Routes:Routes[].DestinationCidrBlock,Associations:Associations[].SubnetId}'
 ```
+
+An empty `Routes`/`Associations` result here means `create-route` or `associate-route-table` ran
+against a blank `$IGW_ID`/`$SUBNET_A`/`$SUBNET_B` (usually because those variables came from a
+different terminal session that already lost its in-memory values) and silently no-op'd rather than
+erroring. Don't proceed to §3 until this check passes — otherwise the task will launch, sit in
+`pending`, and only fail ~15 minutes later when it can't reach Secrets Manager (no route out of the
+subnet at all).
 
 Add `VPC_ID`, `SUBNET_A`, `SUBNET_B`, `IGW_ID`, `RTB_ID` to your vars file.
 
@@ -492,7 +508,7 @@ Write-Host $env:REDIS_ENDPOINT     # add to vars.ps1
 ```
 
 There is no public endpoint — the only thing that can reach it is a task in `$WORKER_SG_ID`. To poke
-at it by hand, `aws ecs execute-command` into a running task (§10) and use `redis-cli` from there —
+at it by hand, `aws ecs execute-command` into a running task (§9) and use `redis-cli` from there —
 this runs inside the container's own Linux shell, so it's the same command regardless of which OS you
 ran the `aws` CLI from:
 
@@ -539,33 +555,39 @@ aws ecr put-lifecycle-policy --repository-name cp/dispatch-worker `
 One repo for all environments — separate by tag (`prod-0.1.0`, `dev-0.1.0`), not by repo. `IMMUTABLE`
 means a rollback to `prod-0.1.0` gets the same bytes it got last week.
 
-### First image, from your laptop
+### First image, via CloudShell (no local Docker needed)
 
-CD (§9) takes over after this — but the service needs one image to exist before it can start. Docker
-itself behaves identically on both OSes; only the variable syntax changes.
+CD (see `02-cicd-setup.md`) takes over after this — but the service needs one image to exist before it can start. No one on
+the ClimatePros side needs Docker installed: the image is built once elsewhere and shipped as a `docker
+save`d tarball (`dispatch-worker-amd64.tar.gz`); loading and pushing it happens in **AWS CloudShell**,
+which has Docker preinstalled. This is bash-only regardless of your local OS, so there's no PowerShell
+variant of this block.
 
-**macOS / Linux**
+1. AWS Console → CloudShell (`>_` icon, top nav) — open it under the account/profile this image is going to.
+2. Actions → Upload file → pick `dispatch-worker-amd64.tar.gz`. It lands in `~`.
+3. Load and push:
 
 ```bash
+gunzip ~/dispatch-worker-amd64.tar.gz
+docker load -i ~/dispatch-worker-amd64.tar
+# note the "Loaded image: <name>:<tag>" line — that's the local tag to reference below (check `docker images` if unsure)
+
+export AWS_REGION=us-east-1
+export ACCOUNT_ID=$(aws sts get-caller-identity --query Account --output text)
+export ENV=test   # match whichever environment this image is for
+
 aws ecr get-login-password --region $AWS_REGION \
   | docker login --username AWS --password-stdin $ACCOUNT_ID.dkr.ecr.$AWS_REGION.amazonaws.com
 
-docker build --platform linux/amd64 -t $ECR_URI:$ENV-0.1.0 .
-docker push $ECR_URI:$ENV-0.1.0
+docker tag dispatch-worker:latest-amd64 $ACCOUNT_ID.dkr.ecr.$AWS_REGION.amazonaws.com/cp/dispatch-worker:$ENV-0.1.0
+docker push $ACCOUNT_ID.dkr.ecr.$AWS_REGION.amazonaws.com/cp/dispatch-worker:$ENV-0.1.0
 ```
 
-**Windows (PowerShell)**
-
-```powershell
-aws ecr get-login-password --region $env:AWS_REGION `
-  | docker login --username AWS --password-stdin "$env:ACCOUNT_ID.dkr.ecr.$env:AWS_REGION.amazonaws.com"
-
-docker build --platform linux/amd64 -t "$($env:ECR_URI):$env:ENV-0.1.0" .
-docker push "$($env:ECR_URI):$env:ENV-0.1.0"
-```
-
-`--platform linux/amd64` is mandatory on Apple Silicon (and harmless on Windows/Intel) — without it the
-task dies with `exec format error`. Login expires every 12 h; `no basic auth credentials` means re-run it.
+The ECR repo (previous subsection) must already exist — `docker push` doesn't create it. The `-amd64` in
+the filename matters: Fargate here runs `X86_64` (see the task definition below), and an arm64 image
+dies with `exec format error`. Login expires every 12 h; `no basic auth credentials` means re-run it.
+CloudShell's home directory persists across sessions but nothing else does — safe to delete the tarball
+once the push succeeds.
 
 ### Log group
 
@@ -605,9 +627,34 @@ aws ecs create-cluster --cluster-name "cp-$env:ENV-dispatch" `
 
 Note the lowercase `key=`/`value=` — the ECS API differs from EC2's `Key=`/`Value=` here.
 
+### Get the secret ARN
+
+Needed for the task definition below. Secrets Manager appends a random 6-character suffix to every
+ARN (`...redis-auth-token-AbCdEf`) — query it rather than typing the pattern by hand; ECS can fail to
+resolve a secret referenced by a guessed/partial ARN.
+
+**macOS / Linux**
+
+```bash
+export SECRET_ARN=$(aws secretsmanager describe-secret \
+  --secret-id cp/$ENV/redis-auth-token \
+  --query ARN --output text)
+echo "SECRET_ARN: $SECRET_ARN"
+```
+
+**Windows (PowerShell)**
+
+```powershell
+$env:SECRET_ARN = (aws secretsmanager describe-secret `
+  --secret-id "cp/$env:ENV/redis-auth-token" `
+  --query ARN --output text)
+echo "SECRET_ARN: $env:SECRET_ARN"
+```
+
 ### Task definition
 
-`taskdef.json` — hand-edit `ACCOUNT`, `REGION`, `ENV`, the image tag and `REDIS_HOST`. CD re-renders
+`taskdef.json` — hand-edit `ACCOUNT`, `REGION`, `ENV`, the image tag, `REDIS_HOST`, and paste in the
+exact `SECRET_ARN` from above (not the hand-typed pattern below — see previous step). CD re-renders
 this file on every deploy, so commit it to the worker repo.
 
 ```json
@@ -634,7 +681,7 @@ this file on every deploy, so commit it to the worker repo.
       { "name": "MAX_CONCURRENT_DISPATCHES", "value": "20" }
     ],
     "secrets": [
-      { "name": "REDIS_AUTH_TOKEN", "valueFrom": "arn:aws:secretsmanager:REGION:ACCOUNT:secret:cp/ENV/redis-auth-token" }
+      { "name": "REDIS_AUTH_TOKEN", "valueFrom": "SECRET_ARN" }
     ],
     "logConfiguration": {
       "logDriver": "awslogs",
@@ -727,160 +774,7 @@ Off again: `--desired-count 0`. There is no autoscaling policy — the toggle is
 
 ---
 
-## 9. CD — GitHub push → ECR → ECS
-
-Keyless, via OIDC. No AWS secrets stored in GitHub.
-
-### One-time: trust GitHub
-
-**macOS / Linux**
-
-```bash
-# skip if the account already has this provider
-aws iam create-open-id-connect-provider \
-  --url https://token.actions.githubusercontent.com \
-  --client-id-list sts.amazonaws.com \
-  --thumbprint-list 6938fd4d98bab03faadb97b34396831e3780aea1
-```
-
-**Windows (PowerShell)**
-
-```powershell
-# skip if the account already has this provider
-aws iam create-open-id-connect-provider `
-  --url https://token.actions.githubusercontent.com `
-  --client-id-list sts.amazonaws.com `
-  --thumbprint-list 6938fd4d98bab03faadb97b34396831e3780aea1
-```
-
-`trust-github.json` — replace `ACCOUNT` and `ORG/REPO`; `sub` scopes the role to one repo and one
-branch (same file, either OS):
-
-```json
-{
-  "Version": "2012-10-17",
-  "Statement": [{
-    "Effect": "Allow",
-    "Principal": { "Federated": "arn:aws:iam::ACCOUNT:oidc-provider/token.actions.githubusercontent.com" },
-    "Action": "sts:AssumeRoleWithWebIdentity",
-    "Condition": {
-      "StringEquals": { "token.actions.githubusercontent.com:aud": "sts.amazonaws.com" },
-      "StringLike":   { "token.actions.githubusercontent.com:sub": "repo:ORG/REPO:ref:refs/heads/main" }
-    }
-  }]
-}
-```
-
-`github-deploy-policy.json` — hand-edit `REGION`/`ACCOUNT`/`ENV` (same treatment as `taskdef.json` in §7):
-
-```json
-{
-  "Version": "2012-10-17",
-  "Statement": [
-    { "Effect": "Allow", "Action": "ecr:GetAuthorizationToken", "Resource": "*" },
-    { "Effect": "Allow", "Action": ["ecr:BatchGetImage", "ecr:BatchCheckLayerAvailability", "ecr:CompleteLayerUpload", "ecr:InitiateLayerUpload", "ecr:PutImage", "ecr:UploadLayerPart"], "Resource": "arn:aws:ecr:REGION:ACCOUNT:repository/cp/dispatch-worker" },
-    { "Effect": "Allow", "Action": ["ecs:RegisterTaskDefinition", "ecs:DescribeTaskDefinition"], "Resource": "*" },
-    { "Effect": "Allow", "Action": ["ecs:UpdateService", "ecs:DescribeServices"], "Resource": "arn:aws:ecs:REGION:ACCOUNT:service/cp-ENV-dispatch/cp-ENV-dispatch-workers" },
-    { "Effect": "Allow", "Action": "iam:PassRole", "Resource": ["arn:aws:iam::ACCOUNT:role/cp-ENV-task-exec", "arn:aws:iam::ACCOUNT:role/cp-ENV-task"] }
-  ]
-}
-```
-
-**macOS / Linux**
-
-```bash
-aws iam create-role --role-name cp-$ENV-github-deploy \
-  --assume-role-policy-document file://trust-github.json \
-  --tags Key=Project,Value=stream1 Key=Env,Value=$ENV Key=ManagedBy,Value=techjays
-
-aws iam put-role-policy --role-name cp-$ENV-github-deploy --policy-name deploy \
-  --policy-document file://github-deploy-policy.json
-```
-
-**Windows (PowerShell)**
-
-```powershell
-aws iam create-role --role-name "cp-$env:ENV-github-deploy" `
-  --assume-role-policy-document file://trust-github.json `
-  --tags "Key=Project,Value=stream1" "Key=Env,Value=$env:ENV" "Key=ManagedBy,Value=techjays"
-
-aws iam put-role-policy --role-name "cp-$env:ENV-github-deploy" --policy-name deploy `
-  --policy-document file://github-deploy-policy.json
-```
-
-`iam:PassRole` is the one people forget — without it `RegisterTaskDefinition` fails with an opaque
-`AccessDenied` on roles the workflow never names directly.
-
-### The workflow
-
-`.github/workflows/deploy.yml` in the worker repo, alongside the `taskdef.json` from §7. This runs on
-GitHub's own `ubuntu-latest` runner, not on your laptop, so it is identical regardless of which OS you
-develop on:
-
-```yaml
-name: deploy
-on:
-  push:
-    branches: [main]
-
-permissions:
-  id-token: write      # required for OIDC
-  contents: read
-
-env:
-  AWS_REGION: us-east-1
-  ECR_REPO: cp/dispatch-worker
-  CLUSTER: cp-prod-dispatch
-  SERVICE: cp-prod-dispatch-workers
-  CONTAINER: dispatch-worker
-
-jobs:
-  deploy:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-
-      - uses: aws-actions/configure-aws-credentials@v4
-        with:
-          role-to-assume: arn:aws:iam::<ACCOUNT_ID>:role/cp-prod-github-deploy
-          aws-region: ${{ env.AWS_REGION }}
-
-      - id: ecr
-        uses: aws-actions/amazon-ecr-login@v2
-
-      - id: build
-        env:
-          REGISTRY: ${{ steps.ecr.outputs.registry }}
-          TAG: prod-${{ github.sha }}
-        run: |
-          docker build --platform linux/amd64 -t $REGISTRY/$ECR_REPO:$TAG .
-          docker push $REGISTRY/$ECR_REPO:$TAG
-          echo "image=$REGISTRY/$ECR_REPO:$TAG" >> $GITHUB_OUTPUT
-
-      - id: taskdef
-        uses: aws-actions/amazon-ecs-render-task-definition@v1
-        with:
-          task-definition: taskdef.json
-          container-name: ${{ env.CONTAINER }}
-          image: ${{ steps.build.outputs.image }}
-
-      - uses: aws-actions/amazon-ecs-deploy-task-definition@v2
-        with:
-          task-definition: ${{ steps.taskdef.outputs.task-definition }}
-          service: ${{ env.SERVICE }}
-          cluster: ${{ env.CLUSTER }}
-          wait-for-service-stability: true
-```
-
-The commit SHA is the image tag — immutable, and rollback is redeploying an older SHA.
-`render-task-definition` swaps only the image line, so every other field stays under review in git.
-
-With `desired-count 0` the deploy still succeeds — zero running tasks is a stable service. The new
-revision starts being used the next time the toggle scales to 1.
-
----
-
-## 10. Verify
+## 9. Verify
 
 **macOS / Linux**
 
@@ -1009,12 +903,14 @@ aws ec2 delete-route-table --route-table-id $env:RTB_ID
 aws ec2 delete-vpc --vpc-id $env:VPC_ID
 ```
 
-Delete the roles too — they cost nothing but they accumulate:
+Delete the roles too — they cost nothing but they accumulate. The CD principal from `02-cicd-setup.md`
+is an IAM **user**, not a role — it isn't in this loop and has its own teardown (access keys + inline
+policy + user) in that doc's own **Teardown** section:
 
 **macOS / Linux**
 
 ```bash
-for R in cp-$ENV-task-exec cp-$ENV-task cp-$ENV-github-deploy; do
+for R in cp-$ENV-task-exec cp-$ENV-task; do
   for P in $(aws iam list-role-policies --role-name $R --query 'PolicyNames' --output text); do
     aws iam delete-role-policy --role-name $R --policy-name $P
   done
@@ -1028,7 +924,7 @@ done
 **Windows (PowerShell)**
 
 ```powershell
-$roles = @("cp-$env:ENV-task-exec", "cp-$env:ENV-task", "cp-$env:ENV-github-deploy")
+$roles = @("cp-$env:ENV-task-exec", "cp-$env:ENV-task")
 foreach ($R in $roles) {
   $policyNames = (aws iam list-role-policies --role-name $R --query 'PolicyNames' --output text) -split '\s+' | Where-Object { $_ }
   foreach ($P in $policyNames) {
