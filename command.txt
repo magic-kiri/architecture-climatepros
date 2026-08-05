@@ -1,0 +1,5 @@
+curl -X POST http://100.58.213.116:8000/test/write \
+  -H "Content-Type: application/json" \
+  -d '{"key": "foo", "value": "bar"}'
+
+curl http://100.58.213.116:8000/test/read
