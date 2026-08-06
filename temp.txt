@@ -40,6 +40,15 @@ aws ec2 create-route --route-table-id $env:RTB_ID --destination-cidr-block 0.0.0
 aws ec2 associate-route-table --route-table-id $env:RTB_ID --subnet-id $env:SUBNET_A --profile cp-test
 aws ec2 associate-route-table --route-table-id $env:RTB_ID --subnet-id $env:SUBNET_B --profile cp-test
 
+# 5b. Verify — do not proceed to Step 3 unless this shows the 0.0.0.0/0 route AND both subnet IDs.
+# A route table with zero associations/routes here means the two commands above ran with an empty
+# $env:IGW_ID or $env:SUBNET_A/B (e.g. a fresh terminal that lost the session's vars) and silently
+# no-op'd instead of erroring — the task will still launch, then hang "pending" and fail 15 min later
+# trying to reach Secrets Manager with no route out.
+aws ec2 describe-route-tables --route-table-ids $env:RTB_ID `
+  --query 'RouteTables[0].{Routes:Routes[].DestinationCidrBlock,Associations:Associations[].SubnetId}' `
+  --profile cp-test
+
 # 6. Print all IDs to copy into vars.ps1
 echo "VPC_ID:    $env:VPC_ID"
 echo "SUBNET_A:  $env:SUBNET_A"
@@ -248,14 +257,17 @@ aws ecr put-lifecycle-policy --repository-name cp/dispatch-worker `
   --lifecycle-policy-text file://lifecycle.json `
   --region $env:AWS_REGION --profile cp-test
 
-# 2. First image push — Docker Desktop must be running; cd into your worker code directory first
-$env:ECR_URI = "$env:ACCOUNT_ID.dkr.ecr.$env:AWS_REGION.amazonaws.com/cp/dispatch-worker"
-
-aws ecr get-login-password --region $env:AWS_REGION --profile cp-test `
-  | docker login --username AWS --password-stdin "$env:ACCOUNT_ID.dkr.ecr.$env:AWS_REGION.amazonaws.com"
-
-docker build --platform linux/amd64 -t "${env:ECR_URI}:test-0.1.0" .
-docker push "${env:ECR_URI}:test-0.1.0"
+# 2. First image push — via AWS CloudShell (no local Docker needed)
+# Upload dispatch-worker-amd64.tar.gz to CloudShell first (Actions -> Upload file), then in CloudShell:
+#
+#   gunzip ~/dispatch-worker-amd64.tar.gz
+#   docker load -i ~/dispatch-worker-amd64.tar
+#   export AWS_REGION=us-east-1
+#   export ACCOUNT_ID=$(aws sts get-caller-identity --query Account --output text)
+#   aws ecr get-login-password --region $AWS_REGION \
+#     | docker login --username AWS --password-stdin $ACCOUNT_ID.dkr.ecr.$AWS_REGION.amazonaws.com
+#   docker tag dispatch-worker:latest-amd64 $ACCOUNT_ID.dkr.ecr.$AWS_REGION.amazonaws.com/cp/dispatch-worker:test-0.1.0
+#   docker push $ACCOUNT_ID.dkr.ecr.$AWS_REGION.amazonaws.com/cp/dispatch-worker:test-0.1.0
 
 # 3. Log group (must exist before cluster or task fails to start)
 aws logs create-log-group --log-group-name /ecs/cp-test-dispatch-worker --profile cp-test
@@ -330,3 +342,14 @@ aws ecs create-service `
   --enable-execute-command `
   --tags key=Project,value=stream1 key=Env,value=test key=ManagedBy,value=techjays `
   --profile cp-test
+
+
+
+
+
+############## CI-CD ###############
+aws iam create-user --user-name "cp-$env:ENV-cicd-deploy" `
+  --tags "Key=Project,Value=stream1" "Key=Env,Value=$env:ENV" "Key=ManagedBy,Value=techjays"
+
+aws iam put-user-policy --user-name "cp-$env:ENV-cicd-deploy" --policy-name deploy `
+  --policy-document file://cicd-deploy-policy.json

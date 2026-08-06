@@ -265,29 +265,4 @@ in this script forces the service to pick up the newly registered revision.
 
 ## Teardown
 
-Not part of `01-ecs-redis-setup.md`'s teardown loop — that one only knows about roles. Deleting a user
-means deleting its keys and inline policy first:
-
-**macOS / Linux**
-
-```bash
-for K in $(aws iam list-access-keys --user-name cp-$ENV-cicd-deploy --query 'AccessKeyMetadata[].AccessKeyId' --output text); do
-  aws iam delete-access-key --user-name cp-$ENV-cicd-deploy --access-key-id $K
-done
-aws iam delete-user-policy --user-name cp-$ENV-cicd-deploy --policy-name deploy
-aws iam delete-user --user-name cp-$ENV-cicd-deploy
-```
-
-**Windows (PowerShell)**
-
-```powershell
-$keys = (aws iam list-access-keys --user-name "cp-$env:ENV-cicd-deploy" --query 'AccessKeyMetadata[].AccessKeyId' --output text) -split '\s+' | Where-Object { $_ }
-foreach ($K in $keys) {
-  aws iam delete-access-key --user-name "cp-$env:ENV-cicd-deploy" --access-key-id $K
-}
-aws iam delete-user-policy --user-name "cp-$env:ENV-cicd-deploy" --policy-name deploy
-aws iam delete-user --user-name "cp-$env:ENV-cicd-deploy"
-```
-
-Then delete the matching GitHub repository secret / Azure DevOps service connection so nothing points at
-a now-deleted key.
+Moved to its own file — see [`03-teardown.md`](03-teardown.md) §1.

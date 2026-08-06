@@ -16,12 +16,14 @@ Source of truth for the design: [`../unified-hld.html`](../unified-hld.html) ·
 | # | File | Covers | Prereq |
 |---|---|---|---|
 | 00 | [`00-aws-cli-setup.md`](00-aws-cli-setup.md) | AWS CLI on macOS + Windows, access keys, profiles, MFA session | — |
-| 01 | [`01-ecs-redis-setup.md`](01-ecs-redis-setup.md) | VPC, subnets, security groups, Secrets Manager, IAM task roles, ElastiCache Redis, ECR, ECS cluster/task def/service, verify, cost, teardown | 00 |
+| 01 | [`01-ecs-redis-setup.md`](01-ecs-redis-setup.md) | VPC, subnets, security groups, Secrets Manager, IAM task roles, ElastiCache Redis, ECR, ECS cluster/task def/service, verify, cost | 00 |
 | 02 | [`02-cicd-setup.md`](02-cicd-setup.md) | Deploy IAM user, GitHub Actions **or** Azure DevOps pipeline (build → ECR → ECS deploy) | 01 through §7 |
+| 03 | [`03-teardown.md`](03-teardown.md) | Delete everything `01` and `02` created — CD user, ECS/Redis/network, task roles, final verify | 01 and/or 02 |
 
 `01` is **standalone** — its own VPC, nothing discovered or reused from the existing FieldJetX
 platform. Connecting this to the existing VPC / SQL Server is a later step, not covered here.
 `02` only adds the CD pipeline and its IAM user; it changes nothing else in the running system.
+`03` only removes what `01`/`02` created — only run the parts matching what you actually built.
 
 ---
 
@@ -39,8 +41,7 @@ platform. Connecting this to the existing VPC / SQL Server is a later step, not 
 | IAM user + access key (CD) | `cp-$ENV-cicd-deploy` |
 | Pipeline definition (CD) | GitHub: `.github/workflows/deploy.yml` · Azure DevOps: `azure-pipelines.yml` |
 
-Everything above is new and deletable — each file's teardown section at the bottom removes what it
-created.
+Everything above is new and deletable — [`03-teardown.md`](03-teardown.md) removes all of it.
 
 ---
 

@@ -20,8 +20,9 @@ CD pipeline ──► ECR ──► ECS service ──► task ──► ElastiC
 | ECS cluster / task def / service | `cp-prod-dispatch` |
 
 CD (build → ECR → ECS deploy, GitHub Actions or Azure DevOps) is a separate doc — see
-[`02-cicd-setup.md`](02-cicd-setup.md). Everything above is new and deletable — teardown at the bottom
-removes the lot. Connecting to the existing FieldJetX VPC and SQL Server is a later step, not this one.
+[`02-cicd-setup.md`](02-cicd-setup.md). Everything above is new and deletable — see
+[`03-teardown.md`](03-teardown.md) to remove it. Connecting to the existing FieldJetX VPC and SQL
+Server is a later step, not this one.
 
 **Platforms.** Every command block below is given twice — **macOS / Linux** (bash) first, then
 **Windows (PowerShell 7+, or Windows PowerShell 5.1)**. All IAM policy documents are passed
@@ -855,101 +856,5 @@ scales to zero. Adding a NAT gateway later adds ~$32/mo before any traffic.
 
 ## Teardown
 
-Reverse order. Everything here is new, so nothing survives.
-
-**macOS / Linux**
-
-```bash
-aws ecs update-service --cluster cp-$ENV-dispatch --service cp-$ENV-dispatch-workers --desired-count 0
-aws ecs delete-service --cluster cp-$ENV-dispatch --service cp-$ENV-dispatch-workers --force
-aws ecs delete-cluster --cluster cp-$ENV-dispatch
-aws elasticache delete-replication-group --replication-group-id cp-$ENV-dispatch-redis
-aws elasticache wait replication-group-deleted --replication-group-id cp-$ENV-dispatch-redis
-aws elasticache delete-cache-subnet-group --cache-subnet-group-name cp-$ENV-redis-subnets
-aws ecr delete-repository --repository-name cp/dispatch-worker --force
-aws logs delete-log-group --log-group-name /ecs/cp-$ENV-dispatch-worker
-aws secretsmanager delete-secret --secret-id cp/$ENV/redis-auth-token --force-delete-without-recovery
-
-aws ec2 delete-security-group --group-id $REDIS_SG_ID
-aws ec2 delete-security-group --group-id $WORKER_SG_ID
-aws ec2 detach-internet-gateway --vpc-id $VPC_ID --internet-gateway-id $IGW_ID
-aws ec2 delete-internet-gateway --internet-gateway-id $IGW_ID
-aws ec2 delete-subnet --subnet-id $SUBNET_A
-aws ec2 delete-subnet --subnet-id $SUBNET_B
-aws ec2 delete-route-table --route-table-id $RTB_ID
-aws ec2 delete-vpc --vpc-id $VPC_ID
-```
-
-**Windows (PowerShell)**
-
-```powershell
-aws ecs update-service --cluster "cp-$env:ENV-dispatch" --service "cp-$env:ENV-dispatch-workers" --desired-count 0
-aws ecs delete-service --cluster "cp-$env:ENV-dispatch" --service "cp-$env:ENV-dispatch-workers" --force
-aws ecs delete-cluster --cluster "cp-$env:ENV-dispatch"
-aws elasticache delete-replication-group --replication-group-id "cp-$env:ENV-dispatch-redis"
-aws elasticache wait replication-group-deleted --replication-group-id "cp-$env:ENV-dispatch-redis"
-aws elasticache delete-cache-subnet-group --cache-subnet-group-name "cp-$env:ENV-redis-subnets"
-aws ecr delete-repository --repository-name cp/dispatch-worker --force
-aws logs delete-log-group --log-group-name "/ecs/cp-$env:ENV-dispatch-worker"
-aws secretsmanager delete-secret --secret-id "cp/$env:ENV/redis-auth-token" --force-delete-without-recovery
-
-aws ec2 delete-security-group --group-id $env:REDIS_SG_ID
-aws ec2 delete-security-group --group-id $env:WORKER_SG_ID
-aws ec2 detach-internet-gateway --vpc-id $env:VPC_ID --internet-gateway-id $env:IGW_ID
-aws ec2 delete-internet-gateway --internet-gateway-id $env:IGW_ID
-aws ec2 delete-subnet --subnet-id $env:SUBNET_A
-aws ec2 delete-subnet --subnet-id $env:SUBNET_B
-aws ec2 delete-route-table --route-table-id $env:RTB_ID
-aws ec2 delete-vpc --vpc-id $env:VPC_ID
-```
-
-Delete the roles too — they cost nothing but they accumulate. The CD principal from `02-cicd-setup.md`
-is an IAM **user**, not a role — it isn't in this loop and has its own teardown (access keys + inline
-policy + user) in that doc's own **Teardown** section:
-
-**macOS / Linux**
-
-```bash
-for R in cp-$ENV-task-exec cp-$ENV-task; do
-  for P in $(aws iam list-role-policies --role-name $R --query 'PolicyNames' --output text); do
-    aws iam delete-role-policy --role-name $R --policy-name $P
-  done
-  for A in $(aws iam list-attached-role-policies --role-name $R --query 'AttachedPolicies[].PolicyArn' --output text); do
-    aws iam detach-role-policy --role-name $R --policy-arn $A
-  done
-  aws iam delete-role --role-name $R
-done
-```
-
-**Windows (PowerShell)**
-
-```powershell
-$roles = @("cp-$env:ENV-task-exec", "cp-$env:ENV-task")
-foreach ($R in $roles) {
-  $policyNames = (aws iam list-role-policies --role-name $R --query 'PolicyNames' --output text) -split '\s+' | Where-Object { $_ }
-  foreach ($P in $policyNames) {
-    aws iam delete-role-policy --role-name $R --policy-name $P
-  }
-  $attached = (aws iam list-attached-role-policies --role-name $R --query 'AttachedPolicies[].PolicyArn' --output text) -split '\s+' | Where-Object { $_ }
-  foreach ($A in $attached) {
-    aws iam detach-role-policy --role-name $R --policy-arn $A
-  }
-  aws iam delete-role --role-name $R
-}
-```
-
-Find anything this doc created, at any time — identical either OS apart from the continuation character:
-
-**macOS / Linux**
-
-```bash
-aws resourcegroupstaggingapi get-resources --tag-filters Key=Project,Values=stream1 \
-  --query 'ResourceTagMappingList[].ResourceARN' --output text
-```
-
-**Windows (PowerShell)**
-
-```powershell
-aws resourcegroupstaggingapi get-resources --tag-filters Key=Project,Values=stream1 `
-  --query 'ResourceTagMappingList[].ResourceARN' --output text
-```
+Moved to its own file — see [`03-teardown.md`](03-teardown.md) §2 (core infra + roles) and §3
+(verify nothing is left).
